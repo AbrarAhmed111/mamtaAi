@@ -1,12 +1,11 @@
-'use client';
-
 import { Metadata } from 'next';
 import * as React from 'react';
 import { RiAlarmWarningFill } from 'react-icons/ri';
 import Link from 'next/link';
+import BackButton from '@/components/global/BackButton';
 
 export const metadata: Metadata = {
-  title: 'Page Not Found | Jazzi Creates',
+  title: 'Page Not Found | MamtaAI',
   description: 'The page you are looking for does not exist.',
 };
 
@@ -24,7 +23,7 @@ export default function NotFound() {
         </h1>
         
         <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto">
-          Sorry, the page you are looking for doesn't exist or has been moved.
+          Sorry, the page you are looking for doesn&apos;t exist or has been moved.
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -35,12 +34,7 @@ export default function NotFound() {
             Go Home
           </Link>
           
-          <button
-            onClick={() => window.history.back()}
-            className="px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-          >
-            Go Back
-          </button>
+          <BackButton />
         </div>
         
         <div className="mt-12 text-sm text-gray-500">

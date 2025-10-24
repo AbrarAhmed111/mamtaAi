@@ -243,11 +243,11 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-              Understanding Your Baby's
+              Understanding Your Baby&apos;s
               <span className="text-blue-600 block">Every Cry</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Revolutionary AI-powered baby cry translation system that helps parents understand their baby's needs instantly. 
+              Revolutionary AI-powered baby cry translation system that helps parents understand their baby&apos;s needs instantly. 
               From hunger to pain, we decode every cry with precision and care.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -345,7 +345,7 @@ export default function Home() {
                 <FaShieldAlt className="h-8 w-8 text-orange-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Privacy First</h3>
-              <p className="text-gray-600">End-to-end encryption ensures your baby's data stays private and secure.</p>
+              <p className="text-gray-600">End-to-end encryption ensures your baby&apos;s data stays private and secure.</p>
             </div>
 
             <div className="text-center">
@@ -353,7 +353,7 @@ export default function Home() {
                 <FaBell className="h-8 w-8 text-red-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Real-Time Alerts</h3>
-              <p className="text-gray-600">Instant notifications help you respond quickly to your baby's needs.</p>
+              <p className="text-gray-600">Instant notifications help you respond quickly to your baby&apos;s needs.</p>
             </div>
 
             <div className="text-center">
@@ -361,7 +361,7 @@ export default function Home() {
                 <FaChartLine className="h-8 w-8 text-indigo-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Smart Analytics</h3>
-              <p className="text-gray-600">Detailed insights and patterns to better understand your baby's behavior.</p>
+              <p className="text-gray-600">Detailed insights and patterns to better understand your baby&apos;s behavior.</p>
             </div>
           </div>
         </div>
@@ -375,7 +375,7 @@ export default function Home() {
               What Parents Say
             </h2>
             <p className="text-xl text-gray-600">
-              Join thousands of parents who trust MamtaAI to understand their baby's needs.
+              Join thousands of parents who trust MamtaAI to understand their baby&apos;s needs.
             </p>
           </div>
 
@@ -387,7 +387,7 @@ export default function Home() {
                     <FaStar key={i} className="h-5 w-5 text-yellow-400" />
                   ))}
                 </div>
-                <p className="text-gray-600 mb-4">"{testimonial.content}"</p>
+                <p className="text-gray-600 mb-4">&ldquo;{testimonial.content}&rdquo;</p>
                 <div>
                   <p className="font-semibold text-gray-900">{testimonial.name}</p>
                   <p className="text-sm text-gray-500">{testimonial.role}</p>
@@ -469,7 +469,7 @@ export default function Home() {
                   </div>
                 </div>
                 <p className="text-blue-100 mb-6 leading-relaxed">
-                  Revolutionary AI-powered baby cry translation system helping parents understand their baby's needs with precision and care.
+                  Revolutionary AI-powered baby cry translation system helping parents understand their baby&apos;s needs with precision and care.
                 </p>
                 <div className="flex space-x-4">
                   <a href="#" className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center hover:bg-blue-500 hover:scale-110 transition-all duration-300 group">

@@ -161,7 +161,7 @@ export default function VerifyOTPPage() {
             Verify Your Account
           </h2>
           <p className="text-gray-600">
-            We've sent a verification code to your {verificationMethod}
+            We&apos;ve sent a verification code to your {verificationMethod}
           </p>
         </div>
 
@@ -202,7 +202,7 @@ export default function VerifyOTPPage() {
               {otp.map((digit, index) => (
                 <input
                   key={index}
-                  ref={el => inputRefs.current[index] = el}
+                  ref={el => { inputRefs.current[index] = el; }}
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"
@@ -254,7 +254,7 @@ export default function VerifyOTPPage() {
           {/* Help Text */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Didn't receive the code?{' '}
+              Didn&apos;t receive the code?{' '}
               <button
                 onClick={handleResend}
                 disabled={!canResend || isLoading}

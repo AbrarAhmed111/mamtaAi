@@ -101,7 +101,7 @@ export default function ForgotPasswordPage() {
                 Check Your {formData.method === 'email' ? 'Email' : 'Phone'}
               </h2>
               <p className="text-gray-600 mb-6">
-                We've sent a password reset {formData.method === 'email' ? 'link' : 'code'} to{' '}
+                We&apos;ve sent a password reset {formData.method === 'email' ? 'link' : 'code'} to{' '}
                 <span className="font-medium text-gray-900">
                   {formData.method === 'email' ? formData.email : formData.phone}
                 </span>
@@ -149,7 +149,7 @@ export default function ForgotPasswordPage() {
             Forgot Password?
           </h2>
           <p className="text-gray-600">
-            No worries! We'll send you reset instructions
+            No worries! We&apos;ll send you reset instructions
           </p>
         </div>
 
