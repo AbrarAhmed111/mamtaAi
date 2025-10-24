@@ -1,3 +1,5 @@
+'use client';
+
 import { Metadata } from 'next';
 import * as React from 'react';
 import { RiAlarmWarningFill } from 'react-icons/ri';
