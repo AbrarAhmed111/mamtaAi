@@ -1,7 +1,8 @@
 
+
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, Suspense } from 'react'
 import { checkEmailAndRedirect } from '@/lib/actions/auth'
 import { useRouter } from 'next/navigation'
 import { getBaseUrl, AUTH_CONSTANTS } from '@/lib/constants'
@@ -10,15 +11,15 @@ import { useReturnUrl } from '@/hooks/useReturnUrl'
 import AuthHeader from '@/components/auth/AuthHeader'
 import AuthInput from '@/components/auth/AuthInput'
 import AuthButton from '@/components/auth/AuthButton'
-import { PageProps } from '@/lib/interfaces/common'
+ 
 
-export default function WelcomePage({ searchParams }: PageProps) {
+function WelcomeContent() {
   const [email, setEmail] = useState('')
   const [emailError, setEmailError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const emailInputRef = useRef<HTMLInputElement>(null)
-  const returnUrl = useReturnUrl(searchParams)
+  const returnUrl = useReturnUrl()
 
   useEffect(() => {
     emailInputRef.current?.focus()
@@ -124,5 +125,13 @@ export default function WelcomePage({ searchParams }: PageProps) {
         </AuthButton>
       </form>
     </div>
+  )
+}
+
+export default function WelcomePage() {
+  return (
+    <Suspense fallback={<div className="px-[24px] py-[10px] md:px-0 md:py-0">Loading...</div>}>
+      <WelcomeContent />
+    </Suspense>
   )
 }

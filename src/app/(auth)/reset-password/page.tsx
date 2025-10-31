@@ -1,22 +1,23 @@
 
 
+
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, Suspense } from 'react'
 import toast from 'react-hot-toast'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { updatePasswordAction } from '@/lib/actions/auth'
 import { AUTH_CONSTANTS } from '@/lib/constants'
 import { validatePassword } from '@/lib/validations'
 import { useReturnUrl } from '@/hooks/useReturnUrl'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/client'
 import AuthHeader from '@/components/auth/AuthHeader'
 import AuthInput from '@/components/auth/AuthInput'
 import AuthButton from '@/components/auth/AuthButton'
 import PasswordRequirements from '@/components/auth/PasswordRequirements'
-import { PageProps } from '@/lib/interfaces/common'
+ 
 
-export default function ResetPasswordPage({ searchParams }: PageProps) {
+function ResetPasswordContent() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [password, setPassword] = useState('')
@@ -27,7 +28,8 @@ export default function ResetPasswordPage({ searchParams }: PageProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [sessionValid, setSessionValid] = useState<boolean | null>(null)
   const [resetError, setResetError] = useState<string | null>(null)
-  const returnUrl = useReturnUrl(searchParams)
+  const returnUrl = useReturnUrl()
+  const searchParams = useSearchParams()
 
   const router = useRouter()
   const passwordInputRef = useRef<HTMLInputElement>(null)
@@ -72,19 +74,21 @@ export default function ResetPasswordPage({ searchParams }: PageProps) {
   useEffect(() => {
     const validateSession = async () => {
       try {
-        const params = await searchParams
-        if (params.error) {
+        const errorParam = searchParams?.get('error')
+        const messageParam = searchParams?.get('message')
+        const validatedParam = searchParams?.get('validated')
+
+        if (errorParam) {
           setSessionValid(false)
           setResetError(
-            params.message ??
+            messageParam ??
               'Invalid or expired reset link. Please request a new password reset.',
           )
           return
         }
         // Handle successful validation from API route
-        if (params.validated === 'true' || params.validated) {
+        if (validatedParam === 'true' || validatedParam) {
           // Verify we have an authenticated session
-          const supabase = createClient()
           const { data, error: authError } = await supabase.auth.getUser()
 
           if (authError || !data.user) {
@@ -239,5 +243,13 @@ export default function ResetPasswordPage({ searchParams }: PageProps) {
         </AuthButton>
       </form>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="px-[24px] py-[10px] md:px-0 md:py-0">Loading...</div>}>
+      <ResetPasswordContent />
+    </Suspense>
   )
 }

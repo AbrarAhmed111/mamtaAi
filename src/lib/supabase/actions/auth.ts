@@ -1,6 +1,7 @@
 'use server';
 
-import { supabase, supabaseAdmin } from '../client';
+import { supabaseAdmin } from '../client';
+import { createServerClient } from '../server';
 import { Database } from '@/types/supabase';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -37,9 +38,21 @@ export interface AuthError {
   code?: string;
 }
 
+async function getBaseURL(): Promise<string> {
+  if (
+    process.env.VERCEL_ENV === 'production' &&
+    process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  }
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+}
+
 // Sign up with email and password
 export async function signUpWithEmail(data: SignupData): Promise<{ user: AuthUser | null; error: AuthError | null }> {
   try {
+    const supabase = await createServerClient()
     // Create user account
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: data.email,
@@ -108,6 +121,7 @@ export async function signUpWithEmail(data: SignupData): Promise<{ user: AuthUse
 // Sign in with email and password
 export async function signInWithEmail(data: LoginData): Promise<{ user: AuthUser | null; error: AuthError | null }> {
   try {
+    const supabase = await createServerClient()
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
@@ -156,6 +170,7 @@ export async function signInWithEmail(data: LoginData): Promise<{ user: AuthUser
 // Sign out
 export async function signOut(): Promise<{ error: AuthError | null }> {
   try {
+    const supabase = await createServerClient()
     const { error } = await supabase.auth.signOut();
     
     if (error) {
@@ -174,6 +189,7 @@ export async function signOut(): Promise<{ error: AuthError | null }> {
 // Get current user
 export async function getCurrentUser(): Promise<{ user: AuthUser | null; error: AuthError | null }> {
   try {
+    const supabase = await createServerClient()
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !authUser) {
@@ -212,8 +228,10 @@ export async function getCurrentUser(): Promise<{ user: AuthUser | null; error: 
 // Send password reset email
 export async function resetPassword(email: string): Promise<{ error: AuthError | null }> {
   try {
+    const supabase = await createServerClient()
+    const baseURL = await getBaseURL()
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/reset-password`,
+      redirectTo: `${baseURL}/api/auth/reset-password`,
     });
 
     if (error) {
@@ -235,6 +253,7 @@ export async function updateProfile(
   updates: Partial<ProfileUpdate>
 ): Promise<{ profile: Profile | null; error: AuthError | null }> {
   try {
+    const supabase = await createServerClient()
     const { data: profile, error } = await supabase
       .from('profiles')
       .update({
@@ -262,6 +281,7 @@ export async function updateProfile(
 // Check if user is verified (for experts)
 export async function checkUserVerification(userId: string): Promise<{ isVerified: boolean; error: AuthError | null }> {
   try {
+    const supabase = await createServerClient()
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('is_verified, role')

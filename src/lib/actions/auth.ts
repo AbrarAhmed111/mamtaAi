@@ -6,14 +6,13 @@ import { supabaseAdmin } from '@/lib/supabase/client'
 
 export async function checkEmailAndRedirect(email: string): Promise<{ status: 'signin' | 'signup'; error?: string }> {
   try {
-    // Try to find user by email using admin client
-    const { data, error } = await supabaseAdmin.auth.admin.getUserByEmail(email)
-    if (error && !error.message?.includes('not found')) {
-      return { status: 'signin', error: 'Unable to verify email at the moment' }
-    }
-    return { status: data?.user ? 'signin' : 'signup' }
+    // Use admin listUsers with email filter (requires SUPABASE_SERVICE_ROLE_KEY)
+    const { data, error } = await (supabaseAdmin as any).auth.admin.listUsers({ email, perPage: 1 })
+    if (error) return { status: 'signin' }
+    const exists = Array.isArray(data?.users) && data.users.length > 0
+    return { status: exists ? 'signin' : 'signup' }
   } catch {
-    return { status: 'signin', error: 'Unable to verify email at the moment' }
+    return { status: 'signin' }
   }
 }
 

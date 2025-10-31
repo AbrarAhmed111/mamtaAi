@@ -1,7 +1,8 @@
 
+
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, Suspense } from 'react'
 import { signin } from '@/lib/actions/auth'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -10,9 +11,9 @@ import { useReturnUrl } from '@/hooks/useReturnUrl'
 import AuthHeader from '@/components/auth/AuthHeader'
 import AuthInput from '@/components/auth/AuthInput'
 import AuthButton from '@/components/auth/AuthButton'
-import { PageProps } from '@/lib/interfaces/common'
+ 
 
-export default function SignInPage({ searchParams }: PageProps) {
+function SignInContent() {
   const [error, setError] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [isMounted, setIsMounted] = useState(false)
@@ -20,7 +21,7 @@ export default function SignInPage({ searchParams }: PageProps) {
   const [email, setEmail] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [password, setPassword] = useState('')
-  const returnUrl = useReturnUrl(searchParams)
+  const returnUrl = useReturnUrl()
 
   const router = useRouter()
   const passwordInputRef = useRef<HTMLInputElement>(null)
@@ -39,7 +40,7 @@ export default function SignInPage({ searchParams }: PageProps) {
         passwordInputRef.current?.focus()
       }, 50)
     }
-  }, [router])
+  }, [router, returnUrl])
 
   const handleBack = () => {
     router.push(buildReturnUrl(AUTH_CONSTANTS.ROUTES.WELCOME, returnUrl))
@@ -136,5 +137,13 @@ export default function SignInPage({ searchParams }: PageProps) {
         </div>
       </form>
     </div>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<div className="px-[24px] py-[10px] md:px-0 md:py-0">Loading...</div>}>
+      <SignInContent />
+    </Suspense>
   )
 }

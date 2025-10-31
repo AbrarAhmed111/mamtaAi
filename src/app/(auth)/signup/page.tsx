@@ -1,8 +1,9 @@
 
 
+
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, Suspense } from 'react'
 import { signup } from '@/lib/actions/auth'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
@@ -18,9 +19,9 @@ import AuthHeader from '@/components/auth/AuthHeader'
 import AuthInput from '@/components/auth/AuthInput'
 import AuthButton from '@/components/auth/AuthButton'
 import PasswordRequirements from '@/components/auth/PasswordRequirements'
-import { PageProps } from '@/lib/interfaces/common'
+ 
 
-export default function SignUpPage({ searchParams }: PageProps) {
+function SignUpContent() {
   const [isMounted, setIsMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -38,7 +39,7 @@ export default function SignUpPage({ searchParams }: PageProps) {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [nameError, setNameError] = useState('')
-  const returnUrl = useReturnUrl(searchParams)
+  const returnUrl = useReturnUrl()
 
   const passwordInputRef = useRef<HTMLInputElement>(null)
   const firstNameInputRef = useRef<HTMLInputElement>(null)
@@ -298,7 +299,7 @@ export default function SignUpPage({ searchParams }: PageProps) {
                   <div className="py-4">
                     <p className="text-[#AAADB1] text-xs sm:text-sm">
                       By tapping &quot;Create Account&quot;, you agree to the
-                      Nizam Terms of Use.
+                      MamtaAi Terms of Use.
                     </p>
                     <button className="text-[#002e6b] font-bold text-xs sm:text-sm">
                       Terms of Use
@@ -306,8 +307,8 @@ export default function SignUpPage({ searchParams }: PageProps) {
                   </div>
                   <div className="pb-4">
                     <p className="text-[#AAADB1] text-xs sm:text-sm">
-                      To learn more about how Nizam collects, uses, shares, and
-                      protects your personal data, please see the Nizam Privacy.
+                      To learn more about how MamtaAi collects, uses, shares, and
+                      protects your personal data, please see the MamtaAi Privacy.
                     </p>
                     <button className="text-[#002e6b] font-bold text-xs sm:text-sm">
                       Privacy Policy
@@ -335,5 +336,13 @@ export default function SignUpPage({ searchParams }: PageProps) {
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={<div className="px-[24px] py-[10px] md:px-0 md:py-0">Loading...</div>}>
+      <SignUpContent />
+    </Suspense>
   )
 }

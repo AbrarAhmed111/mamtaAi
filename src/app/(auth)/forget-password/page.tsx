@@ -1,7 +1,8 @@
 
+
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import { forgotPassword } from '@/lib/actions/auth'
@@ -13,13 +14,13 @@ import { useReturnUrl } from '@/hooks/useReturnUrl'
 import AuthHeader from '@/components/auth/helper/AuthHeader'
 import AuthInput from '@/components/auth/helper/AuthInput'
 import AuthButton from '@/components/auth/helper/AuthButton'
-import { PageProps } from '@/lib/interfaces/common'
+ 
 
 const poppins = Poppins({
   subsets: ['latin'],
   weight: ['700', '400'],
 })
-export default function ForgetPasswordPage({ searchParams }: PageProps) {
+function ForgetPasswordContent() {
   const [step, setStep] = useState(1)
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
@@ -27,7 +28,7 @@ export default function ForgetPasswordPage({ searchParams }: PageProps) {
   const [resendLoading, setResendLoading] = useState(false)
   const [emailError, setEmailError] = useState('')
   const [isMounted, setIsMounted] = useState(false)
-  const returnUrl = useReturnUrl(searchParams)
+  const returnUrl = useReturnUrl()
   const emailInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -195,5 +196,13 @@ export default function ForgetPasswordPage({ searchParams }: PageProps) {
         </AnimatePresence>
       </div>
     </div>
+  )
+}
+
+export default function ForgetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="px-[24px] py-[10px] md:px-0 md:py-0">Loading...</div>}>
+      <ForgetPasswordContent />
+    </Suspense>
   )
 }
