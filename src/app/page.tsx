@@ -194,10 +194,10 @@ export default function Home() {
 
             {/* CTA Buttons */}
             <div className="hidden md:flex items-center space-x-4">
-              <Link href="/auth/login" className="text-gray-600 hover:text-blue-600 px-4 py-2 text-sm font-medium transition-colors duration-200">
+              <Link href="/welcome" className="text-gray-600 hover:text-blue-600 px-4 py-2 text-sm font-medium transition-colors duration-200">
                 Sign In
               </Link>
-              <Link href="/auth/signup" className="relative bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+              <Link href="/welcome" className="relative bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                 Get Started
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
               </Link>
@@ -230,8 +230,8 @@ export default function Home() {
               <a href="#testimonials" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors duration-200">Testimonials</a>
               <a href="#contact" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors duration-200">Contact</a>
               <div className="pt-4 border-t border-gray-200">
-                <Link href="/auth/login" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors duration-200">Sign In</Link>
-                <Link href="/auth/signup" className="block px-3 py-3 text-base font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300">Get Started</Link>
+                <Link href="/welcome" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors duration-200">Sign In</Link>
+                <Link href="/welcome" className="block px-3 py-3 text-base font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300">Get Started</Link>
               </div>
             </div>
           </div>

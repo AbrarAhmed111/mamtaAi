@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaArrowLeft, FaBaby, FaGoogle, FaApple, FaUserMd, FaShieldAlt } from 'react-icons/fa';
 import Link from 'next/link';
+import { signInWithEmail, signOut, getCurrentUser, type AuthUser } from '@/lib/supabase/actions';
 
 type UserRole = 'parent' | 'expert' | 'admin';
 
@@ -78,26 +79,32 @@ export default function LoginForm({ onLogin, onError }: LoginFormProps) {
     setIsLoading(true);
     
     try {
-      // TODO: Implement Supabase authentication
-      console.log('Login attempt:', formData);
-      
-      // Mock user data for demonstration
-      const mockUser: User = {
-        id: '1',
+      const { user, error } = await signInWithEmail({
         email: formData.email,
-        role: 'parent', // This would come from the database
-        isVerified: true,
-        onboardingCompleted: false,
-        fullName: 'John Doe'
-      };
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+        password: formData.password
+      });
       
-      onLogin?.(mockUser);
+      if (error) {
+        setErrors({ general: error.message });
+        onError?.(error.message);
+        return;
+      }
+
+      if (user) {
+        const userData: User = {
+          id: user.id,
+          email: user.email,
+          role: user.profile.role as UserRole,
+          isVerified: user.profile.is_verified || false,
+          onboardingCompleted: user.profile.onboarding_completed || false,
+          fullName: user.profile.full_name
+        };
+        
+        onLogin?.(userData);
+      }
     } catch (error) {
       console.error('Login error:', error);
-      const errorMessage = 'Invalid email or password';
+      const errorMessage = 'An unexpected error occurred. Please try again.';
       setErrors({ general: errorMessage });
       onError?.(errorMessage);
     } finally {
@@ -276,7 +283,7 @@ export default function LoginForm({ onLogin, onError }: LoginFormProps) {
             <label className="text-sm text-gray-600">Remember me</label>
           </div>
           <Link
-            href="/auth/forgot-password"
+            href="/forget-password"
             className="text-sm text-blue-600 hover:underline"
           >
             Forgot password?
@@ -338,7 +345,7 @@ export default function LoginForm({ onLogin, onError }: LoginFormProps) {
       <div className="mt-6 text-center">
         <p className="text-gray-600">
           Don&apos;t have an account?{' '}
-          <Link href="/auth/signup" className="text-blue-600 hover:underline font-medium">
+          <Link href="/signup" className="text-blue-600 hover:underline font-medium">
             Sign up here
           </Link>
         </p>

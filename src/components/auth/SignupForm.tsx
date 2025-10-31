@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaUser, FaPhone, FaCheck, FaGoogle, FaApple, FaUpload, FaArrowRight, FaUserMd, FaShieldAlt } from 'react-icons/fa';
 import Link from 'next/link';
 import Image from 'next/image';
+import { signUpWithEmail, type SignupData as SupabaseSignupData } from '@/lib/supabase/actions';
 
 type SignupStep = 'account' | 'personal' | 'role' | 'verification' | 'onboarding';
 type UserRole = 'parent' | 'expert' | 'admin';
@@ -167,18 +168,42 @@ export default function SignupForm({ onStepChange, onComplete }: SignupFormProps
     setIsLoading(true);
     
     try {
-      // TODO: Implement Supabase integration
-      console.log('Form submitted:', formData);
-      
       if (currentStep === 'account') {
-        setVerificationSent(true);
-        setCurrentStep('verification');
-        onStepChange?.('verification');
+        // Prepare signup data
+        const signupData: SupabaseSignupData = {
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+          role: formData.role as 'parent' | 'expert' | 'admin',
+          profilePicture: formData.profilePicture || undefined,
+          verificationDocuments: formData.verificationDocuments || undefined,
+          professionalTitle: formData.professionalTitle,
+          licenseNumber: formData.licenseNumber,
+          yearsOfExperience: formData.yearsOfExperience
+        };
+
+        // Call Supabase signup
+        const { user, error } = await signUpWithEmail(signupData);
+        
+        if (error) {
+          setErrors({ general: error.message });
+          return;
+        }
+
+        if (user) {
+          setVerificationSent(true);
+          setCurrentStep('verification');
+          onStepChange?.('verification');
+          onComplete?.(formData);
+        }
+      } else {
+        onComplete?.(formData);
       }
-      
-      onComplete?.(formData);
     } catch (error) {
       console.error('Signup error:', error);
+      setErrors({ general: 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -224,6 +249,11 @@ export default function SignupForm({ onStepChange, onComplete }: SignupFormProps
 
             {/* Email/Password Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
+              {errors.general && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-800 text-sm">{errors.general}</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Email Address
@@ -712,7 +742,7 @@ export default function SignupForm({ onStepChange, onComplete }: SignupFormProps
         <div className="text-center mt-6">
           <p className="text-gray-600">
             Already have an account?{' '}
-            <Link href="/auth/login" className="text-blue-600 hover:underline font-medium">
+          <Link href="/signin" className="text-blue-600 hover:underline font-medium">
               Sign in
             </Link>
           </p>

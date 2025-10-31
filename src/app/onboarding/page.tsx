@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/supabase/context';
+import { completeOnboarding } from '@/lib/supabase/actions';
 import { FaBaby, FaUserMd, FaCheck, FaStar, FaTrophy, FaGift, FaArrowRight, FaArrowLeft, FaCamera, FaHeart, FaUsers, FaChartLine } from 'react-icons/fa';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -26,6 +29,8 @@ interface ChecklistItem {
 }
 
 export default function OnboardingPage() {
+  const router = useRouter();
+  const { user, loading, refreshUser } = useAuth();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
   const [babyInfo, setBabyInfo] = useState<BabyInfo>({
     name: '',
@@ -65,6 +70,23 @@ export default function OnboardingPage() {
   
   const [totalPoints, setTotalPoints] = useState(0);
   const [badges, setBadges] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/welcome');
+    }
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    if (user?.profile.onboarding_completed) {
+      router.push('/dashboard');
+    }
+  }, [user, router]);
+
+  // Permanently disable onboarding: always redirect to dashboard
+  useEffect(() => {
+    router.replace('/dashboard');
+  }, [router]);
 
   const steps = [
     { id: 'welcome', title: 'Welcome', icon: FaStar },
@@ -120,6 +142,15 @@ export default function OnboardingPage() {
     
     if (currentIndex > 0) {
       setCurrentStep(stepOrder[currentIndex - 1]);
+    }
+  };
+
+  const finishOnboarding = async () => {
+    if (!user) return;
+    const { success } = await completeOnboarding(user.id);
+    if (success) {
+      await refreshUser();
+      router.push('/dashboard');
     }
   };
 
@@ -457,6 +488,17 @@ export default function OnboardingPage() {
                 Enjoy advanced AI insights and priority support.
               </p>
             </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={finishOnboarding}
+                className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors mx-auto"
+              >
+                Go to Dashboard
+                <FaArrowRight className="ml-2" />
+              </button>
+            </div>
           </div>
         );
 
@@ -514,24 +556,27 @@ export default function OnboardingPage() {
               Back
             </button>
 
-            {currentStep !== 'complete' ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Next
-                <FaArrowRight className="ml-2" />
-              </button>
-            ) : (
-              <Link
-                href="/dashboard"
-                className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Go to Dashboard
-                <FaArrowRight className="ml-2" />
-              </Link>
-            )}
+            <div className="flex items-center space-x-3">
+              {currentStep !== 'complete' && (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Next
+                  <FaArrowRight className="ml-2" />
+                </button>
+              )}
+              {currentStep !== 'complete' && (
+                <button
+                  type="button"
+                  onClick={finishOnboarding}
+                  className="px-4 py-2 text-gray-500 hover:text-gray-700"
+                >
+                  Skip onboarding
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
