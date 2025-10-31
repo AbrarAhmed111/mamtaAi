@@ -44,6 +44,8 @@ export default function DashboardPage() {
         avatar: user.profile.avatar_url || undefined
       }}
       currentPath="/dashboard"
+      role={user.profile.role}
+      onboardingCompleted={user.profile.onboarding_completed ?? null}
       onSignOut={async () => {
         try {
           await signOut();

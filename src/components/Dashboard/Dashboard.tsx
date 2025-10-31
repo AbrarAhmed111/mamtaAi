@@ -113,16 +113,8 @@ export default function Dashboard({
     }
   ]);
 
-  const [babies, setBabies] = useState<Baby[]>([
-    {
-      id: '1',
-      name: 'Emma',
-      age: '3 months',
-      avatar: '/api/placeholder/64/64',
-      lastCry: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-      totalCries: 15
-    }
-  ]);
+  const [babies, setBabies] = useState<Baby[]>([]);
+  const [babiesLoading, setBabiesLoading] = useState(false);
 
   const [totalPoints, setTotalPoints] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
@@ -154,6 +146,56 @@ export default function Dashboard({
       return { ...badge, earned, earnedAt: earned && !badge.earned ? new Date() : badge.earnedAt };
     }));
   }, [checklist, babies]);
+
+  const isParent = (user.role || '').toLowerCase() === 'parent';
+
+  useEffect(() => {
+    const fetchBabies = async () => {
+      if (!isParent) return;
+      try {
+        setBabiesLoading(true);
+        const res = await fetch('/api/babies', { cache: 'no-store' });
+        if (!res.ok) {
+          setBabies([]);
+          return;
+        }
+        const json = await res.json();
+        const dbBabies = (json.babies || []) as Array<{
+          id: string;
+          name: string;
+          birth_date: string;
+          avatar_url?: string | null;
+        }>;
+        const mapped: Baby[] = dbBabies.map(b => ({
+          id: b.id,
+          name: b.name,
+          age: formatAge(b.birth_date),
+          avatar: b.avatar_url || '/api/placeholder/64/64',
+          lastCry: new Date(),
+          totalCries: 0,
+        }));
+        setBabies(mapped);
+      } finally {
+        setBabiesLoading(false);
+      }
+    };
+    fetchBabies();
+  }, [isParent]);
+
+  function formatAge(birthDateISO: string): string {
+    try {
+      const bd = new Date(birthDateISO);
+      const now = new Date();
+      const months = (now.getFullYear() - bd.getFullYear()) * 12 + (now.getMonth() - bd.getMonth());
+      if (months <= 0) return 'Newborn';
+      if (months < 12) return `${months} month${months === 1 ? '' : 's'}`;
+      const years = Math.floor(months / 12);
+      const remMonths = months % 12;
+      return remMonths ? `${years}y ${remMonths}m` : `${years}y`;
+    } catch {
+      return '';
+    }
+  }
 
   const completeChecklistItem = (itemId: string) => {
     setChecklist(prev => prev.map(item => {
@@ -260,18 +302,37 @@ export default function Dashboard({
                 onItemAction={handleChecklistAction}
               />
               
-              <RecordingSection
-                isRecording={isRecording}
-                recordingTime={recordingTime}
-                onStartRecording={startRecording}
-                onStopRecording={stopRecording}
-              />
+              {isParent && (
+                <RecordingSection
+                  isRecording={isRecording}
+                  recordingTime={recordingTime}
+                  onStartRecording={startRecording}
+                  onStopRecording={stopRecording}
+                />
+              )}
               
-              <BabyProfiles
-                babies={babies}
-                onAddBaby={handleAddBaby}
-                onBabyClick={handleBabyClick}
-              />
+              {isParent && (
+                babiesLoading ? (
+                  <div className="bg-white rounded-xl p-6 border border-gray-100 text-gray-600">Loading babies...</div>
+                ) : babies.length > 0 ? (
+                  <BabyProfiles
+                    babies={babies}
+                    onAddBaby={handleAddBaby}
+                    onBabyClick={handleBabyClick}
+                  />
+                ) : (
+                  <div className="bg-white rounded-xl p-6 border border-dashed border-gray-200 text-center">
+                    <p className="text-gray-700 font-medium">No babies added yet</p>
+                    <p className="text-gray-500 text-sm mt-1">Add your baby to start tracking and getting insights.</p>
+                    <button
+                      onClick={handleAddBaby}
+                      className="mt-4 inline-flex items-center px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+                    >
+                      Add Baby
+                    </button>
+                  </div>
+                )
+              )}
             </div>
 
             {/* Sidebar */}

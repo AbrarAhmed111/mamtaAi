@@ -2,7 +2,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/supabase/context';
 import { 
   FaBaby, 
   FaMicrophone, 
@@ -35,6 +37,15 @@ import {
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeModule, setActiveModule] = useState(0);
+  const router = useRouter();
+  const { user } = useAuth();
+
+  // Redirect signed-in users to dashboard
+  useEffect(() => {
+    if (user) {
+      router.replace('/dashboard');
+    }
+  }, [user, router]);
 
   const modules = [
     {
