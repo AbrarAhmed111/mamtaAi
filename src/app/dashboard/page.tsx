@@ -2,18 +2,9 @@
 
 import { useAuth } from '@/lib/supabase/context';
 import Dashboard from '@/components/Dashboard/Dashboard';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/welcome');
-    }
-  }, [user, loading, router]);
+  const { user, loading, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -27,7 +18,8 @@ export default function DashboardPage() {
   }
 
   if (!user) {
-    return null; // Will redirect to login
+    // Middleware protects this route; avoid client-side redirect loops
+    return null;
   }
 
   return (
@@ -38,6 +30,14 @@ export default function DashboardPage() {
         avatar: user.profile.avatar_url || undefined
       }}
       currentPath="/dashboard"
+      onSignOut={async () => {
+        try {
+          await signOut();
+          window.location.href = '/welcome';
+        } catch (e) {
+          // ignore
+        }
+      }}
     />
   );
 }

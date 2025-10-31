@@ -6,13 +6,17 @@ import { supabaseAdmin } from '@/lib/supabase/client'
 
 export async function checkEmailAndRedirect(email: string): Promise<{ status: 'signin' | 'signup'; error?: string }> {
   try {
-    // Use admin listUsers with email filter (requires SUPABASE_SERVICE_ROLE_KEY)
-    const { data, error } = await (supabaseAdmin as any).auth.admin.listUsers({ email, perPage: 1 })
-    if (error) return { status: 'signin' }
-    const exists = Array.isArray(data?.users) && data.users.length > 0
+    // Best-effort existence check using admin listUsers
+    const { data, error } = await (supabaseAdmin as any).auth.admin.listUsers({ page: 1, perPage: 1000 })
+    if (error || !Array.isArray(data?.users)) {
+      // Be conservative: if we can't verify, default to signup to avoid false positives
+      return { status: 'signup' }
+    }
+    const target = email.trim().toLowerCase()
+    const exists = data.users.some((u: any) => (u.email || '').toLowerCase() === target)
     return { status: exists ? 'signin' : 'signup' }
   } catch {
-    return { status: 'signin' }
+    return { status: 'signup' }
   }
 }
 

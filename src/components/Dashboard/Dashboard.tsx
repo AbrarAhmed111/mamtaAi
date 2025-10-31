@@ -47,11 +47,13 @@ interface DashboardProps {
     avatar?: string;
   };
   currentPath?: string;
+  onSignOut?: () => void;
 }
 
 export default function Dashboard({ 
   user = { name: 'Sarah Johnson', role: 'Parent' },
-  currentPath = '/dashboard'
+  currentPath = '/dashboard',
+  onSignOut
 }: DashboardProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([
@@ -241,9 +243,11 @@ export default function Dashboard({
         <DashboardHeader
           greeting={getGreeting()}
           userName={user.name.split(' ')[0]}
+          userAvatarUrl={user.avatar}
           onNotificationClick={handleNotificationClick}
           onSettingsClick={handleSettingsClick}
           onMenuToggle={toggleMobileMenu}
+          onSignOut={onSignOut}
         />
         
         <div className="flex-1 p-4 sm:p-6">

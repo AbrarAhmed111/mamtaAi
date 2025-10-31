@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import { FaBell, FaCog, FaBars } from 'react-icons/fa';
 
 interface DashboardHeaderProps {
@@ -10,6 +11,8 @@ interface DashboardHeaderProps {
   onNotificationClick?: () => void;
   onSettingsClick?: () => void;
   onMenuToggle?: () => void;
+  onSignOut?: () => void;
+  userAvatarUrl?: string;
 }
 
 export default function DashboardHeader({
@@ -19,8 +22,23 @@ export default function DashboardHeader({
   showNotifications = true,
   onNotificationClick,
   onSettingsClick,
-  onMenuToggle
+  onMenuToggle,
+  onSignOut,
+  userAvatarUrl
 }: DashboardHeaderProps) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener('click', handler);
+    return () => window.removeEventListener('click', handler);
+  }, []);
+
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="px-4 sm:px-6 py-4">
@@ -44,7 +62,7 @@ export default function DashboardHeader({
             </div>
           </div>
           
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4" ref={menuRef}>
             {showNotifications && (
               <button 
                 className="p-2 text-gray-400 hover:text-gray-600 relative"
@@ -60,6 +78,34 @@ export default function DashboardHeader({
             >
               <FaCog className="text-lg" />
             </button>
+
+            {/* User dropdown */}
+            <div className="relative">
+              <button
+                className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-gray-200 hover:bg-gray-50"
+                onClick={() => setOpen(prev => !prev)}
+              >
+                <img
+                  src={userAvatarUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(userName) + '&background=E5E7EB&color=111827&size=64'}
+                  alt={userName}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+                <span className="hidden sm:inline text-sm font-medium text-gray-700">{userName}</span>
+              </button>
+              {open && (
+                <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                    onClick={() => {
+                      setOpen(false);
+                      onSignOut && onSignOut();
+                    }}
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

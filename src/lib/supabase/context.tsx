@@ -47,23 +47,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Get initial session
-    const getInitialSession = async () => {
+    const init = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          await refreshUser();
-        }
+        // Always attempt to resolve user from server (SSR cookies)
+        await refreshUser();
       } catch (error) {
-        console.error('Error getting initial session:', error);
+        console.error('Error initializing auth:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    getInitialSession();
+    init();
 
-    // Listen for auth changes
+    // Listen for auth changes (client-side events)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
