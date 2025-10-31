@@ -1,10 +1,18 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useAuth } from '@/lib/supabase/context';
 import Dashboard from '@/components/Dashboard/Dashboard';
 
 export default function DashboardPage() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, refreshUser } = useAuth();
+
+  // Ensure user is hydrated after navigations without needing a manual refresh
+  useEffect(() => {
+    if (!loading && !user) {
+      void refreshUser();
+    }
+  }, [loading, user, refreshUser]);
 
   if (loading) {
     return (
@@ -18,8 +26,14 @@ export default function DashboardPage() {
   }
 
   if (!user) {
-    // Middleware protects this route; avoid client-side redirect loops
-    return null;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Preparing your dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
