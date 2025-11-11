@@ -23,8 +23,31 @@ export async function updateSession(request: NextRequest) {
   if (currentPath.startsWith('/reset-password')) return supabaseResponse
 
   if (user && !userError) {
-    // Redirect authenticated users away from auth pages or root
-    if (isAuthPage || currentPath === '/') {
+    // Fetch role and verification only when needed
+    let role: string | null = null
+    let isVerified: boolean | null = null
+    const ensureProfile = async () => {
+      if (role !== null) return
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('role, is_verified')
+          .eq('id', user.id)
+          .single()
+        role = (data?.role as string) || null
+        isVerified = (data?.is_verified as boolean) || false
+      } catch {
+        role = null
+        isVerified = false
+      }
+    }
+    // Redirect authenticated users away from auth pages (allow landing page '/')
+    if (isAuthPage) {
+      await ensureProfile()
+      // Experts without approval should not land on dashboard
+      if (role === 'expert' && !isVerified) {
+        return NextResponse.redirect(new URL('/onboarding?status=pending', request.url))
+      }
       const returnUrl = request.nextUrl.searchParams.get('returnUrl')
       if (returnUrl) {
         try {
@@ -35,6 +58,18 @@ export async function updateSession(request: NextRequest) {
         }
       }
       return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+
+    // Block experts without approval from protected pages
+    if (isProtectedPath) {
+      await ensureProfile()
+      // If already on onboarding, allow to avoid redirect loops
+      if (currentPath.startsWith('/onboarding')) {
+        return supabaseResponse
+      }
+      if (role === 'expert' && !isVerified) {
+        return NextResponse.redirect(new URL('/onboarding?status=pending', request.url))
+      }
     }
 
     // Allow access to protected and public paths

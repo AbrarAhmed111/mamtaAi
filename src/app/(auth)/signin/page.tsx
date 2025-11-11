@@ -3,7 +3,8 @@
 'use client'
 
 import React, { useEffect, useRef, useState, Suspense } from 'react'
-import { signin } from '@/lib/actions/auth'
+import { useSearchParams } from 'next/navigation'
+import { resendConfirmation, signin } from '@/lib/actions/auth'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AUTH_CONSTANTS, buildReturnUrl } from '@/lib/constants'
@@ -22,6 +23,10 @@ function SignInContent() {
   const [showPassword, setShowPassword] = useState(false)
   const [password, setPassword] = useState('')
   const returnUrl = useReturnUrl()
+  const [resending, setResending] = useState(false)
+  const [resendMsg, setResendMsg] = useState('')
+  const qs = useSearchParams()
+  const wasVerified = qs?.get('verified') === '1'
 
   const router = useRouter()
   const passwordInputRef = useRef<HTMLInputElement>(null)
@@ -122,7 +127,39 @@ function SignInContent() {
               Forgot password?
             </button>
           </Link>
+          {error?.toLowerCase().includes('verify') || error?.toLowerCase().includes('confirm') ? (
+            <div className="w-full text-xs text-red-900 bg-red-50 border border-yellow-200 rounded p-2 mt-2">
+              Please verify your email to sign in.{" "}
+              <button
+                type="button"
+                disabled={resending}
+                onClick={async () => {
+                  setResending(true)
+                  setResendMsg('')
+                  const addr = email
+                  if (!addr) {
+                    setResendMsg('Email not found. Go back and enter your email again.')
+                    setResending(false)
+                    return
+                  }
+                  const { success, error: e } = await resendConfirmation(addr)
+                  setResendMsg(success || e || '')
+                  setResending(false)
+                }}
+                className="text-[#002e6b] underline ml-1 disabled:opacity-50"
+              >
+                Resend confirmation email
+              </button>
+              {resendMsg && <div className="mt-1 text-xs text-gray-700">{resendMsg}</div>}
+            </div>
+          ) : null}
         </div>
+
+        {wasVerified && (
+          <div className="w-full text-xs text-green-700 bg-green-50 border border-green-200 rounded p-2 -mt-2">
+            Your email has been verified. Please sign in to continue.
+          </div>
+        )}
 
         <div className="absolute md:static right-[3%] justify-center flex items-center bottom-2 w-[94%] md:w-full mx-auto">
           <AuthButton

@@ -1,7 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { signInWithEmail, signUpWithEmail, resetPassword, type SignupData } from '@/lib/supabase/actions'
+import { signInWithEmail, signUpWithEmail, resetPassword, resendSignupConfirmation, type SignupData } from '@/lib/supabase/actions'
 import { supabaseAdmin } from '@/lib/supabase/client'
 
 export async function checkEmailAndRedirect(email: string): Promise<{ status: 'signin' | 'signup'; error?: string }> {
@@ -36,17 +36,32 @@ export async function signup(formData: FormData): Promise<{ success?: boolean; e
   const lastName = String(formData.get('last-name') || '')
   const email = String(formData.get('email') || '')
   const password = String(formData.get('password') || '')
+  const role = String(formData.get('role') || 'parent') as 'parent' | 'expert' | 'admin'
+  const professionalTitle = String(formData.get('professional-title') || '')
+  const licenseNumber = String(formData.get('license-number') || '')
+  const yearsOfExperience = String(formData.get('years-of-experience') || '')
+  const documents = formData.getAll('documents').filter(Boolean) as File[]
 
   const payload: SignupData = {
     email,
     password,
     firstName,
     lastName,
-    role: 'parent',
+    role,
+    professionalTitle: role === 'expert' ? professionalTitle || undefined : undefined,
+    licenseNumber: role === 'expert' ? licenseNumber || undefined : undefined,
+    yearsOfExperience: role === 'expert' ? yearsOfExperience || undefined : undefined,
+    verificationDocuments: role === 'expert' ? documents : undefined,
   }
 
   const { user, error } = await signUpWithEmail(payload)
-  if (error) return { error: error.message }
+  if (error) {
+    // If auth user was created but profile failed, still guide user to verify email
+    if (error.message.toLowerCase().includes('create user profile')) {
+      return { success: true }
+    }
+    return { error: error.message }
+  }
   if (!user) return { error: 'Failed to create account' }
   return { success: true }
 }
@@ -55,6 +70,12 @@ export async function forgotPassword(email: string): Promise<{ success?: string;
   const { error } = await resetPassword(email)
   if (error) return { error: error.message }
   return { success: 'Password reset email sent successfully.' }
+}
+
+export async function resendConfirmation(email: string): Promise<{ success?: string; error?: string }> {
+  const { error } = await resendSignupConfirmation(email)
+  if (error) return { error: error.message }
+  return { success: 'Confirmation email resent. Please check your inbox.' }
 }
 
 // Optional: implement server-side password update if needed later

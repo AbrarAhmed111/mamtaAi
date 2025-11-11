@@ -39,6 +39,15 @@ function SignUpContent() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [nameError, setNameError] = useState('')
+  const [role, setRole] = useState<'parent' | 'expert' | ''>('')
+  const [professionalTitle, setProfessionalTitle] = useState('')
+  const [licenseNumber, setLicenseNumber] = useState('')
+  const [yearsOfExperience, setYearsOfExperience] = useState('')
+  const docsInputRef = useRef<HTMLInputElement>(null)
+  const [expTitleError, setExpTitleError] = useState('')
+  const [expLicenseError, setExpLicenseError] = useState('')
+  const [expYearsError, setExpYearsError] = useState('')
+  const [expDocsError, setExpDocsError] = useState('')
   const returnUrl = useReturnUrl()
 
   const passwordInputRef = useRef<HTMLInputElement>(null)
@@ -75,6 +84,62 @@ function SignUpContent() {
       return
     }
 
+    if (!role) {
+      toast.error('Please select your role')
+      return
+    }
+
+    if (role === 'expert') {
+      // Validate expert fields
+      let hasError = false
+
+      if (!professionalTitle.trim()) {
+        setExpTitleError('Professional title is required')
+        hasError = true
+      } else {
+        setExpTitleError('')
+      }
+
+      if (!licenseNumber.trim()) {
+        setExpLicenseError('License number is required')
+        hasError = true
+      } else {
+        setExpLicenseError('')
+      }
+
+      const yearsNum = Number(yearsOfExperience)
+      if (!yearsOfExperience || Number.isNaN(yearsNum) || yearsNum < 0 || yearsNum > 80 || !Number.isInteger(yearsNum)) {
+        setExpYearsError('Years of experience must be an integer between 0 and 80')
+        hasError = true
+      } else {
+        setExpYearsError('')
+      }
+
+      const files = docsInputRef.current?.files
+      if (!files || files.length === 0) {
+        setExpDocsError('Please upload at least one supporting document (PDF/JPG/PNG, max 5MB)')
+        hasError = true
+      } else {
+        // Validate file types and sizes
+        const allowed = ['application/pdf', 'image/png', 'image/jpeg']
+        let invalid = ''
+        for (const f of Array.from(files)) {
+          if (!allowed.includes(f.type) || f.size > 5 * 1024 * 1024) {
+            invalid = 'Each document must be PDF/JPG/PNG and <= 5MB'
+            break
+          }
+        }
+        if (invalid) {
+          setExpDocsError(invalid)
+          hasError = true
+        } else {
+          setExpDocsError('')
+        }
+      }
+
+      if (hasError) return
+    }
+
     setIsLoading(true)
     setNameError('')
 
@@ -84,13 +149,25 @@ function SignUpContent() {
       fd.append('last-name', lastName)
       fd.append('email', email)
       fd.append('password', password)
+      fd.append('role', role)
+      if (role === 'expert') {
+        if (professionalTitle) fd.append('professional-title', professionalTitle)
+        if (licenseNumber) fd.append('license-number', licenseNumber)
+        if (yearsOfExperience) fd.append('years-of-experience', yearsOfExperience)
+        const files = docsInputRef.current?.files
+        if (files && files.length) {
+          Array.from(files).forEach(f => fd.append('documents', f))
+        }
+      }
 
       const res = await signup(fd)
 
       if (res?.success) {
         toast.success(AUTH_CONSTANTS.SUCCESS_MESSAGES.SIGNUP_SUCCESS)
-        router.push(buildReturnUrl(AUTH_CONSTANTS.ROUTES.SIGNIN, returnUrl))
-        localStorage.removeItem(AUTH_CONSTANTS.STORAGE_KEYS.AUTH_EMAIL)
+        // Redirect to verify-email page with countdown before Sign In
+        const emailParam = encodeURIComponent(email)
+        const rt = returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''
+        router.push(`/verify-email?email=${emailParam}${rt}`)
       }
     } catch (err) {
       console.error('Signup error:', err)
@@ -101,6 +178,18 @@ function SignUpContent() {
 
   function nextStep() {
     setStep(2)
+  }
+  function nextExpertStep() {
+    // Ensure names and role are set before proceeding
+    if (!firstName || !lastName) {
+      setNameError(AUTH_CONSTANTS.ERROR_MESSAGES.NAME_REQUIRED)
+      return
+    }
+    if (!role) {
+      toast.error('Please select your role')
+      return
+    }
+    setStep(3)
   }
 
   useEffect(() => {
@@ -219,7 +308,7 @@ function SignUpContent() {
               </div>
             </div>
           </motion.div>
-        ) : (
+        ) : step === 2 ? (
           <motion.div key="step2">
             <div className="px-[24px] py-[10px]">
               <div className="flex md:block flex-col h-screen md:h-auto justify-between">
@@ -276,23 +365,60 @@ function SignUpContent() {
                       }}
                       error={nameError}
                     />
+
+                    {/* Role selection */}
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-700 mb-2">I am a:</p>
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="role"
+                            checked={role === 'parent'}
+                            onChange={() => setRole('parent')}
+                          />
+                          <span>Parent</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="role"
+                            checked={role === 'expert'}
+                            onChange={() => setRole('expert')}
+                          />
+                          <span>Expert</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
 
-                  <form
-                    className="md:block hidden"
-                    id="signupFormStep2"
-                    onSubmit={handleSubmit}
-                  >
-                    <AuthButton
-                      type="submit"
-                      disabled={!firstName || !lastName}
-                      loading={isLoading}
-                      loadingText="Creating account..."
-                      className="my-6 sm:my-8"
+                  {role === 'expert' ? (
+                    <div className="md:block hidden my-6 sm:my-8">
+                      <AuthButton
+                        onClick={nextExpertStep}
+                        disabled={!firstName || !lastName}
+                        className=""
+                      >
+                        Next
+                      </AuthButton>
+                    </div>
+                  ) : (
+                    <form
+                      className="md:block hidden"
+                      id="signupFormStep2"
+                      onSubmit={handleSubmit}
                     >
-                      Create Account
-                    </AuthButton>
-                  </form>
+                      <AuthButton
+                        type="submit"
+                        disabled={!firstName || !lastName || !role}
+                        loading={isLoading}
+                        loadingText="Creating account..."
+                        className="my-6 sm:my-8"
+                      >
+                        Create Account
+                      </AuthButton>
+                    </form>
+                  )}
                 </div>
 
                 <div>
@@ -314,22 +440,131 @@ function SignUpContent() {
                       Privacy Policy
                     </button>
                   </div>
-                  <form
-                    className="md:hidden mb-4"
-                    id="signupFormStep2"
-                    onSubmit={handleSubmit}
-                  >
-                    <AuthButton
-                      type="submit"
-                      disabled={!firstName || !lastName}
-                      loading={isLoading}
-                      loadingText="Creating account..."
-                      className="mt-6 sm:mt-12"
+                  {role === 'expert' ? (
+                    <div className="md:hidden mb-4">
+                      <AuthButton onClick={nextExpertStep} disabled={!firstName || !lastName} className="mt-6 sm:mt-12">
+                        Next
+                      </AuthButton>
+                    </div>
+                  ) : (
+                    <form
+                      className="md:hidden mb-4"
+                      id="signupFormStep2"
+                      onSubmit={handleSubmit}
                     >
-                      Create Account
-                    </AuthButton>
-                  </form>
+                      <AuthButton
+                        type="submit"
+                        disabled={!firstName || !lastName || !role}
+                        loading={isLoading}
+                        loadingText="Creating account..."
+                        className="mt-6 sm:mt-12"
+                      >
+                        Create Account
+                      </AuthButton>
+                    </form>
+                  )}
                 </div>
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div key="step3">
+            <div className="px-[24px] py-[10px]">
+              <div className="py-[10px] max-w-[500px]">
+                <AuthHeader
+                  title="Expert verification"
+                  label="SIGN UP"
+                  onBack={() => setStep(2)}
+                  returnUrl={returnUrl}
+                />
+
+                <div className="mt-[24px] space-y-3 ">
+                  <AuthInput
+                    placeholder="Professional Title"
+                    value={professionalTitle}
+                    onChange={e => {
+                      setProfessionalTitle(e.target.value)
+                      if (expTitleError) setExpTitleError('')
+                    }}
+                    onBlur={() => {
+                      if (!professionalTitle.trim()) setExpTitleError('Professional title is required')
+                    }}
+                    error={expTitleError}
+                  />
+                  <AuthInput
+                    placeholder="License Number"
+                    value={licenseNumber}
+                    onChange={e => {
+                      setLicenseNumber(e.target.value)
+                      if (expLicenseError) setExpLicenseError('')
+                    }}
+                    onBlur={() => {
+                      if (!licenseNumber.trim()) setExpLicenseError('License number is required')
+                    }}
+                    error={expLicenseError}
+                  />
+                  <AuthInput
+                    type="number"
+                    min={0}
+                    max={80}
+                    step={1}
+                    placeholder="Years of Experience"
+                    value={yearsOfExperience}
+                    onChange={e => {
+                      setYearsOfExperience(e.target.value)
+                      if (expYearsError) setExpYearsError('')
+                    }}
+                    onBlur={() => {
+                      const n = Number(yearsOfExperience)
+                      if (!yearsOfExperience || Number.isNaN(n) || n < 0 || n > 80 || !Number.isInteger(n)) {
+                        setExpYearsError('Years of experience must be an integer between 0 and 80')
+                      }
+                    }}
+                    error={expYearsError}
+                  />
+                  <div>
+                    <label className="text-sm text-gray-700">Upload supporting documents</label>
+                    <input
+                      ref={docsInputRef}
+                      type="file"
+                      name="documents"
+                      multiple
+                      accept=".pdf,image/png,image/jpeg"
+                      className="mt-1 block w-full text-sm"
+                      onChange={() => expDocsError && setExpDocsError('')}
+                    />
+                    {expDocsError && (
+                      <p className="text-xs text-red-600 mt-1">{expDocsError}</p>
+                    )}
+                  </div>
+                  <p className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded px-2 py-1">
+                    You will be given access after reviewing your application.
+                  </p>
+                </div>
+
+                <form id="signupFormStep3" onSubmit={handleSubmit} className="md:block hidden">
+                  <AuthButton
+                    type="submit"
+                    disabled={!firstName || !lastName || role !== 'expert'}
+                    loading={isLoading}
+                    loadingText="Creating account..."
+                    className="my-6 sm:my-8"
+                  >
+                    Create Account
+                  </AuthButton>
+                </form>
+
+                <form id="signupFormStep3m" onSubmit={handleSubmit} className="md:hidden mb-4">
+                  <AuthButton
+                    type="submit"
+                    disabled={!firstName || !lastName || role !== 'expert'}
+                    loading={isLoading}
+                    loadingText="Creating account..."
+                    className="mt-6 sm:mt-12"
+                  >
+                    Create Account
+                  </AuthButton>
+                </form>
               </div>
             </div>
           </motion.div>

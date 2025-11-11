@@ -23,7 +23,7 @@ export default function AuthButton({
   const variantClasses = {
     primary:
       disabled || loading
-        ? 'bg-[#E0E6EE] text-[#66696D] cursor-not-allowed'
+        ? 'bg-[#E0E6EE] text-[#black] cursor-not-allowed'
         : 'bg-[#002e6b] text-white hover:opacity-90',
     secondary:
       'border border-[#002e6b] text-[#002e6b] bg-transparent hover:bg-[#002e6b] hover:text-white',

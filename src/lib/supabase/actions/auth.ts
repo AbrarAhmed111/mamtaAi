@@ -54,9 +54,13 @@ export async function signUpWithEmail(data: SignupData): Promise<{ user: AuthUse
   try {
     const supabase = await createServerClient()
     // Create user account
+    const baseURL = await getBaseURL()
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
+      options: {
+        emailRedirectTo: `${baseURL}/api/auth/confirm`,
+      },
     });
 
     if (authError) {
@@ -88,7 +92,7 @@ export async function signUpWithEmail(data: SignupData): Promise<{ user: AuthUse
       }
     };
 
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .insert(profileData)
       .select()
@@ -128,7 +132,17 @@ export async function signInWithEmail(data: LoginData): Promise<{ user: AuthUser
     });
 
     if (authError) {
-      return { user: null, error: { message: authError.message, code: authError.message } };
+      const msg = authError.message || ''
+      const isUnconfirmed = msg.toLowerCase().includes('confirm')
+      return {
+        user: null,
+        error: {
+          message: isUnconfirmed
+            ? 'Please verify your email address before signing in.'
+            : msg,
+          code: isUnconfirmed ? 'email_not_confirmed' : authError.message,
+        },
+      }
     }
 
     if (!authData.user) {
@@ -244,6 +258,27 @@ export async function resetPassword(email: string): Promise<{ error: AuthError |
     return { 
       error: { message: 'An unexpected error occurred' } 
     };
+  }
+}
+
+// Resend signup confirmation email
+export async function resendSignupConfirmation(email: string): Promise<{ error: AuthError | null }> {
+  try {
+    const supabase = await createServerClient()
+    const baseURL = await getBaseURL()
+    // resend for signup confirmation
+    const { error } = await (supabase as any).auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `${baseURL}/api/auth/confirm` },
+    })
+    if (error) {
+      return { error: { message: error.message, code: error.message } }
+    }
+    return { error: null }
+  } catch (error) {
+    console.error('Resend confirmation error:', error)
+    return { error: { message: 'Failed to resend confirmation email' } }
   }
 }
 

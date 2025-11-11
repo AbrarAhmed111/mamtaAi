@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import toast from 'react-hot-toast';
 import { FaBaby, FaCamera, FaUsers, FaCheck, FaTrophy, FaStar, FaMicrophone } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import DashboardHeader from './DashboardHeader';
@@ -48,12 +50,16 @@ interface DashboardProps {
   };
   currentPath?: string;
   onSignOut?: () => void;
+  role?: string | null;
+  onboardingCompleted?: boolean | null;
 }
 
 export default function Dashboard({ 
   user = { name: 'Sarah Johnson', role: 'Parent' },
   currentPath = '/dashboard',
-  onSignOut
+  onSignOut,
+  role,
+  onboardingCompleted
 }: DashboardProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([
@@ -115,6 +121,8 @@ export default function Dashboard({
 
   const [babies, setBabies] = useState<Baby[]>([]);
   const [babiesLoading, setBabiesLoading] = useState(false);
+  const [showSelectBaby, setShowSelectBaby] = useState(false);
+  const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
 
   const [totalPoints, setTotalPoints] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
@@ -147,7 +155,10 @@ export default function Dashboard({
     }));
   }, [checklist, babies]);
 
-  const isParent = (user.role || '').toLowerCase() === 'parent';
+  const effectiveRole = (role ?? user.role ?? '').toLowerCase();
+  const isParent = effectiveRole === 'parent';
+  const isRoleUnset = !effectiveRole || (effectiveRole !== 'parent' && effectiveRole !== 'expert');
+  const isOnboardingIncomplete = onboardingCompleted === false;
 
   useEffect(() => {
     const fetchBabies = async () => {
@@ -237,13 +248,40 @@ export default function Dashboard({
 
   const handleChecklistAction = (itemId: string) => {
     if (itemId === 'first-cry') {
-      startRecording();
-    } else {
-      completeChecklistItem(itemId);
+      if (!isParent) {
+        toast.error('Only parents can record cries.');
+        return;
+      }
+      if (isOnboardingIncomplete || isRoleUnset) {
+        toast.error('Please complete onboarding first.');
+        return;
+      }
+      if (babies.length === 0) {
+        setSelectedBabyId(null);
+        setShowSelectBaby(true);
+        return;
+      }
+      if (babies.length === 1) {
+        setSelectedBabyId(babies[0].id);
+        startRecording();
+        return;
+      }
+      if (!selectedBabyId) setSelectedBabyId(babies[0].id);
+      setShowSelectBaby(true);
+      return;
     }
+    completeChecklistItem(itemId);
   };
 
   const handleAddBaby = () => {
+    if (!isParent) {
+      toast.error('Only parents can add babies. Please select Parent as your role.');
+      return;
+    }
+    if (isOnboardingIncomplete || isRoleUnset) {
+      toast.error('Please complete onboarding before adding a baby.');
+      return;
+    }
     // TODO: Implement add baby functionality
     console.log('Add baby clicked');
   };
@@ -291,7 +329,99 @@ export default function Dashboard({
           onMenuToggle={toggleMobileMenu}
           onSignOut={onSignOut}
         />
+
+        {(isRoleUnset || isOnboardingIncomplete) && (
+          <div className="mx-4 sm:mx-6 mt-4">
+            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <p className="font-medium">
+                    {isRoleUnset
+                      ? 'Please choose your role (Parent or Expert).'
+                      : 'Please complete your profile onboarding to continue.'}
+                  </p>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    {isRoleUnset
+                      ? 'This helps us tailor the dashboard to your needs.'
+                      : 'Complete your profile to unlock all features.'}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Link
+                    href="/onboarding"
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-yellow-600 text-white text-sm font-medium hover:bg-yellow-700"
+                  >
+                    Go to onboarding
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         
+        {showSelectBaby && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-4">
+              <h3 className="text-lg font-semibold">Select your baby</h3>
+              <p className="text-sm text-gray-600 mt-1">Choose which baby this recording is for.</p>
+              {babies.length === 0 ? (
+                <div className="mt-4 text-center">
+                  <p className="text-gray-700 font-medium">No babies found</p>
+                  <p className="text-gray-500 text-sm mt-1">Please add a baby before recording a cry.</p>
+                </div>
+              ) : (
+                <div className="mt-3 space-y-2 max-h-60 overflow-auto">
+                  {babies.map(b => (
+                    <label key={b.id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="selectedBaby"
+                        checked={selectedBabyId === b.id}
+                        onChange={() => setSelectedBabyId(b.id)}
+                      />
+                      <span className="font-medium text-gray-800">{b.name}</span>
+                      <span className="ml-auto text-xs text-gray-500">{b.age}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  onClick={() => setShowSelectBaby(false)}
+                  className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                {babies.length === 0 ? (
+                  <button
+                    onClick={() => {
+                      setShowSelectBaby(false);
+                      handleAddBaby();
+                    }}
+                    className="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    Add Baby
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (!selectedBabyId) {
+                        toast.error('Please select a baby');
+                        return;
+                      }
+                      setShowSelectBaby(false);
+                      startRecording();
+                    }}
+                    className="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    Continue
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 p-4 sm:p-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             {/* Main Content */}

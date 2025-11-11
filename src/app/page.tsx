@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/supabase/context';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   FaBaby, 
   FaMicrophone, 
@@ -33,19 +34,27 @@ import {
   FaBars,
   FaTimes
 } from 'react-icons/fa';
+import logo from '@/assets/img/smallLogo.png'
+import Image from 'next/image';
+
 
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeModule, setActiveModule] = useState(0);
-  const router = useRouter();
   const { user } = useAuth();
+  const router = useRouter();
+  const qs = useSearchParams();
 
-  // Redirect signed-in users to dashboard
+  // If root receives Supabase error params for expired/invalid email link, route to resend page
   useEffect(() => {
-    if (user) {
-      router.replace('/dashboard');
+    const error = qs?.get('error') || ''
+    const code = qs?.get('error_code') || ''
+    const desc = qs?.get('error_description') || ''
+    const expired = code === 'otp_expired' || /expired|invalid/i.test(error + ' ' + desc)
+    if (expired) {
+      router.replace('/verify-email?error=true&message=' + encodeURIComponent(desc || 'Email link is invalid or has expired'))
     }
-  }, [user, router]);
+  }, [qs, router]);
 
   const modules = [
     {
@@ -165,8 +174,8 @@ export default function Home() {
             <div className="flex items-center group cursor-pointer">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
-                <div className="relative bg-white p-2 rounded-full">
-                  <FaBaby className="h-8 w-8 text-blue-600 group-hover:text-purple-600 transition-colors duration-300" />
+                <div className="relative ">
+                  <Image src={logo} alt='' className="h-12 rounded-full w-12 text-blue-600 group-hover:text-purple-600 transition-colors duration-300" />
                 </div>
               </div>
               <div className="ml-3">
@@ -205,13 +214,22 @@ export default function Home() {
 
             {/* CTA Buttons */}
             <div className="hidden md:flex items-center space-x-4">
-              <Link href="/welcome" className="text-gray-600 hover:text-blue-600 px-4 py-2 text-sm font-medium transition-colors duration-200">
-                Sign In
-              </Link>
-              <Link href="/welcome" className="relative bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                Get Started
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
-              </Link>
+              {user ? (
+                <Link href="/dashboard" className="relative bg-gradient-to-r from-blue-600 to-purple-600 !text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                  Dashboard
+               
+                </Link>
+              ) : (
+                <>
+                  <Link href="/welcome" className="text-gray-600 hover:text-blue-600 px-4 py-2 text-sm font-medium transition-colors duration-200">
+                    Sign In
+                  </Link>
+                  <Link href="/welcome" className="relative bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                    Get Started
+                   
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Mobile menu button */}
@@ -240,10 +258,16 @@ export default function Home() {
               <a href="#features" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors duration-200">Features</a>
               <a href="#testimonials" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors duration-200">Testimonials</a>
               <a href="#contact" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors duration-200">Contact</a>
-              <div className="pt-4 border-t border-gray-200">
-                <Link href="/welcome" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors duration-200">Sign In</Link>
-                <Link href="/welcome" className="block px-3 py-3 text-base font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300">Get Started</Link>
-              </div>
+                <div className="pt-4 border-t border-gray-200">
+                  {user ? (
+                    <Link href="/dashboard" className="block px-3 py-3 text-base font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300">Dashboard</Link>
+                  ) : (
+                    <>
+                      <Link href="/welcome" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors duration-200">Sign In</Link>
+                      <Link href="/welcome" className="block px-3 py-3 text-base font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300">Get Started</Link>
+                    </>
+                  )}
+                </div>
             </div>
           </div>
         )}
@@ -261,7 +285,7 @@ export default function Home() {
               Revolutionary AI-powered baby cry translation system that helps parents understand their baby&apos;s needs instantly. 
               From hunger to pain, we decode every cry with precision and care.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            {/* <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button className="bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center">
                 <FaPlay className="mr-2" />
                 Watch Demo
@@ -270,7 +294,7 @@ export default function Home() {
                 <FaDownload className="mr-2" />
                 Download App
               </button>
-            </div>
+            </div> */}
           </div>
         </div>
       </section>
@@ -510,14 +534,14 @@ export default function Home() {
                     <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                     Pricing
                   </a></li>
-                  <li><a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
+                  {/* <li><a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
                     <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                     Download App
-                  </a></li>
-                  <li><a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
+                  </a></li> */}
+                  {/* <li><a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
                     <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                     API Access
-                  </a></li>
+                  </a></li> */}
                 </ul>
               </div>
 

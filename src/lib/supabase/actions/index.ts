@@ -5,6 +5,7 @@ export {
   signOut,
   getCurrentUser,
   resetPassword,
+  resendSignupConfirmation,
   updateProfile,
   checkUserVerification,
   type SignupData,

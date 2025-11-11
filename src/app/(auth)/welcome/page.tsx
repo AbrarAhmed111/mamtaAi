@@ -11,6 +11,7 @@ import { useReturnUrl } from '@/hooks/useReturnUrl'
 import AuthHeader from '@/components/auth/AuthHeader'
 import AuthInput from '@/components/auth/AuthInput'
 import AuthButton from '@/components/auth/AuthButton'
+import { supabase } from '@/lib/supabase/client'
  
 
 function WelcomeContent() {
@@ -124,6 +125,26 @@ function WelcomeContent() {
           Continue
         </AuthButton>
       </form>
+
+      <div className="mt-4">
+        <AuthButton
+          type="button"
+          variant="secondary"
+          onClick={async () => {
+            const origin =
+              typeof window !== 'undefined' ? window.location.origin : ''
+            const rt = `${origin}/api/auth/callback${
+              returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''
+            }`
+            await supabase.auth.signInWithOAuth({
+              provider: 'google',
+              options: { redirectTo: rt },
+            })
+          }}
+        >
+          Continue with Google
+        </AuthButton>
+      </div>
     </div>
   )
 }
