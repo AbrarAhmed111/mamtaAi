@@ -13,7 +13,14 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <Providers>
       <AuthProvider>
         <html lang="en">
-          <head></head>
+          <head>
+            {/* Favicons served from /public/favicons */}
+            <link rel="icon" href="/favicons/favicon.ico" sizes="any" />
+            <link rel="icon" type="image/svg+xml" href="/favicons/favicon.svg" />
+            <link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" />
+            <link rel="manifest" href="/favicons/site.webmanifest" />
+            <meta name="theme-color" content="#002e6b" />
+          </head>
           <body suppressHydrationWarning className="antialiased">
             <Toaster position="top-center" reverseOrder={false} />
             {children}

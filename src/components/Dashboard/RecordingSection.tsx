@@ -27,7 +27,7 @@ export default function RecordingSection({
       
       <div className="text-center">
         {isRecording ? (
-          <div className="space-y-4">
+          <div className="space-y-4 flex items-center justify-center flex-col gap-2 mt-2">
             <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto">
               <div className="w-12 h-12 bg-red-500 rounded-full animate-pulse"></div>
             </div>
@@ -37,14 +37,14 @@ export default function RecordingSection({
             </div>
             <button
               onClick={onStopRecording}
-              className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              className="px-6 py-3 bg-red-600 text-white flex item-center !gap-x-2 justify-center rounded-lg hover:bg-red-700 transition-colors"
             >
-              <FaStop className="mr-2" />
+              <FaStop className="" />
               Stop Recording
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 flex items-center justify-center flex-col gap-2 mt-2">
             <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
               <FaMicrophone className="text-blue-600 text-2xl" />
             </div>
@@ -54,10 +54,13 @@ export default function RecordingSection({
             </div>
             <button
               onClick={onStartRecording}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-6 py-3 bg-blue-600 flex item-center !gap-x-2 justify-center text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              <FaPlay className="mr-2" />
+              <FaPlay className="" />
+              <h1>
+
               Start Recording
+              </h1>
             </button>
           </div>
         )}

@@ -3,13 +3,11 @@
 interface ProgressSummaryProps {
   completedItems: number;
   totalItems: number;
-  totalPoints: number;
 }
 
 export default function ProgressSummary({ 
   completedItems, 
-  totalItems, 
-  totalPoints 
+  totalItems
 }: ProgressSummaryProps) {
   const progressPercentage = (completedItems / totalItems) * 100;
 
@@ -30,11 +28,6 @@ export default function ProgressSummary({
             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
             style={{ width: `${progressPercentage}%` }}
           ></div>
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600">Total Points</span>
-          <span className="text-lg font-bold text-blue-600">{totalPoints}</span>
         </div>
       </div>
     </div>

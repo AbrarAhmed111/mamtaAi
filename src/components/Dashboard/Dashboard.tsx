@@ -1,17 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { FaBaby, FaCamera, FaUsers, FaCheck, FaTrophy, FaStar, FaMicrophone } from 'react-icons/fa';
+import { FaBaby, FaCamera, FaUsers } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import DashboardHeader from './DashboardHeader';
 import WelcomeChecklist from './WelcomeChecklist';
 import RecordingSection from './RecordingSection';
 import BabyProfiles from './BabyProfiles';
-import BadgesSection from './BadgesSection';
+// import BadgesSection from './BadgesSection';
 import QuickActions from './QuickActions';
-import ProgressSummary from './ProgressSummary';
 
 interface ChecklistItem {
   id: string;
@@ -19,19 +17,10 @@ interface ChecklistItem {
   description: string;
   completed: boolean;
   icon: React.ComponentType<any>;
-  points: number;
   action: string;
 }
 
-interface Badge {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ComponentType<any>;
-  color: string;
-  earned: boolean;
-  earnedAt?: Date;
-}
+// Badge system removed
 
 interface Baby {
   id: string;
@@ -69,7 +58,6 @@ export default function Dashboard({
       description: 'Complete your baby\'s profile with photos and details',
       completed: false,
       icon: FaBaby,
-      points: 50,
       action: 'Complete Profile'
     },
     {
@@ -78,7 +66,6 @@ export default function Dashboard({
       description: 'Record your baby\'s cry to get AI-powered insights',
       completed: false,
       icon: FaCamera,
-      points: 30,
       action: 'Record Cry'
     },
     {
@@ -87,72 +74,22 @@ export default function Dashboard({
       description: 'Connect with other parents and get expert advice',
       completed: false,
       icon: FaUsers,
-      points: 20,
       action: 'Join Now'
     }
   ]);
 
-  const [badges, setBadges] = useState<Badge[]>([
-    {
-      id: 'super-parent',
-      name: 'Super Parent',
-      description: 'Completed all onboarding steps',
-      icon: FaTrophy,
-      color: 'text-yellow-600',
-      earned: false
-    },
-    {
-      id: 'engaged-parent',
-      name: 'Engaged Parent',
-      description: 'Active in community discussions',
-      icon: FaStar,
-      color: 'text-blue-600',
-      earned: false
-    },
-    {
-      id: 'cry-expert',
-      name: 'Cry Expert',
-      description: 'Recorded 10+ baby cries',
-      icon: FaMicrophone,
-      color: 'text-green-600',
-      earned: false
-    }
-  ]);
+  // Badges removed
 
   const [babies, setBabies] = useState<Baby[]>([]);
   const [babiesLoading, setBabiesLoading] = useState(false);
   const [showSelectBaby, setShowSelectBaby] = useState(false);
   const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
 
-  const [totalPoints, setTotalPoints] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
 
   useEffect(() => {
-    // Calculate total points
-    const points = checklist.reduce((total, item) => {
-      return item.completed ? total + item.points : total;
-    }, 0);
-    setTotalPoints(points);
-
-    // Update badges based on progress
-    setBadges(prev => prev.map(badge => {
-      let earned = false;
-      
-      switch (badge.id) {
-        case 'super-parent':
-          earned = checklist.every(item => item.completed);
-          break;
-        case 'engaged-parent':
-          earned = checklist.find(item => item.id === 'join-community')?.completed || false;
-          break;
-        case 'cry-expert':
-          earned = babies.some(baby => baby.totalCries >= 10);
-          break;
-      }
-      
-      return { ...badge, earned, earnedAt: earned && !badge.earned ? new Date() : badge.earnedAt };
-    }));
+    // Points and badges removed
   }, [checklist, babies]);
 
   const effectiveRole = (role ?? user.role ?? '').toLowerCase();
@@ -278,10 +215,6 @@ export default function Dashboard({
       toast.error('Only parents can add babies. Please select Parent as your role.');
       return;
     }
-    if (isOnboardingIncomplete || isRoleUnset) {
-      toast.error('Please complete onboarding before adding a baby.');
-      return;
-    }
     // TODO: Implement add baby functionality
     console.log('Add baby clicked');
   };
@@ -330,7 +263,7 @@ export default function Dashboard({
           onSignOut={onSignOut}
         />
 
-        {(isRoleUnset || isOnboardingIncomplete) && (
+        {(isRoleUnset || isOnboardingIncomplete || (isParent && babies.length === 0)) && (
           <div className="mx-4 sm:mx-6 mt-4">
             <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -338,21 +271,23 @@ export default function Dashboard({
                   <p className="font-medium">
                     {isRoleUnset
                       ? 'Please choose your role (Parent or Expert).'
-                      : 'Please complete your profile onboarding to continue.'}
+                      : 'Please add at least one baby to continue.'}
                   </p>
                   <p className="text-sm text-yellow-700 mt-1">
                     {isRoleUnset
                       ? 'This helps us tailor the dashboard to your needs.'
-                      : 'Complete your profile to unlock all features.'}
+                      : 'Add a baby to start tracking and get personalized insights.'}
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Link
-                    href="/onboarding"
-                    className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-yellow-600 text-white text-sm font-medium hover:bg-yellow-700"
-                  >
-                    Go to onboarding
-                  </Link>
+                  {!isRoleUnset && (
+                    <button
+                      onClick={handleAddBaby}
+                      className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-yellow-600 text-white text-sm font-medium hover:bg-yellow-700"
+                    >
+                      Add Baby
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -428,7 +363,6 @@ export default function Dashboard({
             <div className="lg:col-span-2 space-y-6 lg:space-y-8">
               <WelcomeChecklist
                 checklist={checklist}
-                totalPoints={totalPoints}
                 onItemAction={handleChecklistAction}
               />
               
@@ -440,7 +374,12 @@ export default function Dashboard({
                   onStopRecording={stopRecording}
                 />
               )}
-              
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* BadgesSection removed */}
+              <QuickActions onActionClick={handleActionClick} />
               {isParent && (
                 babiesLoading ? (
                   <div className="bg-white rounded-xl p-6 border border-gray-100 text-gray-600">Loading babies...</div>
@@ -463,17 +402,6 @@ export default function Dashboard({
                   </div>
                 )
               )}
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              <BadgesSection badges={badges} />
-              <QuickActions onActionClick={handleActionClick} />
-              <ProgressSummary
-                completedItems={checklist.filter(item => item.completed).length}
-                totalItems={checklist.length}
-                totalPoints={totalPoints}
-              />
             </div>
           </div>
         </div>

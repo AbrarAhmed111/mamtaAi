@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from './client';
-import { getCurrentUser, type AuthUser } from './actions';
+import { type AuthUser } from './actions';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -19,13 +19,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      const { user: currentUser, error } = await getCurrentUser();
-      if (error) {
-        console.error('Error getting current user:', error);
+      const res = await fetch('/api/auth/me', { cache: 'no-store' });
+      if (!res.ok) {
         setUser(null);
-      } else {
-        setUser(currentUser);
+        return;
       }
+      const data = await res.json();
+      const currentUser: AuthUser = {
+        id: data.id,
+        email: data.email,
+        profile: data.profile,
+      };
+      setUser(currentUser);
     } catch (error) {
       console.error('Error refreshing user:', error);
       setUser(null);

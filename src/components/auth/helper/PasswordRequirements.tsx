@@ -1,5 +1,5 @@
 import { IoIosCheckmarkCircle, IoIosCloseCircle } from 'react-icons/io'
-import { validatePassword } from '@/lib/validations'
+import { validatePassword } from '@/lib/supabase/validations'
 
 interface PasswordRequirementsProps {
   password: string

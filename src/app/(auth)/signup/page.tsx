@@ -13,7 +13,7 @@ import {
   validateEmail,
   validatePassword,
   isValidPassword,
-} from '@/lib/validations'
+} from '@/lib/supabase/validations'
 import { useReturnUrl } from '@/hooks/useReturnUrl'
 import AuthHeader from '@/components/auth/AuthHeader'
 import AuthInput from '@/components/auth/AuthInput'

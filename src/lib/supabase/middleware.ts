@@ -48,6 +48,10 @@ export async function updateSession(request: NextRequest) {
       if (role === 'expert' && !isVerified) {
         return NextResponse.redirect(new URL('/onboarding?status=pending', request.url))
       }
+      // Require role selection before leaving auth pages
+      if (!role) {
+        return NextResponse.redirect(new URL('/auth/role', request.url))
+      }
       const returnUrl = request.nextUrl.searchParams.get('returnUrl')
       if (returnUrl) {
         try {
@@ -63,6 +67,10 @@ export async function updateSession(request: NextRequest) {
     // Block experts without approval from protected pages
     if (isProtectedPath) {
       await ensureProfile()
+      // Require role selection before accessing protected pages
+      if (!role && !currentPath.startsWith('/auth/role')) {
+        return NextResponse.redirect(new URL('/auth/role', request.url))
+      }
       // If already on onboarding, allow to avoid redirect loops
       if (currentPath.startsWith('/onboarding')) {
         return supabaseResponse
