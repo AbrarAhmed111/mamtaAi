@@ -3,7 +3,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/supabase/context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
@@ -38,7 +38,7 @@ import logo from '@/assets/img/smallLogo.png'
 import Image from 'next/image';
 
 
-export default function Home() {
+function HomeContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeModule, setActiveModule] = useState(0);
   const { user } = useAuth();
@@ -621,4 +621,12 @@ export default function Home() {
       </footer>
     </div>
   );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="px-4 py-6">Loading...</div>}>
+      <HomeContent />
+    </Suspense>
+  )
 }
