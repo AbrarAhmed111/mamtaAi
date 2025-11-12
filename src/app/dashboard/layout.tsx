@@ -36,7 +36,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onToggle={toggleMobileMenu}
       />
 
-      <div className="flex-1 flex flex-col lg:ml-0">
+      <div className="flex-1 flex flex-col lg:ml-64">
         <DashboardHeader
           greeting={getGreeting()}
           userName={displayUser.name.split(' ')[0]}

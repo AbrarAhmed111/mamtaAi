@@ -69,7 +69,7 @@ export default function Sidebar({ currentPath = '/dashboard', user, isOpen = fal
       
       {/* Sidebar */}
       <div className={`
-        fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col
+        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
@@ -134,22 +134,7 @@ export default function Sidebar({ currentPath = '/dashboard', user, isOpen = fal
           })}
         </nav>
 
-        {/* User Profile */}
-        <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center">
-              <FaBaby className="text-pink-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">
-                {user?.name || 'Sarah Johnson'}
-              </p>
-              <p className="text-xs text-gray-500">
-                {user?.role || 'Parent'}
-              </p>
-            </div>
-          </div>
-        </div>
+       
       </div>
     </>
   );

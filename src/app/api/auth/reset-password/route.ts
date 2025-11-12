@@ -4,13 +4,12 @@ import { createServerClient } from '@/lib/supabase/server'
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
   const code = url.searchParams.get('code')
-  const type = url.searchParams.get('type')
 
-  // Only handle recovery/email change flows
-  if (!code || !type) {
+  // Accept links that only include the authorization code
+  if (!code) {
     const redirectUrl = new URL('/reset-password', request.url)
     redirectUrl.searchParams.set('error', 'true')
-    redirectUrl.searchParams.set('message', 'Invalid reset link')
+    redirectUrl.searchParams.set('message', 'Invalid or expired reset link. Please request a new one.')
     return NextResponse.redirect(redirectUrl)
   }
 
@@ -21,7 +20,12 @@ export async function GET(request: NextRequest) {
     if (error) {
       const redirectUrl = new URL('/reset-password', request.url)
       redirectUrl.searchParams.set('error', 'true')
-      redirectUrl.searchParams.set('message', error.message)
+      // Improve messaging for common cases like otp_expired/access_denied
+      const msg =
+        /expired|otp_expired|access_denied/i.test(error.message)
+          ? 'Reset link expired or already used. Please request a new password reset.'
+          : error.message
+      redirectUrl.searchParams.set('message', msg)
       return NextResponse.redirect(redirectUrl)
     }
 
@@ -31,7 +35,11 @@ export async function GET(request: NextRequest) {
   } catch (e: any) {
     const redirectUrl = new URL('/reset-password', request.url)
     redirectUrl.searchParams.set('error', 'true')
-    redirectUrl.searchParams.set('message', e?.message || 'Something went wrong')
+    const msg =
+      /expired|otp_expired|access_denied/i.test(e?.message || '')
+        ? 'Reset link expired or already used. Please request a new password reset.'
+        : (e?.message || 'Something went wrong')
+    redirectUrl.searchParams.set('message', msg)
     return NextResponse.redirect(redirectUrl)
   }
 }

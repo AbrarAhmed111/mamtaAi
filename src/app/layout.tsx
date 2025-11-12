@@ -1,5 +1,5 @@
 import "../assets/css/globals.css"; // CSS is now included here
-import { Toaster } from "react-hot-toast";
+import { Toaster } from "@/components/ui/sonner";
 import { ReactNode } from "react";
 import Providers from "@/store/Providers";
 import { AuthProvider } from "@/lib/supabase/context";
@@ -22,7 +22,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             <meta name="theme-color" content="#002e6b" />
           </head>
           <body suppressHydrationWarning className="antialiased">
-            <Toaster position="top-center" reverseOrder={false} />
+            <Toaster position="top-center" />
             {children}
           </body>
         </html>

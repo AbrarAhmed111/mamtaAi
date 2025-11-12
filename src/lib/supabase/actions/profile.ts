@@ -171,7 +171,7 @@ export async function addBaby(
       .insert({
         baby_id: baby.id,
         parent_id: userId,
-        relationship: 'parent',
+        relationship: 'guardian',
         is_primary: true,
         access_level: 'full',
         can_edit_profile: true,

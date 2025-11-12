@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState, useRef, Suspense } from 'react'
 import { signup } from '@/lib/actions/auth'
-import toast from 'react-hot-toast'
+import { toast } from '@/components/ui/sonner'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AUTH_CONSTANTS, buildReturnUrl } from '@/lib/constants'

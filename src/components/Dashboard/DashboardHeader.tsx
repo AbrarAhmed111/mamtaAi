@@ -40,7 +40,7 @@ export default function DashboardHeader({
   }, []);
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
+  <header className="sticky top-0 z-30 bg-white/90 supports-[backdrop-filter]:bg-white/60 backdrop-blur shadow-sm border-b border-gray-200">
       <div className="px-4 sm:px-6 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
@@ -65,7 +65,7 @@ export default function DashboardHeader({
           <div className="flex items-center space-x-2 sm:space-x-4" ref={menuRef}>
             {showNotifications && (
               <button 
-                className="p-2 text-gray-400 hover:text-gray-600 relative"
+                className="p-2 text-gray-400 hover:text-gray-600 relative hidden md:block"
                 onClick={onNotificationClick}
               >
                 <FaBell className="text-lg" />
@@ -73,7 +73,7 @@ export default function DashboardHeader({
               </button>
             )}
             <button 
-              className="p-2 text-gray-400 hover:text-gray-600"
+              className="p-2 text-gray-400 hover:text-gray-600 hidden md:block"
               onClick={onSettingsClick}
             >
               <FaCog className="text-lg" />
