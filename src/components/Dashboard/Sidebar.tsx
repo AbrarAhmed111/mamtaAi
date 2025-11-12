@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { FaBaby, FaMicrophone, FaChartLine, FaUsers, FaUserMd, FaBars, FaTimes } from 'react-icons/fa';
 import Link from 'next/link';
-
+import logo from '@/assets/img/smallLogo.png';
+import Image from 'next/image';
+import { MdDashboard } from "react-icons/md";
 interface SidebarProps {
   currentPath?: string;
   user?: {
@@ -20,38 +22,38 @@ export default function Sidebar({ currentPath = '/dashboard', user, isOpen = fal
     {
       href: '/dashboard',
       label: 'Dashboard',
-      icon: FaBaby,
-      active: currentPath === '/dashboard'
+      icon: MdDashboard,
+      active: currentPath?.startsWith('/dashboard') && (currentPath === '/dashboard')
     },
     {
-      href: '/babies',
+      href: '/dashboard/babies',
       label: 'My Babies',
       icon: FaBaby,
-      active: currentPath === '/babies'
+      active: currentPath?.startsWith('/dashboard/babies')
     },
     {
-      href: '/recordings',
+      href: '/dashboard/recordings',
       label: 'Recordings',
       icon: FaMicrophone,
-      active: currentPath === '/recordings'
+      active: currentPath?.startsWith('/dashboard/recordings')
     },
     {
-      href: '/insights',
+      href: '/dashboard/insights',
       label: 'Insights',
       icon: FaChartLine,
-      active: currentPath === '/insights'
+      active: currentPath?.startsWith('/dashboard/insights')
     },
     {
-      href: '/community',
+      href: '/dashboard/community',
       label: 'Community',
       icon: FaUsers,
-      active: currentPath === '/community'
+      active: currentPath?.startsWith('/dashboard/community')
     },
     {
-      href: '/experts',
+      href: '/dashboard/experts',
       label: 'Experts',
       icon: FaUserMd,
-      active: currentPath === '/experts'
+      active: currentPath?.startsWith('/dashboard/experts')
     }
   ];
 
@@ -74,9 +76,13 @@ export default function Sidebar({ currentPath = '/dashboard', user, isOpen = fal
         {/* Mobile Header */}
         <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <FaBaby className="text-white text-sm" />
-            </div>
+            <Image
+              src={logo}
+              alt="MamtaAI"
+              width={24}
+              height={24}
+              className="object-contain rounded-full"
+            />
             <h1 className="text-xl font-semibold text-gray-900">MamtaAI</h1>
           </div>
           <button
@@ -90,9 +96,13 @@ export default function Sidebar({ currentPath = '/dashboard', user, isOpen = fal
         {/* Logo - Desktop */}
         <div className="hidden lg:block p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <FaBaby className="text-white text-sm" />
-            </div>
+            <Image
+              src={logo}
+              alt="MamtaAI"
+              width={28}
+              height={28}
+              className="object-contain rounded-full"
+            />
             <h1 className="text-xl font-semibold text-gray-900">MamtaAI</h1>
           </div>
         </div>

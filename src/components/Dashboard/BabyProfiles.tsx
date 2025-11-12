@@ -6,9 +6,9 @@ interface Baby {
   id: string;
   name: string;
   age: string;
-  avatar: string;
-  lastCry: Date;
-  totalCries: number;
+  avatar?: string;
+  lastCry?: Date | null;
+  totalCries?: number | null;
 }
 
 interface BabyProfilesProps {
@@ -35,7 +35,7 @@ export default function BabyProfiles({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1  gap-4">
         {babies.map((baby) => (
           <div 
             key={baby.id} 
@@ -43,20 +43,29 @@ export default function BabyProfiles({
             onClick={() => onBabyClick?.(baby)}
           >
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center">
-                <FaBaby className="text-pink-600" />
+              <div className="w-12 h-12 rounded-full overflow-hidden border">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={baby.avatar || '/api/placeholder/64/64'}
+                  alt={baby.name}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="flex-1">
                 <h4 className="font-medium text-gray-900">{baby.name}</h4>
                 <p className="text-sm text-gray-600">{baby.age}</p>
-                <p className="text-xs text-gray-500">
-                  Last cry: {baby.lastCry.toLocaleTimeString()}
-                </p>
+                {/* {baby?.lastCry ? (
+                  <p className="text-xs text-gray-500">
+                    Last cry: {new Date(baby.lastCry).toLocaleTimeString()}
+                  </p>
+                ) : null} */}
               </div>
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{baby.totalCries}</p>
-                <p className="text-xs text-gray-500">total cries</p>
-              </div>
+              {/* {typeof baby?.totalCries === 'number' ? (
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-900">{baby.totalCries}</p>
+                  <p className="text-xs text-gray-500">total cries</p>
+                </div>
+              ) : null} */}
             </div>
           </div>
         ))}
