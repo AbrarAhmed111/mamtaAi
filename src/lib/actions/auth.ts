@@ -96,8 +96,11 @@ export async function updatePasswordAction(newPassword: string): Promise<void> {
     throw new Error(error.message || 'Failed to update password.')
   }
 
-  // Success - redirect to dashboard (or sign-in) as desired
-  redirect('/dashboard?passwordReset=success')
+  // End recovery session to avoid rendering/auth edge cases, then send user to welcome to sign in again
+  try {
+    await supabase.auth.signOut()
+  } catch {}
+  redirect('/welcome?passwordReset=success')
 }
 
 
