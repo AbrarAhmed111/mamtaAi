@@ -226,25 +226,14 @@ export default function Dashboard({
   };
 
   const startRecording = () => {
+    // Deprecated simulation removed; real recording is controlled inside RecordingSection
     setIsRecording(true);
     setRecordingTime(0);
-    
-    // Simulate recording
-    const interval = setInterval(() => {
-      setRecordingTime(prev => prev + 1);
-    }, 1000);
-
-    // Stop recording after 10 seconds (simulation)
-    setTimeout(() => {
-      setIsRecording(false);
-      clearInterval(interval);
-      completeChecklistItem('first-cry');
-    }, 10000);
   };
 
   const stopRecording = () => {
+    // Do not auto-complete checklist on stop; completion is driven by saved recording (stats)
     setIsRecording(false);
-    completeChecklistItem('first-cry');
   };
 
   const getGreeting = () => {
