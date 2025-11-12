@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { signInWithEmail, signUpWithEmail, resetPassword, resendSignupConfirmation, type SignupData } from '@/lib/supabase/actions'
+import { createServerClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
 
 export async function checkEmailAndRedirect(email: string): Promise<{ status: 'signin' | 'signup'; error?: string }> {
@@ -78,10 +79,25 @@ export async function resendConfirmation(email: string): Promise<{ success?: str
   return { success: 'Confirmation email resent. Please check your inbox.' }
 }
 
-// Optional: implement server-side password update if needed later
-export async function updatePasswordAction(_password: string): Promise<void> {
-  // For now, redirect user to dashboard; client flow validates session and can handle update if implemented
-  redirect('/dashboard')
+export async function updatePasswordAction(newPassword: string): Promise<void> {
+  const supabase = await createServerClient()
+  // Ensure we are in a valid recovery/auth session
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser()
+
+  if (userError || !user) {
+    throw new Error('Invalid or expired session. Please request a new password reset.')
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword })
+  if (error) {
+    throw new Error(error.message || 'Failed to update password.')
+  }
+
+  // Success - redirect to dashboard (or sign-in) as desired
+  redirect('/dashboard?passwordReset=success')
 }
 
 

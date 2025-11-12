@@ -88,24 +88,36 @@ function ResetPasswordContent() {
         }
         // Handle successful validation from API route
         if (validatedParam === 'true' || validatedParam) {
-          // Verify we have an authenticated session
-          const { data, error: authError } = await supabase.auth.getUser()
-
-          if (authError || !data.user) {
-            console.error('Session validation failed:', {
-              authError,
-              user: data.user,
-            })
+          // Validate session using server-side cookies to avoid client hydration issues
+          try {
+            const res = await fetch('/api/auth/me', { cache: 'no-store' })
+            if (!res.ok) {
+              const j = await res.json().catch(() => ({}))
+              console.error('Session validation failed (server):', j)
+              setSessionValid(false)
+              setResetError(
+                'Session expired. Please request a new password reset.',
+              )
+              return
+            }
+            const j = await res.json().catch(() => ({}))
+            if (!j?.id) {
+              console.error('Session validation failed (no user):', j)
+              setSessionValid(false)
+              setResetError(
+                'Session expired. Please request a new password reset.',
+              )
+              return
+            }
+            setSessionValid(true)
+            passwordInputRef.current?.focus()
+            return
+          } catch (e) {
+            console.error('Session validation error:', e)
             setSessionValid(false)
-            setResetError(
-              'Session expired. Please request a new password reset.',
-            )
+            setResetError('Session expired. Please request a new password reset.')
             return
           }
-
-          setSessionValid(true)
-          passwordInputRef.current?.focus()
-          return
         }
 
         setSessionValid(false)

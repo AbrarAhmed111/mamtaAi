@@ -173,33 +173,33 @@ export default function Dashboard({
   }, []);
   const loadBabies = async () => {
     if (!isParent) return;
-    try {
-      setBabiesLoading(true);
-      const res = await fetch('/api/babies', { cache: 'no-store' });
-      if (!res.ok) {
-        setBabies([]);
-        return;
+      try {
+        setBabiesLoading(true);
+        const res = await fetch('/api/babies', { cache: 'no-store' });
+        if (!res.ok) {
+          setBabies([]);
+          return;
+        }
+        const json = await res.json();
+        const dbBabies = (json.babies || []) as Array<{
+          id: string;
+          name: string;
+          birth_date: string;
+          avatar_url?: string | null;
+        }>;
+        const mapped: Baby[] = dbBabies.map(b => ({
+          id: b.id,
+          name: b.name,
+          age: formatAge(b.birth_date),
+          avatar: b.avatar_url || '/api/placeholder/64/64',
+          lastCry: new Date(),
+          totalCries: 0,
+        }));
+        setBabies(mapped);
+      } finally {
+        setBabiesLoading(false);
       }
-      const json = await res.json();
-      const dbBabies = (json.babies || []) as Array<{
-        id: string;
-        name: string;
-        birth_date: string;
-        avatar_url?: string | null;
-      }>;
-      const mapped: Baby[] = dbBabies.map(b => ({
-        id: b.id,
-        name: b.name,
-        age: formatAge(b.birth_date),
-        avatar: b.avatar_url || '/api/placeholder/64/64',
-        lastCry: new Date(),
-        totalCries: 0,
-      }));
-      setBabies(mapped);
-    } finally {
-      setBabiesLoading(false);
-    }
-  };
+    };
 
   function formatAge(birthDateISO: string): string {
     try {
@@ -353,8 +353,8 @@ export default function Dashboard({
                   {!isRoleUnset && (
                     <button
                       onClick={handleAddBaby}
-                      className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-yellow-600 text-white text-sm font-medium hover:bg-yellow-700"
-                    >
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-yellow-600 text-white text-sm font-medium hover:bg-yellow-700"
+                  >
                       Add Baby
                     </button>
                   )}
@@ -428,23 +428,23 @@ export default function Dashboard({
         )}
 
         <div className="p-0">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6 lg:space-y-8">
+            <div className="lg:col-span-2 space-y-6 lg:space-y-8">
           <div className="bg-white rounded-xl border border-gray-100 p-5">
-            <WelcomeChecklist
-              checklist={checklist}
-              onItemAction={handleChecklistAction}
-            />
+              <WelcomeChecklist
+                checklist={checklist}
+                onItemAction={handleChecklistAction}
+              />
           </div>
-
-          {isParent && (
+              
+              {isParent && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <RecordingSection
-                isRecording={isRecording}
-                recordingTime={recordingTime}
+                <RecordingSection
+                  isRecording={isRecording}
+                  recordingTime={recordingTime}
                 onStartRecording={handleStartRecording}
-                onStopRecording={stopRecording}
+                  onStopRecording={stopRecording}
                 onSave={async (blob, durationSeconds) => {
                   try {
                     const targetBabyId = selectedBabyId || (babies[0]?.id || null);

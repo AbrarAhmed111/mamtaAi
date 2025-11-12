@@ -45,8 +45,8 @@ async function getBaseURL(): Promise<string> {
   ) {
     return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
   }
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
   // Fallback to known Vercel URL for production if envs are missing
   if (process.env.NODE_ENV === 'production') return 'https://mamtaai.vercel.app'
   return 'http://localhost:3000'
