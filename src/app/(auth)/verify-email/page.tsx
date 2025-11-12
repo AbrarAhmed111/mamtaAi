@@ -20,7 +20,7 @@ function VerifyEmailContent() {
   const [resending, setResending] = useState(false)
   const [resendMsg, setResendMsg] = useState('')
 
-  const signinHref = useMemo(() => buildReturnUrl('/signin', returnUrl), [returnUrl])
+  const signinHref = useMemo(() => buildReturnUrl('/welcome', returnUrl), [returnUrl])
 
   useEffect(() => {
     if (hasError) {
@@ -67,7 +67,7 @@ function VerifyEmailContent() {
         <div className="mt-4 flex gap-2">
           <>
             <AuthButton onClick={() => router.replace(signinHref)}>
-              Go to Sign In
+              Go to Welcome
             </AuthButton>
             <AuthButton
               variant="secondary"

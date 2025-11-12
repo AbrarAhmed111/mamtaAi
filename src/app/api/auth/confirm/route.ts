@@ -9,10 +9,10 @@ export async function GET(request: NextRequest) {
   const sbError = url.searchParams.get('error')
   const sbErrorCode = url.searchParams.get('error_code')
 
-  // If Supabase passed error params (e.g., otp_expired), just send user to signin (no error presentation page)
+  // If Supabase passed error params (e.g., otp_expired), just send user to welcome (no error presentation page)
   if (sbError) {
-    const errSignin = new URL('/signin', request.url)
-    return NextResponse.redirect(errSignin)
+    const errWelcome = new URL('/welcome', request.url)
+    return NextResponse.redirect(errWelcome)
   }
 
   try {
@@ -46,14 +46,14 @@ export async function GET(request: NextRequest) {
         token_hash: token,
       })
       if (error) {
-        const errSignin = new URL('/signin', request.url)
-        return NextResponse.redirect(errSignin)
+        const errWelcome = new URL('/welcome', request.url)
+        return NextResponse.redirect(errWelcome)
       }
     } else if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code)
       if (error) {
-        const errSignin = new URL('/signin', request.url)
-        return NextResponse.redirect(errSignin)
+        const errWelcome = new URL('/welcome', request.url)
+        return NextResponse.redirect(errWelcome)
       }
     } else if (token) {
       const { error } = await (supabase as any).auth.verifyOtp({
@@ -61,16 +61,15 @@ export async function GET(request: NextRequest) {
         token_hash: token,
       })
       if (error) {
-        const errSignin = new URL('/signin', request.url)
-        return NextResponse.redirect(errSignin)
+        const errWelcome = new URL('/welcome', request.url)
+        return NextResponse.redirect(errWelcome)
       }
     } else {
-      const errSignin = new URL('/signin', request.url)
-      return NextResponse.redirect(errSignin)
+      const errWelcome = new URL('/welcome', request.url)
+      return NextResponse.redirect(errWelcome)
     }
 
-    const okUrl = new URL('/signin', request.url)
-    okUrl.searchParams.set('verified', '1')
+    const okUrl = new URL('/welcome', request.url)
     const redirectResponse = NextResponse.redirect(okUrl)
     const isLocalhost =
       okUrl.origin.startsWith('http://localhost') ||
@@ -87,8 +86,8 @@ export async function GET(request: NextRequest) {
     })
     return redirectResponse
   } catch (e: any) {
-    const errSignin = new URL('/signin', request.url)
-    return NextResponse.redirect(errSignin)
+    const errWelcome = new URL('/welcome', request.url)
+    return NextResponse.redirect(errWelcome)
   }
 }
 
