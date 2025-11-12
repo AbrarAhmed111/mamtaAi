@@ -10,6 +10,11 @@ export async function updateSession(request: NextRequest) {
   const supabase = await createServerClient()
   const supabaseResponse = NextResponse.next()
 
+  // Avoid interfering with Supabase auth handshakes (PKCE, email link)
+  if (currentPath.startsWith('/api/auth/')) {
+    return NextResponse.next()
+  }
+
   const {
     data: { user },
     error: userError,
