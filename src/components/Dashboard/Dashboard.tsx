@@ -290,7 +290,7 @@ export default function Dashboard({
     router.push('/babies/new');
   };
 
-  const handleBabyClick = (baby: Baby) => {
+  const handleBabyClick = (baby: any) => {
     // TODO: Implement baby click functionality
     console.log('Baby clicked:', baby);
   };
