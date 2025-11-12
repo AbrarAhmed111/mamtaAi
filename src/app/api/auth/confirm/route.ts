@@ -9,16 +9,10 @@ export async function GET(request: NextRequest) {
   const sbError = url.searchParams.get('error')
   const sbErrorCode = url.searchParams.get('error_code')
 
-  // Surface Supabase error parameters (e.g., otp_expired)
+  // If Supabase passed error params (e.g., otp_expired), just send user to signin (no error presentation page)
   if (sbError) {
-    const errUrl = new URL('/verify-email', request.url)
-    errUrl.searchParams.set('error', 'true')
-    const msg =
-      sbErrorCode === 'otp_expired'
-        ? 'Verification link has expired. Please request a new confirmation email.'
-        : 'Invalid verification link. Please request a new confirmation email.'
-    errUrl.searchParams.set('message', msg)
-    return NextResponse.redirect(errUrl)
+    const errSignin = new URL('/signin', request.url)
+    return NextResponse.redirect(errSignin)
   }
 
   try {
@@ -38,13 +32,28 @@ export async function GET(request: NextRequest) {
       },
     )
 
-    if (code) {
-      const { error } = await supabase.auth.exchangeCodeForSession(code)
-      if (error) {
+    // Prefer token-based verification for email confirmations.
+    // Only use code exchange for true PKCE/code flows.
+    if (type === 'signup' || type === 'email_change') {
+      if (!token) {
         const errUrl = new URL('/verify-email', request.url)
         errUrl.searchParams.set('error', 'true')
-        errUrl.searchParams.set('message', error.message)
+        errUrl.searchParams.set('message', 'Invalid verification link')
         return NextResponse.redirect(errUrl)
+      }
+      const { error } = await (supabase as any).auth.verifyOtp({
+        type,
+        token_hash: token,
+      })
+      if (error) {
+        const errSignin = new URL('/signin', request.url)
+        return NextResponse.redirect(errSignin)
+      }
+    } else if (code) {
+      const { error } = await supabase.auth.exchangeCodeForSession(code)
+      if (error) {
+        const errSignin = new URL('/signin', request.url)
+        return NextResponse.redirect(errSignin)
       }
     } else if (token) {
       const { error } = await (supabase as any).auth.verifyOtp({
@@ -52,16 +61,12 @@ export async function GET(request: NextRequest) {
         token_hash: token,
       })
       if (error) {
-        const errUrl = new URL('/verify-email', request.url)
-        errUrl.searchParams.set('error', 'true')
-        errUrl.searchParams.set('message', error.message)
-        return NextResponse.redirect(errUrl)
+        const errSignin = new URL('/signin', request.url)
+        return NextResponse.redirect(errSignin)
       }
     } else {
-      const errUrl = new URL('/verify-email', request.url)
-      errUrl.searchParams.set('error', 'true')
-      errUrl.searchParams.set('message', 'Invalid verification link')
-      return NextResponse.redirect(errUrl)
+      const errSignin = new URL('/signin', request.url)
+      return NextResponse.redirect(errSignin)
     }
 
     const okUrl = new URL('/signin', request.url)
@@ -82,10 +87,8 @@ export async function GET(request: NextRequest) {
     })
     return redirectResponse
   } catch (e: any) {
-    const errUrl = new URL('/verify-email', request.url)
-    errUrl.searchParams.set('error', 'true')
-    errUrl.searchParams.set('message', e?.message || 'Verification failed')
-    return NextResponse.redirect(errUrl)
+    const errSignin = new URL('/signin', request.url)
+    return NextResponse.redirect(errSignin)
   }
 }
 
