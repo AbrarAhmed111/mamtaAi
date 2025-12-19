@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import Spinner from '@/components/ui/spinner'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -134,9 +135,11 @@ export default function BabiesPage() {
                     >
                       <div className="flex items-center gap-4">
                         <div className="relative">
-                          <img
+                          <Image
                             src={b.avatar}
                             alt={b.name}
+                            width={56}
+                            height={56}
                             className="w-14 h-14 rounded-full object-cover border-2 border-pink-200 shadow-sm"
                           />
                           <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-pink-400 rounded-full border-2 border-white flex items-center justify-center">
@@ -225,9 +228,11 @@ export default function BabiesPage() {
                       >
                         <td className="py-4 pr-4">
                           <div className="relative">
-                            <img
+                            <Image
                               src={b.avatar}
                               alt={b.name}
+                              width={48}
+                              height={48}
                               className="w-12 h-12 rounded-full object-cover border-2 border-pink-200 shadow-sm"
                             />
                             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-pink-400 rounded-full border-2 border-white"></div>

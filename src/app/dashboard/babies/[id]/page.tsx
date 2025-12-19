@@ -161,7 +161,7 @@ export default function BabyDetailPage() {
             </div>
             <div className="mb-6">
               <p className="text-gray-700 mb-2">
-                Are you sure you want to delete <span className="font-semibold text-pink-600">{name}</span>'s profile?
+                Are you sure you want to delete <span className="font-semibold text-pink-600">{name}</span>&apos;s profile?
               </p>
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-3">
                 <p className="text-sm text-red-800 font-medium">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast, Toaster } from '@/components/ui/sonner';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -125,9 +125,39 @@ export default function Dashboard({
   const isRoleUnset = !effectiveRole || (effectiveRole !== 'parent' && effectiveRole !== 'expert');
   const isOnboardingIncomplete = onboardingCompleted === false;
 
+  const loadBabies = useCallback(async () => {
+    if (!isParent) return;
+    try {
+      setBabiesLoading(true);
+      const res = await fetch('/api/babies', { cache: 'no-store' });
+      if (!res.ok) {
+        setBabies([]);
+        return;
+      }
+      const json = await res.json();
+      const dbBabies = (json.babies || []) as Array<{
+        id: string;
+        name: string;
+        birth_date: string;
+        avatar_url?: string | null;
+      }>;
+      const mapped: Baby[] = dbBabies.map(b => ({
+        id: b.id,
+        name: b.name,
+        age: formatAge(b.birth_date),
+        avatar: b.avatar_url || '/api/placeholder/64/64',
+        lastCry: new Date(),
+        totalCries: 0,
+      }));
+      setBabies(mapped);
+    } finally {
+      setBabiesLoading(false);
+    }
+  }, [isParent]);
+
   useEffect(() => {
     void loadBabies();
-  }, [isParent]);
+  }, [loadBabies]);
 
   // Fetch dynamic checklist stats
   useEffect(() => {
@@ -172,35 +202,6 @@ export default function Dashboard({
   useEffect(() => {
     void loadRecentRecordings();
   }, []);
-  const loadBabies = async () => {
-    if (!isParent) return;
-      try {
-        setBabiesLoading(true);
-        const res = await fetch('/api/babies', { cache: 'no-store' });
-        if (!res.ok) {
-          setBabies([]);
-          return;
-        }
-        const json = await res.json();
-        const dbBabies = (json.babies || []) as Array<{
-          id: string;
-          name: string;
-          birth_date: string;
-          avatar_url?: string | null;
-        }>;
-        const mapped: Baby[] = dbBabies.map(b => ({
-          id: b.id,
-          name: b.name,
-          age: formatAge(b.birth_date),
-          avatar: b.avatar_url || '/api/placeholder/64/64',
-          lastCry: new Date(),
-          totalCries: 0,
-        }));
-        setBabies(mapped);
-      } finally {
-        setBabiesLoading(false);
-      }
-    };
 
   function formatAge(birthDateISO: string): string {
     try {

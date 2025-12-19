@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { FaBell, FaCog, FaBars } from 'react-icons/fa';
 
 interface DashboardHeaderProps {
@@ -85,9 +86,11 @@ export default function DashboardHeader({
                 className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-pink-200 hover:bg-pink-50 transition-colors"
                 onClick={() => setOpen(prev => !prev)}
               >
-                <img
+                <Image
                   src={userAvatarUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(userName) + '&background=E5E7EB&color=111827&size=64'}
                   alt={userName}
+                  width={32}
+                  height={32}
                   className="w-8 h-8 rounded-full object-cover"
                 />
                 <span className="hidden sm:inline text-sm font-medium text-gray-700">{userName}</span>

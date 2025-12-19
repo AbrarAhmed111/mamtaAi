@@ -3,7 +3,20 @@ const nextConfig = {
     images: {
       // This allows Next.js to serve images from the local 'public' folder
       // You can also specify external domains if needed
-      // domains: ['your-external-domain.com'], 
+      remotePatterns: [
+        {
+          protocol: 'https',
+          hostname: 'ui-avatars.com',
+        },
+        {
+          protocol: 'https',
+          hostname: '**.supabase.co',
+        },
+        {
+          protocol: 'https',
+          hostname: '**.supabase.in',
+        },
+      ],
       unoptimized: false, // Set to true if you want to skip image optimization
     },
   };
