@@ -28,7 +28,7 @@ export default function AuthHeader({
   const BackButton = () => (
     <IoMdArrowRoundBack
       size={24}
-      className=" cursor-pointer"
+      className="cursor-pointer text-pink-600 hover:text-pink-700 transition-colors"
       onClick={onBack}
     />
   )
@@ -57,7 +57,7 @@ export default function AuthHeader({
         {label && (
           <div className="flex-auto flex justify-center md:justify-end">
             <span
-              className={`text-sm leading-[28px] text-[#AAADB1] auth-signup-text ${poppins.className}`}
+              className={`text-sm leading-[28px] bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent font-semibold auth-signup-text ${poppins.className}`}
             >
               {label}
             </span>
@@ -69,13 +69,13 @@ export default function AuthHeader({
       <div className="flex flex-col gap-3 mt-[24px]">
         <div className="flex items-center gap-1 text-lg sm:text-3xl font-bold">
           <h1
-            className={`${poppins.className} text-2xl lg:text-3xl xl:text-4xl font-bold mb-1`}
+            className={`${poppins.className} text-2xl lg:text-3xl xl:text-4xl font-bold mb-1 bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 bg-clip-text text-transparent`}
           >
             {title}
           </h1>
         </div>
         {subtitle && (
-          <span className="text-[#66696D] font-medium leading-[150%] tracking-[-0.5px] text-[16px] lg:text-lg xl:text-[22px]">
+          <span className="text-gray-600 font-medium leading-[150%] tracking-[-0.5px] text-[16px] lg:text-lg xl:text-[22px]">
             {subtitle}
           </span>
         )}

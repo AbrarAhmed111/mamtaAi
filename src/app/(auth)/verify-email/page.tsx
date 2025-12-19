@@ -53,7 +53,7 @@ function VerifyEmailContent() {
         backHref="/"
       />
 
-      <div className="mt-[24px] bg-white rounded-lg border border-gray-200 p-4">
+      <div className="mt-[24px] bg-white rounded-xl border border-pink-200 p-6 shadow-sm bg-gradient-to-br from-white to-pink-50/30">
         <>
           <p className="text-gray-700">
             We&apos;ve sent a verification link to{' '}

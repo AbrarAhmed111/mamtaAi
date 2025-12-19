@@ -28,7 +28,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50 flex">
       <Sidebar
         currentPath={pathname || '/dashboard'}
         user={displayUser}

@@ -23,10 +23,10 @@ export default function AuthButton({
   const variantClasses = {
     primary:
       disabled || loading
-        ? 'bg-[#E0E6EE] text-[#black] cursor-not-allowed'
-        : 'bg-[#002e6b] text-white hover:opacity-90',
+        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+        : 'bg-gradient-to-r from-pink-500 to-rose-500 text-white hover:from-pink-600 hover:to-rose-600 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5',
     secondary:
-      'border border-[#002e6b] text-[#002e6b] bg-transparent hover:bg-[#002e6b] hover:text-white',
+      'border-2 border-pink-300 text-pink-600 bg-transparent hover:bg-pink-50 hover:border-pink-400',
   }
 
   return (

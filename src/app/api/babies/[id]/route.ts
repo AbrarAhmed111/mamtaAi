@@ -101,4 +101,49 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 }
 
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const supabase = await createServerClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { id } = await params
+
+    // Ensure membership and check if user has permission to delete
+    const { data: membership } = await supabase
+      .from('baby_parents')
+      .select('baby_id, can_edit_profile')
+      .eq('baby_id', id)
+      .eq('parent_id', user.id)
+      .single()
+    if (!membership) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    // Delete baby_parents relationship first (cascade should handle this, but explicit is safer)
+    const { error: relationError } = await supabase
+      .from('baby_parents')
+      .delete()
+      .eq('baby_id', id)
+
+    if (relationError) {
+      return NextResponse.json({ error: relationError.message }, { status: 400 })
+    }
+
+    // Delete the baby record
+    const { error: deleteError } = await supabase
+      .from('babies')
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) {
+      return NextResponse.json({ error: deleteError.message }, { status: 400 })
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
+  }
+}
+
 

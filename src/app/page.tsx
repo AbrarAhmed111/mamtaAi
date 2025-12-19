@@ -35,6 +35,7 @@ import {
   FaTimes
 } from 'react-icons/fa';
 import logo from '@/assets/img/smallLogo.png'
+import motherAndBaby from '@/assets/img/motherandbaby.jpg'
 import Image from 'next/image';
 
 
@@ -165,9 +166,9 @@ function HomeContent() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50">
       {/* Enhanced Navigation */}
-      <nav className="fixed top-0 w-full bg-white/95 backdrop-blur-lg z-50 border-b border-gray-200/50 shadow-sm">
+      <nav className="fixed top-0 w-full bg-white/95 backdrop-blur-lg z-50 border-b border-pink-100/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo Section */}
@@ -179,7 +180,7 @@ function HomeContent() {
                 </div>
               </div>
               <div className="ml-3">
-                <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 bg-clip-text text-transparent">
                   MamtaAI
                 </span>
                 <div className="text-xs text-gray-500 font-medium">AI-Powered Baby Care</div>
@@ -189,25 +190,25 @@ function HomeContent() {
             {/* Desktop Navigation */}
             <div className="hidden md:block">
               <div className="ml-10 flex items-baseline space-x-1">
-                <a href="#home" className="relative px-4 py-2 text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors duration-200 group">
+                <a href="#home" className="relative px-4 py-2 text-sm font-medium text-gray-900 hover:text-pink-600 transition-colors duration-200 group">
                   Home
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-full transition-all duration-300"></span>
+                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300"></span>
                 </a>
-                <a href="#modules" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors duration-200 group">
+                <a href="#modules" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-pink-600 transition-colors duration-200 group">
                   Modules
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-full transition-all duration-300"></span>
+                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300"></span>
                 </a>
-                <a href="#features" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors duration-200 group">
+                <a href="#features" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-pink-600 transition-colors duration-200 group">
                   Features
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-full transition-all duration-300"></span>
+                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300"></span>
                 </a>
-                <a href="#testimonials" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors duration-200 group">
+                <a href="#testimonials" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-pink-600 transition-colors duration-200 group">
                   Testimonials
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-full transition-all duration-300"></span>
+                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300"></span>
                 </a>
-                <a href="#contact" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors duration-200 group">
+                <a href="#contact" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-pink-600 transition-colors duration-200 group">
                   Contact
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-full transition-all duration-300"></span>
+                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300"></span>
                 </a>
               </div>
             </div>
@@ -215,16 +216,16 @@ function HomeContent() {
             {/* CTA Buttons */}
             <div className="hidden md:flex items-center space-x-4">
               {user ? (
-                <Link href="/dashboard" className="relative bg-gradient-to-r from-blue-600 to-purple-600 !text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                <Link href="/dashboard" className="relative bg-gradient-to-r from-pink-500 to-rose-500 !text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                   Dashboard
                
                 </Link>
               ) : (
                 <>
-                  <Link href="/welcome" className="text-gray-600 hover:text-blue-600 px-4 py-2 text-sm font-medium transition-colors duration-200">
+                  <Link href="/welcome" className="text-gray-600 hover:text-pink-600 px-4 py-2 text-sm font-medium transition-colors duration-200">
                     Sign In
                   </Link>
-                  <Link href="/welcome" className="relative bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                  <Link href="/welcome" className="relative bg-gradient-to-r from-pink-500 to-rose-500 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                     Get Started
                    
                   </Link>
@@ -253,18 +254,18 @@ function HomeContent() {
         {isMenuOpen && (
           <div className="md:hidden bg-white/95 backdrop-blur-lg border-t border-gray-200/50 shadow-lg">
             <div className="px-4 pt-2 pb-3 space-y-1">
-              <a href="#home" className="block px-3 py-3 text-base font-medium text-gray-900 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors duration-200">Home</a>
-              <a href="#modules" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors duration-200">Modules</a>
-              <a href="#features" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors duration-200">Features</a>
-              <a href="#testimonials" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors duration-200">Testimonials</a>
-              <a href="#contact" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors duration-200">Contact</a>
+              <a href="#home" className="block px-3 py-3 text-base font-medium text-gray-900 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Home</a>
+              <a href="#modules" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Modules</a>
+              <a href="#features" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Features</a>
+              <a href="#testimonials" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Testimonials</a>
+              <a href="#contact" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Contact</a>
                 <div className="pt-4 border-t border-gray-200">
                   {user ? (
-                    <Link href="/dashboard" className="block px-3 py-3 text-base font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300">Dashboard</Link>
+                    <Link href="/dashboard" className="block px-3 py-3 text-base font-medium bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300">Dashboard</Link>
                   ) : (
                     <>
-                      <Link href="/welcome" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors duration-200">Sign In</Link>
-                      <Link href="/welcome" className="block px-3 py-3 text-base font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300">Get Started</Link>
+                      <Link href="/welcome" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Sign In</Link>
+                      <Link href="/welcome" className="block px-3 py-3 text-base font-medium bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300">Get Started</Link>
                     </>
                   )}
                 </div>
@@ -274,27 +275,123 @@ function HomeContent() {
       </nav>
 
       {/* Hero Section */}
-      <section id="home" className="pt-40 pb-16 px-4 sm:px-6 lg:px-8">
+      <section id="home" className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-              Understanding Your Baby&apos;s
-              <span className="text-blue-600 block">Every Cry</span>
-            </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Revolutionary AI-powered baby cry translation system that helps parents understand their baby&apos;s needs instantly. 
-              From hunger to pain, we decode every cry with precision and care.
-            </p>
-            {/* <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center">
-                <FaPlay className="mr-2" />
-                Watch Demo
-              </button>
-              <button className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center">
-                <FaDownload className="mr-2" />
-                Download App
-              </button>
-            </div> */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left Side - Heading & Content */}
+            <div className="space-y-8 animate-fade-in">
+              <div className="inline-block">
+                <span className="px-4 py-2 bg-gradient-to-r from-pink-100 to-rose-100 text-pink-700 rounded-full text-sm font-semibold border border-pink-200">
+                  🤱 AI-Powered Baby Care
+                </span>
+              </div>
+              
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
+                <span className="text-gray-900">Understanding Your</span>
+                <br />
+                <span className="bg-gradient-to-r from-pink-500 via-rose-500 to-purple-500 bg-clip-text text-transparent">
+                  Baby&apos;s Every Cry
+                </span>
+              </h1>
+              
+              <p className="text-xl md:text-2xl text-gray-600 leading-relaxed max-w-xl">
+                Revolutionary AI-powered baby cry translation system that helps parents understand their baby&apos;s needs instantly. 
+                From hunger to pain, we decode every cry with <span className="text-pink-600 font-semibold">precision and care</span>.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <Link 
+                  href={user ? "/dashboard" : "/welcome"}
+                  className="group relative bg-gradient-to-r from-pink-500 to-rose-500 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center"
+                >
+                  <span>Get Started Free</span>
+                  <FaArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <button className="border-2 border-pink-300 text-pink-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-pink-50 transition-all duration-300 flex items-center justify-center">
+                  <FaPlay className="mr-2" />
+                  Watch Demo
+                </button>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-6 pt-8">
+                <div>
+                  <div className="text-3xl font-bold text-pink-600">95%+</div>
+                  <div className="text-sm text-gray-600">Accuracy Rate</div>
+                </div>
+                <div>
+                  <div className="text-3xl font-bold text-rose-600">10K+</div>
+                  <div className="text-sm text-gray-600">Happy Parents</div>
+                </div>
+                <div>
+                  <div className="text-3xl font-bold text-purple-600">24/7</div>
+                  <div className="text-sm text-gray-600">Support</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side - Media */}
+            <div className="relative lg:pl-8">
+              <div className="relative">
+                {/* Decorative Elements */}
+                <div className="absolute -top-8 -right-8 w-64 h-64 bg-gradient-to-br from-pink-200 to-rose-200 rounded-full blur-3xl opacity-50 animate-pulse"></div>
+                <div className="absolute -bottom-8 -left-8 w-56 h-56 bg-gradient-to-br from-purple-200 to-pink-200 rounded-full blur-3xl opacity-50 animate-pulse delay-1000"></div>
+                
+                {/* Main Image Container */}
+                <div className="relative z-10">
+                  <div className="relative rounded-3xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-500">
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 to-purple-500/10 z-10"></div>
+                    
+                    {/* Image */}
+                    <div className="relative aspect-[4/5] lg:aspect-square">
+                      <Image
+                        src={motherAndBaby}
+                        alt="Mother and baby - AI-powered baby care"
+                        fill
+                        className="object-cover"
+                        priority
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                      />
+                    </div>
+                    
+                    {/* Floating Badge */}
+                    <div className="absolute bottom-6 left-6 bg-white/95 backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-pink-100">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-pink-400 to-rose-400 rounded-xl flex items-center justify-center">
+                          <FaBaby className="text-white text-xl" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900">AI Analysis</div>
+                          <div className="text-xs text-gray-600">Real-time insights</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Decorative Cards */}
+                  <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl p-4 shadow-xl border border-rose-100 hidden lg:block animate-float">
+                    <div className="flex items-center space-x-2">
+                      <FaHeartbeat className="text-rose-500 text-xl" />
+                      <div>
+                        <div className="text-sm font-semibold text-gray-900">Health Monitor</div>
+                        <div className="text-xs text-gray-600">Vital signs tracking</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="absolute -top-6 -right-6 bg-white rounded-2xl p-4 shadow-xl border border-purple-100 hidden lg:block animate-float-delayed">
+                    <div className="flex items-center space-x-2">
+                      <FaBrain className="text-purple-500 text-xl" />
+                      <div>
+                        <div className="text-sm font-semibold text-gray-900">Smart AI</div>
+                        <div className="text-xs text-gray-600">Machine learning</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -339,7 +436,7 @@ function HomeContent() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-16 bg-gradient-to-br from-blue-50 to-purple-50">
+      <section id="features" className="py-16 bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -434,20 +531,20 @@ function HomeContent() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-blue-600">
+      <section className="py-16 bg-gradient-to-r from-pink-500 via-rose-500 to-purple-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
             Ready to Understand Your Baby Better?
           </h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-pink-50 mb-8 max-w-2xl mx-auto">
             Join the future of parenting with AI-powered baby cry translation. 
             Start your journey today.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-white text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors">
+            <button className="bg-white text-pink-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors">
               Start Free Trial
             </button>
-            <button className="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors">
+            <button className="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-pink-600 transition-colors">
               Learn More
             </button>
           </div>

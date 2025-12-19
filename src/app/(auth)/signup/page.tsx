@@ -427,7 +427,7 @@ function SignUpContent() {
                       By tapping &quot;Create Account&quot;, you agree to the
                       MamtaAi Terms of Use.
                     </p>
-                    <button className="text-[#002e6b] font-bold text-xs sm:text-sm">
+                    <button className="text-pink-600 hover:text-pink-700 font-bold text-xs sm:text-sm transition-colors">
                       Terms of Use
                     </button>
                   </div>
@@ -436,7 +436,7 @@ function SignUpContent() {
                       To learn more about how MamtaAi collects, uses, shares, and
                       protects your personal data, please see the MamtaAi Privacy.
                     </p>
-                    <button className="text-[#002e6b] font-bold text-xs sm:text-sm">
+                    <button className="text-pink-600 hover:text-pink-700 font-bold text-xs sm:text-sm transition-colors">
                       Privacy Policy
                     </button>
                   </div>

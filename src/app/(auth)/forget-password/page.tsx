@@ -173,7 +173,7 @@ function ForgetPasswordContent() {
                         We&apos;ve sent an email to {email}
                       </h1>
                     </div>
-                    <span className="text-[#66696D] text-[16px] leading-[150%] tracking-[-0.5px] font-medium md:text-lg xl:text-[22px] text-center md:text-start">
+                    <span className="text-gray-600 text-[16px] leading-[150%] tracking-[-0.5px] font-medium md:text-lg xl:text-[22px] text-center md:text-start">
                       Check your inbox for instructions on how to reset your
                       password. If you don&apos;t receive an email, check your
                       junk/spam or resend below.

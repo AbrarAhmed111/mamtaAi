@@ -123,7 +123,7 @@ function SignInContent() {
             )}
             className="flex justify-end text-sm mt-2"
           >
-            <button type="button" className="text-[#002e6b] hover:underline">
+            <button type="button" className="text-pink-600 hover:text-pink-700 hover:underline font-medium">
               Forgot password?
             </button>
           </Link>
@@ -146,7 +146,7 @@ function SignInContent() {
                   setResendMsg(success || e || '')
                   setResending(false)
                 }}
-                className="text-[#002e6b] underline ml-1 disabled:opacity-50"
+                className="text-pink-600 hover:text-pink-700 underline ml-1 disabled:opacity-50 font-medium"
               >
                 Resend confirmation email
               </button>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast, Toaster } from '@/components/ui/sonner';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Spinner from '@/components/ui/spinner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FaBaby, FaCamera, FaUsers } from 'react-icons/fa';
@@ -276,7 +277,7 @@ export default function Dashboard({
       toast.error('Only parents can add babies. Please select Parent as your role.');
       return;
     }
-    router.push('/babies/new');
+    router.push('/dashboard/babies/add-baby');
   };
 
   const handleBabyClick = (baby: any) => {
@@ -340,12 +341,13 @@ export default function Dashboard({
                 </div>
                 <div className="flex gap-2">
                   {!isRoleUnset && (
-                    <button
+                    <Link
+                      href="/dashboard/babies/add-baby"
                       onClick={handleAddBaby}
-                    className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-yellow-600 text-white text-sm font-medium hover:bg-yellow-700"
-                  >
+                      className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    >
                       Add Baby
-                    </button>
+                    </Link>
                   )}
                 </div>
               </div>
@@ -387,15 +389,16 @@ export default function Dashboard({
                   Cancel
                 </button>
                 {babies.length === 0 ? (
-                  <button
+                  <Link
+                    href="/dashboard/babies/add-baby"
                     onClick={() => {
                       setShowSelectBaby(false);
                       handleAddBaby();
                     }}
-                    className="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                    className="px-4 py-2 text-sm rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg"
                   >
                     Add Baby
-                  </button>
+                  </Link>
                 ) : (
                   <button
                     onClick={() => {
@@ -406,7 +409,7 @@ export default function Dashboard({
                       setShowSelectBaby(false);
                       startRecording();
                     }}
-                    className="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                    className="px-4 py-2 text-sm rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg"
                   >
                     Continue
                   </button>
@@ -496,19 +499,20 @@ export default function Dashboard({
                   <div className="bg-white rounded-xl p-6 border border-dashed border-gray-200 text-center">
                     <p className="text-gray-700 font-medium">No babies added yet</p>
                     <p className="text-gray-500 text-sm mt-1">Add your baby to start tracking and getting insights.</p>
-                    <button
+                    <Link
+                      href="/dashboard/babies/add-baby"
                       onClick={handleAddBaby}
-                      className="mt-4 inline-flex items-center px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+                      className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                     >
                       Add Baby
-                    </button>
+                    </Link>
                   </div>
                 )
               )}
 
           {/* Recent recordings */}
-          <div className="bg-white rounded-xl border border-gray-100 p-5">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Your Baby Recordings</h3>
+          <div className="bg-white rounded-2xl border border-pink-100 p-5 bg-gradient-to-br from-white to-pink-50/20">
+            <h3 className="text-lg font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent mb-4">Your Baby Recordings</h3>
             {recentLoading ? (
               <div className="text-gray-600 text-sm">Loading recordings...</div>
             ) : recentRecs.length === 0 ? (

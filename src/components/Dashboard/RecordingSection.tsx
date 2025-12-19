@@ -182,8 +182,8 @@ export default function RecordingSection({
   const effectiveTime = internalRecording ? internalTime : recordingTime;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">🎤 Record Baby Cry</h3>
+    <div className="bg-white rounded-2xl shadow-sm border border-pink-100 p-6 bg-gradient-to-br from-white to-pink-50/20">
+      <h3 className="text-lg font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent mb-4">🎤 Record Baby Cry</h3>
       
       <div className="text-center">
         {effectiveRecording ? (
@@ -210,7 +210,7 @@ export default function RecordingSection({
             </div>
             <button
               onClick={stop}
-              className="px-6 py-3 bg-red-600 text-white flex item-center !gap-x-2 justify-center rounded-lg hover:bg-red-700 transition-colors"
+              className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white flex item-center !gap-x-2 justify-center rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold"
             >
               <FaStop className="" />
               Stop Recording
@@ -218,8 +218,8 @@ export default function RecordingSection({
           </div>
         ) : (
           <div className="space-y-4 flex items-center justify-center flex-col gap-2 mt-2">
-            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-              <FaMicrophone className="text-blue-600 text-2xl" />
+            <div className="w-20 h-20 bg-gradient-to-br from-pink-100 to-rose-100 rounded-full flex items-center justify-center mx-auto border-2 border-pink-200">
+              <FaMicrophone className="text-pink-600 text-2xl" />
             </div>
             {isSaving ? (
               <div className="flex flex-col items-center gap-2">
@@ -238,7 +238,7 @@ export default function RecordingSection({
                     onClick={start}
                     disabled={isSaving}
                     aria-busy={isSaving}
-                    className={`px-6 py-3 bg-blue-600 flex item-center !gap-x-2 justify-center text-white rounded-lg transition-colors ${isSaving ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-700'}`}
+                    className={`px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 flex item-center !gap-x-2 justify-center text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold ${isSaving ? 'opacity-60 cursor-not-allowed transform-none' : 'hover:from-pink-600 hover:to-rose-600'}`}
                   >
                     <FaPlay className="" />
                     <h1>

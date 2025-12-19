@@ -1,6 +1,7 @@
 'use client';
 
 import { FaBaby, FaPlus } from 'react-icons/fa';
+import Link from 'next/link';
 
 interface Baby {
   id: string;
@@ -23,51 +24,49 @@ export default function BabyProfiles({
   onBabyClick 
 }: BabyProfilesProps) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Your Babies</h3>
-        <button 
+    <div className="bg-white rounded-2xl shadow-sm border border-pink-100 p-6 bg-gradient-to-br from-white to-pink-50/20">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
+          Your Babies
+        </h3>
+        <Link
+          href="/dashboard/babies/add-baby"
           onClick={onAddBaby}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm font-semibold"
         >
           <FaPlus className="text-sm" />
           <span>Add Baby</span>
-        </button>
+        </Link>
       </div>
 
-      <div className="grid grid-cols-1  gap-4">
+      <div className="grid grid-cols-1 gap-4">
         {babies.map((baby) => (
-          <div 
-            key={baby.id} 
-            className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+          <Link
+            key={baby.id}
+            href={`/dashboard/babies/${baby.id}`}
+            className="block border border-pink-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer bg-gradient-to-br from-white to-pink-50/30 hover:from-pink-50/50 hover:to-rose-50/50"
             onClick={() => onBabyClick?.(baby)}
           >
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-full overflow-hidden border">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={baby.avatar || '/api/placeholder/64/64'}
-                  alt={baby.name}
-                  className="w-full h-full object-cover"
-                />
+              <div className="relative">
+                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-pink-200 shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={baby.avatar || '/api/placeholder/64/64'}
+                    alt={baby.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-pink-400 rounded-full border-2 border-white flex items-center justify-center">
+                  <FaBaby className="text-white text-xs" />
+                </div>
               </div>
               <div className="flex-1">
-                <h4 className="font-medium text-gray-900">{baby.name}</h4>
-                <p className="text-sm text-gray-600">{baby.age}</p>
-                {/* {baby?.lastCry ? (
-                  <p className="text-xs text-gray-500">
-                    Last cry: {new Date(baby.lastCry).toLocaleTimeString()}
-                  </p>
-                ) : null} */}
+                <h4 className="font-semibold text-gray-900 text-lg">{baby.name}</h4>
+                <p className="text-sm text-pink-600 font-medium mt-1">{baby.age}</p>
               </div>
-              {/* {typeof baby?.totalCries === 'number' ? (
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{baby.totalCries}</p>
-                  <p className="text-xs text-gray-500">total cries</p>
-                </div>
-              ) : null} */}
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

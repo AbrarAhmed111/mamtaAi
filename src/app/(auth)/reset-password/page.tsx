@@ -138,7 +138,7 @@ function ResetPasswordContent() {
       <div className="px-[24px] py-[10px] md:px-0 md:py-0">
         <div className="flex items-center justify-center min-h-[200px]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Validating reset link...</p>
           </div>
         </div>
@@ -162,7 +162,7 @@ function ResetPasswordContent() {
           <div className="text-red-500 text-sm mb-2">{resetError}</div>
           <button
             onClick={() => router.push('/forget-password')}
-            className="text-sm text-blue-600 hover:text-blue-800 underline"
+            className="text-sm text-pink-600 hover:text-pink-700 underline font-medium"
           >
             Request a new password reset
           </button>

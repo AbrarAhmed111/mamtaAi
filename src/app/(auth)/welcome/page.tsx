@@ -128,7 +128,7 @@ function WelcomeContent() {
           disabled={loading}
           loading={loading}
           loadingText="Verifying user..."
-          className={`mt-[24px] ${loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-[#002e6b] hover:opacity-90'}`}
+          className="mt-[24px]"
         >
           Continue
         </AuthButton>
@@ -137,7 +137,7 @@ function WelcomeContent() {
       <div className="mt-4">
         <button
           onClick={handleGoogleLogin}
-          className="flex items-center justify-center w-full gap-3 rounded-2xl min-h-[46px] md:min-h-[56px] border border-gray-300 bg-white px-4 py-2.5 sm:py-3 text-sm sm:text-[16px] font-semibold text-gray-700 shadow-sm transition-colors duration-300 hover:bg-gray-50"
+          className="flex items-center justify-center w-full gap-3 rounded-2xl min-h-[46px] md:min-h-[56px] border-2 border-pink-200 bg-white px-4 py-2.5 sm:py-3 text-sm sm:text-[16px] font-semibold text-gray-700 shadow-sm transition-all duration-300 hover:bg-pink-50 hover:border-pink-300 hover:shadow-md"
         >
           <svg
             className="h-5 w-5"

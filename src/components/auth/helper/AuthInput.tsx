@@ -26,7 +26,7 @@ const AuthInput = forwardRef<HTMLInputElement, AuthInputProps>(
         <div className="relative">
           <input
             ref={ref}
-            className={`bg-[#F6F7F8] px-4 text-[16px] font-medium rounded-2xl min-h-[56px] py-2.5 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`bg-pink-50/50 border border-pink-100 px-4 text-[16px] font-medium rounded-2xl min-h-[56px] py-2.5 w-full focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-pink-300 transition-all ${
               showPasswordToggle ? 'pr-10' : ''
             } ${className || ''}`}
             {...props}

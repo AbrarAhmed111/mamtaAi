@@ -21,9 +21,11 @@ export default function WelcomeChecklist({
   onItemAction 
 }: WelcomeChecklistProps) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6">
+    <div className="bg-white rounded-2xl shadow-sm border border-pink-100 p-6 bg-gradient-to-br from-white to-pink-50/20">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">🎉 Welcome Checklist</h3>
+        <h3 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
+          🎉 Welcome Checklist
+        </h3>
       </div>
 
       <div className="space-y-4">
@@ -32,30 +34,30 @@ export default function WelcomeChecklist({
           return (
             <div
               key={item.id}
-              className={`p-4 rounded-lg border-2 transition-all ${
+              className={`p-5 rounded-xl border-2 transition-all duration-300 ${
                 item.completed
-                  ? 'border-green-200 bg-green-50'
-                  : 'border-gray-200 hover:border-blue-300'
+                  ? 'border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 shadow-sm'
+                  : 'border-pink-200 hover:border-pink-300 bg-gradient-to-br from-white to-pink-50/30 hover:shadow-md'
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
                       item.completed
-                        ? 'bg-green-100 text-green-600'
-                        : 'bg-gray-100 text-gray-400'
+                        ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-lg'
+                        : 'bg-gradient-to-br from-pink-100 to-rose-100 text-pink-600'
                     }`}
                   >
-                    {item.completed ? <FaCheck /> : <Icon />}
+                    {item.completed ? <FaCheck className="text-lg" /> : <Icon className="text-lg" />}
                   </div>
                   <div>
-                    <h4 className={`font-medium ${
+                    <h4 className={`font-semibold text-lg ${
                       item.completed ? 'text-green-800' : 'text-gray-900'
                     }`}>
                       {item.title}
                     </h4>
-                    <p className="text-sm text-gray-600">{item.description}</p>
+                    <p className="text-sm text-gray-600 mt-1">{item.description}</p>
                   </div>
                 </div>
                 
@@ -63,7 +65,7 @@ export default function WelcomeChecklist({
                   {!item.completed && (
                     <button
                       onClick={() => onItemAction?.(item.id)}
-                      className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                      className="px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold rounded-xl hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                     >
                       {item.action}
                     </button>

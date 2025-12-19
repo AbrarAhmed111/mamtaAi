@@ -69,12 +69,12 @@ export default function Sidebar({ currentPath = '/dashboard', user, isOpen = fal
       
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col
+        fixed inset-y-0 left-0 z-50 w-64 bg-white/95 backdrop-blur-lg shadow-lg border-r border-pink-100 flex flex-col
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* Mobile Header */}
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="lg:hidden flex items-center justify-between p-4 border-b border-pink-100 bg-gradient-to-r from-pink-50/50 to-rose-50/50">
           <div className="flex items-center space-x-3">
             <Image
               src={logo}
@@ -83,7 +83,7 @@ export default function Sidebar({ currentPath = '/dashboard', user, isOpen = fal
               height={24}
               className="object-contain rounded-full"
             />
-            <h1 className="text-xl font-semibold text-gray-900">MamtaAI</h1>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">MamtaAI</h1>
           </div>
           <button
             onClick={onToggle}
@@ -94,7 +94,7 @@ export default function Sidebar({ currentPath = '/dashboard', user, isOpen = fal
         </div>
 
         {/* Logo - Desktop */}
-        <div className="hidden lg:block p-6 border-b border-gray-200">
+        <div className="hidden lg:block p-6 border-b border-pink-100 bg-gradient-to-r from-pink-50/50 to-rose-50/50">
           <div className="flex items-center space-x-3">
             <Image
               src={logo}
@@ -103,7 +103,7 @@ export default function Sidebar({ currentPath = '/dashboard', user, isOpen = fal
               height={28}
               className="object-contain rounded-full"
             />
-            <h1 className="text-xl font-semibold text-gray-900">MamtaAI</h1>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">MamtaAI</h1>
           </div>
         </div>
 
@@ -121,10 +121,10 @@ export default function Sidebar({ currentPath = '/dashboard', user, isOpen = fal
                     onToggle?.();
                   }
                 }}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   item.active
-                    ? 'text-blue-600 bg-blue-50 font-medium'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    ? 'text-pink-600 bg-gradient-to-r from-pink-50 to-rose-50 font-semibold border-l-4 border-pink-500 shadow-sm'
+                    : 'text-gray-600 hover:text-pink-600 hover:bg-pink-50/50'
                 }`}
               >
                 <Icon className="text-lg" />

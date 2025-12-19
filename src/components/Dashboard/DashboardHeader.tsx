@@ -40,7 +40,7 @@ export default function DashboardHeader({
   }, []);
 
   return (
-  <header className="sticky top-0 z-30 bg-white/90 supports-[backdrop-filter]:bg-white/60 backdrop-blur shadow-sm border-b border-gray-200">
+  <header className="sticky top-0 z-30 bg-white/90 supports-[backdrop-filter]:bg-white/60 backdrop-blur shadow-sm border-b border-pink-100">
       <div className="px-4 sm:px-6 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
@@ -53,7 +53,7 @@ export default function DashboardHeader({
             </button>
             
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+              <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
                 {greeting}, {userName}! 👋
               </h2>
               <p className="text-sm sm:text-base text-gray-600 hidden sm:block">
@@ -82,7 +82,7 @@ export default function DashboardHeader({
             {/* User dropdown */}
             <div className="relative">
               <button
-                className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-gray-200 hover:bg-gray-50"
+                className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-pink-200 hover:bg-pink-50 transition-colors"
                 onClick={() => setOpen(prev => !prev)}
               >
                 <img
@@ -93,9 +93,9 @@ export default function DashboardHeader({
                 <span className="hidden sm:inline text-sm font-medium text-gray-700">{userName}</span>
               </button>
               {open && (
-                <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                <div className="absolute right-0 mt-2 w-40 bg-white border border-pink-100 rounded-xl shadow-lg z-50 overflow-hidden">
                   <button
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-pink-50 text-gray-700 transition-colors"
                     onClick={() => {
                       setOpen(false);
                       onSignOut && onSignOut();
