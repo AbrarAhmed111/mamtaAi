@@ -23,10 +23,42 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No profile' }, { status: 404 })
     }
 
+    // Fallback to auth user metadata if profile doesn't have avatar_url (for Google OAuth users)
+    const avatarUrl = profile.avatar_url || 
+      (user.user_metadata?.avatar_url as string) || 
+      (user.user_metadata?.picture as string) || 
+      null
+
+    const fullName = profile.full_name || 
+      (user.user_metadata?.full_name as string) || 
+      (user.user_metadata?.name as string) || 
+      `${user.user_metadata?.given_name || ''} ${user.user_metadata?.family_name || ''}`.trim() ||
+      profile.full_name ||
+      'User'
+
+    // Update profile if we have better data from auth metadata
+    if (!profile.avatar_url && avatarUrl) {
+      // Update profile asynchronously (don't block the response)
+      supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', user.id)
+        .then(() => {
+          // Profile updated
+        })
+        .catch(() => {
+          // Non-fatal error
+        })
+    }
+
     return NextResponse.json({
       id: user.id,
       email: user.email,
-      profile,
+      profile: {
+        ...profile,
+        avatar_url: avatarUrl || profile.avatar_url,
+        full_name: fullName || profile.full_name,
+      },
     })
   } catch (e: any) {
     return NextResponse.json(

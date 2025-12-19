@@ -31,20 +31,26 @@ export async function GET(request: NextRequest) {
       if (user?.id) {
         const { data: existingProfile, error: profileFetchError } = await supabase
           .from('profiles')
-          .select('id')
+          .select('id, avatar_url')
           .eq('id', user.id)
           .single()
 
-        if (profileFetchError) {
-          const fullName =
-            (user.user_metadata?.full_name as string) ||
-            (user.user_metadata?.name as string) ||
-            (user.email as string) ||
-            'User'
-          const avatarUrl =
-            (user.user_metadata?.avatar_url as string) || null
+        // Extract Google profile data
+        const fullName =
+          (user.user_metadata?.full_name as string) ||
+          (user.user_metadata?.name as string) ||
+          `${user.user_metadata?.given_name || ''} ${user.user_metadata?.family_name || ''}`.trim() ||
+          (user.email?.split('@')[0] as string) ||
+          'User'
+        
+        // Google provides picture in user_metadata.picture, not avatar_url
+        const avatarUrl =
+          (user.user_metadata?.avatar_url as string) ||
+          (user.user_metadata?.picture as string) ||
+          null
 
-          // Create minimal profile
+        if (profileFetchError) {
+          // Create minimal profile for new users
           await supabase.from('profiles').insert({
             id: user.id,
             full_name: fullName,
@@ -56,6 +62,18 @@ export async function GET(request: NextRequest) {
               signupMethod: 'google',
             },
           } as any)
+        } else if (existingProfile && !existingProfile.avatar_url && avatarUrl) {
+          // Update existing profile if it doesn't have an avatar but we have one from Google
+          await supabase
+            .from('profiles')
+            .update({ avatar_url: avatarUrl })
+            .eq('id', user.id)
+        } else if (existingProfile && !existingProfile.full_name && fullName) {
+          // Update full_name if missing
+          await supabase
+            .from('profiles')
+            .update({ full_name: fullName })
+            .eq('id', user.id)
         }
       }
     } catch {

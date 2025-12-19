@@ -18,6 +18,12 @@ export async function GET(request: NextRequest) {
       provider,
       options: {
         redirectTo: redirectTarget.toString(),
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+        // Request profile and email scopes to get user info
+        scopes: provider === 'google' ? 'email profile' : undefined,
       },
     })
 
