@@ -10,7 +10,7 @@ interface QuickActionsProps {
 export default function QuickActions({ onActionClick }: QuickActionsProps) {
   const actions = [
     {
-      href: '/community',
+      href: '/dashboard/community',
       label: 'Join Community',
       icon: FaUsers,
       iconColor: 'text-pink-600',

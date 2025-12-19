@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { FaBell, FaCog, FaBars } from 'react-icons/fa';
+import Link from 'next/link';
 
 interface DashboardHeaderProps {
   greeting?: string;
@@ -96,9 +97,16 @@ export default function DashboardHeader({
                 <span className="hidden sm:inline text-sm font-medium text-gray-700">{userName}</span>
               </button>
               {open && (
-                <div className="absolute right-0 mt-2 w-40 bg-white border border-pink-100 rounded-xl shadow-lg z-50 overflow-hidden">
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-pink-100 rounded-xl shadow-lg z-50 overflow-hidden">
+                  <Link
+                    href="/dashboard/settings"
+                    className="block w-full text-left px-4 py-2 text-sm hover:bg-pink-50 text-gray-700 transition-colors"
+                    onClick={() => setOpen(false)}
+                  >
+                    Profile & Settings
+                  </Link>
                   <button
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-pink-50 text-gray-700 transition-colors"
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-pink-50 text-gray-700 transition-colors border-t border-pink-100"
                     onClick={() => {
                       setOpen(false);
                       onSignOut && onSignOut();

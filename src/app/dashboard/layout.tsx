@@ -42,6 +42,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           userName={displayUser.name.split(' ')[0]}
           userAvatarUrl={displayUser.avatar}
           onMenuToggle={toggleMobileMenu}
+          onSettingsClick={() => {
+            window.location.href = '/dashboard/settings'
+          }}
           onSignOut={async () => {
             try {
               await signOut()

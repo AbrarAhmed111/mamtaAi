@@ -16,6 +16,10 @@ const nextConfig = {
           protocol: 'https',
           hostname: '**.supabase.in',
         },
+        {
+          protocol: 'https',
+          hostname: 'lh3.googleusercontent.com',
+        },
       ],
       unoptimized: false, // Set to true if you want to skip image optimization
     },

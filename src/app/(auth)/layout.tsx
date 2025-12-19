@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { ReactNode } from 'react'
-import authImage from '@/assets/img/motherandbaby.jpg'
+import authImage from '@/assets/img/motherandbaby.png'
 import logo from '@/assets/img/smallLogo.png'
 
 

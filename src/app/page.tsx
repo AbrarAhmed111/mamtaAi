@@ -35,7 +35,7 @@ import {
   FaTimes
 } from 'react-icons/fa';
 import logo from '@/assets/img/smallLogo.png'
-import motherAndBaby from '@/assets/img/motherandbaby.jpg'
+import motherAndBaby from '@/assets/img/motherandbaby.png'
 import Image from 'next/image';
 
 
@@ -176,7 +176,7 @@ function HomeContent() {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
                 <div className="relative ">
-                  <Image src={logo} alt='' className="h-12 rounded-full w-12 text-blue-600 group-hover:text-purple-600 transition-colors duration-300" />
+                  <Image src={logo} alt='' className="h-16 rounded-full w-16 text-blue-600 group-hover:text-purple-600 transition-colors duration-300" />
                 </div>
               </div>
               <div className="ml-3">
@@ -282,7 +282,7 @@ function HomeContent() {
             <div className="space-y-8 animate-fade-in">
               <div className="inline-block">
                 <span className="px-4 py-2 bg-gradient-to-r from-pink-100 to-rose-100 text-pink-700 rounded-full text-sm font-semibold border border-pink-200">
-                  🤱 AI-Powered Baby Care
+                  AI-Powered Baby Care
                 </span>
               </div>
               
@@ -356,7 +356,7 @@ function HomeContent() {
                     </div>
                     
                     {/* Floating Badge */}
-                    <div className="absolute bottom-6 left-6 bg-white/95 backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-pink-100">
+                    {/* <div className="absolute bottom-6 left-6 bg-white/95 backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-pink-100">
                       <div className="flex items-center space-x-3">
                         <div className="w-12 h-12 bg-gradient-to-br from-pink-400 to-rose-400 rounded-xl flex items-center justify-center">
                           <FaBaby className="text-white text-xl" />
@@ -366,7 +366,7 @@ function HomeContent() {
                           <div className="text-xs text-gray-600">Real-time insights</div>
                         </div>
                       </div>
-                    </div>
+                    </div> */}
                   </div>
                   
                   {/* Decorative Cards */}
@@ -380,7 +380,7 @@ function HomeContent() {
                     </div>
                   </div>
                   
-                  <div className="absolute -top-6 -right-6 bg-white rounded-2xl p-4 shadow-xl border border-purple-100 hidden lg:block animate-float-delayed">
+                  {/* <div className="absolute -top-6 -right-6 bg-white rounded-2xl p-4 shadow-xl border border-purple-100 hidden lg:block animate-float-delayed">
                     <div className="flex items-center space-x-2">
                       <FaBrain className="text-purple-500 text-xl" />
                       <div>
@@ -388,7 +388,7 @@ function HomeContent() {
                         <div className="text-xs text-gray-600">Machine learning</div>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>
