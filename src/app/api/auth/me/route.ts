@@ -39,16 +39,10 @@ export async function GET(request: NextRequest) {
     // Update profile if we have better data from auth metadata
     if (!profile.avatar_url && avatarUrl) {
       // Update profile asynchronously (don't block the response)
-      supabase
+      void supabase
         .from('profiles')
         .update({ avatar_url: avatarUrl })
         .eq('id', user.id)
-        .then(() => {
-          // Profile updated
-        })
-        .catch(() => {
-          // Non-fatal error
-        })
     }
 
     return NextResponse.json({
