@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       if (user?.id) {
         const { data: existingProfile, error: profileFetchError } = await supabase
           .from('profiles')
-          .select('id, avatar_url')
+          .select('id, avatar_url, full_name')
           .eq('id', user.id)
           .single()
 
