@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { FaHeart, FaComment, FaEye, FaArrowLeft, FaEdit, FaTrash, FaReply } from 'react-icons/fa'
+import { FaHeart, FaComment, FaEye, FaArrowLeft, FaEdit, FaTrash, FaReply, FaBookmark } from 'react-icons/fa'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
@@ -19,6 +19,7 @@ interface BlogPost {
   view_count: number | null
   like_count: number | null
   comment_count: number | null
+  bookmark_count: number | null
   is_expert_content: boolean | null
   author_credentials: string | null
   published_at: string | null
@@ -35,6 +36,8 @@ interface Comment {
   content: string
   like_count: number | null
   created_at: string | null
+  is_edited: boolean | null
+  edited_at: string | null
   author: {
     id: string
     full_name: string
@@ -53,12 +56,26 @@ export default function BlogPostPage() {
   const [commentContent, setCommentContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editContent, setEditContent] = useState('')
+  const [replyingToId, setReplyingToId] = useState<string | null>(null)
+  const [replyContent, setReplyContent] = useState('')
+  const [isFavorited, setIsFavorited] = useState(false)
+  const [bookmarkCount, setBookmarkCount] = useState(0)
 
   useEffect(() => {
     loadPost()
     loadComments()
     loadUser()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+
+  useEffect(() => {
+    if (user) {
+      checkFavoriteStatus()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, id])
 
   const loadUser = async () => {
     try {
@@ -76,6 +93,7 @@ export default function BlogPostPage() {
       const data = await res.json()
       if (data.post) {
         setPost(data.post)
+        setBookmarkCount(data.post.bookmark_count || 0)
       } else {
         toast.error('Post not found')
         router.push('/dashboard/community')
@@ -85,6 +103,43 @@ export default function BlogPostPage() {
       router.push('/dashboard/community')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const checkFavoriteStatus = async () => {
+    if (!user) return
+    try {
+      const res = await fetch(`/api/community/blog/${id}/favorite`)
+      const data = await res.json()
+      setIsFavorited(data.is_favorited || false)
+    } catch (error) {
+      console.error('Failed to check favorite status')
+    }
+  }
+
+  const handleToggleFavorite = async () => {
+    if (!user) {
+      toast.error('Please sign in to save favorites')
+      return
+    }
+
+    try {
+      const method = isFavorited ? 'DELETE' : 'POST'
+      const res = await fetch(`/api/community/blog/${id}/favorite`, {
+        method,
+      })
+
+      if (res.ok) {
+        const newFavorited = !isFavorited
+        setIsFavorited(newFavorited)
+        setBookmarkCount(prev => newFavorited ? prev + 1 : Math.max(0, prev - 1))
+        toast.success(newFavorited ? 'Post saved to favorites!' : 'Removed from favorites')
+        loadPost() // Refresh to get updated bookmark count
+      } else {
+        toast.error('Failed to update favorite')
+      }
+    } catch (error) {
+      toast.error('Failed to update favorite')
     }
   }
 
@@ -100,19 +155,24 @@ export default function BlogPostPage() {
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!commentContent.trim()) return
+    if (!commentContent.trim() && !replyContent.trim()) return
 
     setSubmitting(true)
     try {
       const res = await fetch(`/api/community/blog/${id}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: commentContent }),
+        body: JSON.stringify({ 
+          content: replyContent.trim() || commentContent.trim(),
+          parent_comment_id: replyingToId || null
+        }),
       })
 
       if (res.ok) {
         setCommentContent('')
-        toast.success('Comment added!')
+        setReplyContent('')
+        setReplyingToId(null)
+        toast.success(replyingToId ? 'Reply added!' : 'Comment added!')
         loadComments()
         loadPost() // Refresh to update comment count
       } else {
@@ -124,6 +184,91 @@ export default function BlogPostPage() {
       setSubmitting(false)
     }
   }
+
+  const handleEditComment = async (commentId: string) => {
+    if (!editContent.trim()) return
+
+    try {
+      const res = await fetch(`/api/community/blog/comments/${commentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: editContent }),
+      })
+
+      if (res.ok) {
+        toast.success('Comment updated!')
+        setEditingCommentId(null)
+        setEditContent('')
+        loadComments()
+      } else {
+        toast.error('Failed to update comment')
+      }
+    } catch (error) {
+      toast.error('Failed to update comment')
+    }
+  }
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('Are you sure you want to delete this comment?')) return
+
+    try {
+      const res = await fetch(`/api/community/blog/comments/${commentId}`, {
+        method: 'DELETE',
+      })
+
+      if (res.ok) {
+        toast.success('Comment deleted!')
+        loadComments()
+        loadPost() // Refresh to update comment count
+      } else {
+        toast.error('Failed to delete comment')
+      }
+    } catch (error) {
+      toast.error('Failed to delete comment')
+    }
+  }
+
+  const handleLikeComment = async (commentId: string) => {
+    try {
+      const res = await fetch(`/api/community/blog/comments/${commentId}/like`, {
+        method: 'POST',
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        // Update the comment in the list
+        setComments(comments.map(c => 
+          c.id === commentId ? { ...c, like_count: data.like_count } : c
+        ))
+      }
+    } catch (error) {
+      toast.error('Failed to like comment')
+    }
+  }
+
+  const startEdit = (comment: Comment) => {
+    setEditingCommentId(comment.id)
+    setEditContent(comment.content)
+  }
+
+  const startReply = (commentId: string) => {
+    setReplyingToId(commentId)
+    setReplyContent('')
+  }
+
+  const cancelEdit = () => {
+    setEditingCommentId(null)
+    setEditContent('')
+  }
+
+  const cancelReply = () => {
+    setReplyingToId(null)
+    setReplyContent('')
+  }
+
+  // Group comments by parent
+  const topLevelComments = comments.filter(c => !c.parent_comment_id)
+  const getReplies = (parentId: string) => comments.filter(c => c.parent_comment_id === parentId)
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return ''
@@ -147,7 +292,7 @@ export default function BlogPostPage() {
 
   return (
     <div className="w-full">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-full mx-auto">
         {/* Back Button */}
         <Link
           href="/dashboard/community"
@@ -247,6 +392,18 @@ export default function BlogPostPage() {
                 <FaEye />
                 <span>{post.view_count || 0}</span>
               </div>
+              <button
+                onClick={handleToggleFavorite}
+                className={`flex items-center gap-2 transition-colors ${
+                  isFavorited
+                    ? 'text-pink-600 hover:text-pink-700'
+                    : 'text-gray-600 hover:text-pink-600'
+                }`}
+                title={isFavorited ? 'Remove from favorites' : 'Save to favorites'}
+              >
+                <FaBookmark className={isFavorited ? 'fill-current' : ''} />
+                <span>{bookmarkCount || 0}</span>
+              </button>
               {isAuthor && (
                 <div className="ml-auto flex gap-2">
                   <button className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
@@ -270,7 +427,7 @@ export default function BlogPostPage() {
           </h2>
 
           {/* Comment Form */}
-          {user && (
+          {user && !replyingToId && (
             <form onSubmit={handleSubmitComment} className="mb-8">
               <textarea
                 value={commentContent}
@@ -291,53 +448,252 @@ export default function BlogPostPage() {
 
           {/* Comments List */}
           <div className="space-y-6">
-            {comments.length === 0 ? (
+            {topLevelComments.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No comments yet. Be the first to comment!</p>
             ) : (
-              comments.map((comment) => (
-                <div key={comment.id} className="border-b border-gray-200 pb-6 last:border-0">
-                  <div className="flex items-start gap-4">
-                    {comment.author && (
-                      <>
-                        {comment.author.avatar_url ? (
-                          <Image
-                            src={comment.author.avatar_url}
-                            alt={comment.author.full_name}
-                            width={40}
-                            height={40}
-                            className="rounded-full object-cover flex-shrink-0"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center flex-shrink-0">
-                            {comment.author.full_name[0]}
+              topLevelComments.map((comment) => {
+                const isAuthor = user?.id === comment.author?.id
+                const replies = getReplies(comment.id)
+                const isEditing = editingCommentId === comment.id
+                const isReplying = replyingToId === comment.id
+
+                return (
+                  <div key={comment.id} className="border-b border-gray-200 pb-6 last:border-0">
+                    <div className="flex items-start gap-4">
+                      {comment.author && (
+                        <>
+                          {comment.author.avatar_url ? (
+                            <Image
+                              src={comment.author.avatar_url}
+                              alt={comment.author.full_name}
+                              width={40}
+                              height={40}
+                              className="rounded-full object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center flex-shrink-0">
+                              {comment.author.full_name[0]}
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-semibold text-gray-900">
+                                {comment.author.full_name}
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                {formatDate(comment.created_at)}
+                              </span>
+                              {comment.is_edited && (
+                                <span className="text-xs text-gray-400 italic">
+                                  (edited)
+                                </span>
+                              )}
+                            </div>
+                            {isEditing ? (
+                              <div className="mb-4">
+                                <textarea
+                                  value={editContent}
+                                  onChange={(e) => setEditContent(e.target.value)}
+                                  rows={3}
+                                  className="w-full p-3 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent mb-2"
+                                />
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleEditComment(comment.id)}
+                                    className="px-4 py-1 text-sm bg-pink-600 text-white rounded-lg hover:bg-pink-700"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={cancelEdit}
+                                    className="px-4 py-1 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-gray-700 mb-2">{comment.content}</p>
+                            )}
+                            <div className="flex items-center gap-4">
+                              <button 
+                                onClick={() => handleLikeComment(comment.id)}
+                                className="flex items-center gap-1 text-gray-600 hover:text-pink-600 text-sm transition-colors"
+                              >
+                                <FaHeart />
+                                <span>{comment.like_count || 0}</span>
+                              </button>
+                              {user && (
+                                <button 
+                                  onClick={() => startReply(comment.id)}
+                                  className="flex items-center gap-1 text-gray-600 hover:text-pink-600 text-sm transition-colors"
+                                >
+                                  <FaReply />
+                                  Reply
+                                </button>
+                              )}
+                              {isAuthor && !isEditing && (
+                                <>
+                                  <button 
+                                    onClick={() => startEdit(comment)}
+                                    className="flex items-center gap-1 text-gray-600 hover:text-blue-600 text-sm transition-colors"
+                                  >
+                                    <FaEdit />
+                                    Edit
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDeleteComment(comment.id)}
+                                    className="flex items-center gap-1 text-gray-600 hover:text-red-600 text-sm transition-colors"
+                                  >
+                                    <FaTrash />
+                                    Delete
+                                  </button>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Reply Form */}
+                            {isReplying && (
+                              <div className="mt-4 pl-4 border-l-2 border-pink-200">
+                                <form onSubmit={(e) => {
+                                  e.preventDefault()
+                                  handleSubmitComment(e)
+                                }} className="mb-4">
+                                  <textarea
+                                    value={replyContent}
+                                    onChange={(e) => setReplyContent(e.target.value)}
+                                    placeholder="Write a reply..."
+                                    rows={3}
+                                    className="w-full p-3 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent mb-2"
+                                  />
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="submit"
+                                      disabled={submitting || !replyContent.trim()}
+                                      className="px-4 py-1 text-sm bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50"
+                                    >
+                                      {submitting ? 'Posting...' : 'Post Reply'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={cancelReply}
+                                      className="px-4 py-1 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </form>
+                              </div>
+                            )}
+
+                            {/* Nested Replies */}
+                            {replies.length > 0 && (
+                              <div className="mt-4 pl-4 border-l-2 border-pink-200 space-y-4">
+                                {replies.map((reply) => {
+                                  const isReplyAuthor = user?.id === reply.author?.id
+                                  const isEditingReply = editingCommentId === reply.id
+
+                                  return (
+                                    <div key={reply.id} className="pb-4 border-b border-gray-100 last:border-0">
+                                      <div className="flex items-start gap-3">
+                                        {reply.author && (
+                                          <>
+                                            {reply.author.avatar_url ? (
+                                              <Image
+                                                src={reply.author.avatar_url}
+                                                alt={reply.author.full_name}
+                                                width={32}
+                                                height={32}
+                                                className="rounded-full object-cover flex-shrink-0"
+                                              />
+                                            ) : (
+                                              <div className="w-8 h-8 bg-pink-200 rounded-full flex items-center justify-center flex-shrink-0 text-xs">
+                                                {reply.author.full_name[0]}
+                                              </div>
+                                            )}
+                                            <div className="flex-1">
+                                              <div className="flex items-center gap-2 mb-1">
+                                                <span className="font-semibold text-gray-900 text-sm">
+                                                  {reply.author.full_name}
+                                                </span>
+                                                <span className="text-xs text-gray-500">
+                                                  {formatDate(reply.created_at)}
+                                                </span>
+                                                {reply.is_edited && (
+                                                  <span className="text-xs text-gray-400 italic">
+                                                    (edited)
+                                                  </span>
+                                                )}
+                                              </div>
+                                              {isEditingReply ? (
+                                                <div className="mb-2">
+                                                  <textarea
+                                                    value={editContent}
+                                                    onChange={(e) => setEditContent(e.target.value)}
+                                                    rows={2}
+                                                    className="w-full p-2 text-sm border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent mb-2"
+                                                  />
+                                                  <div className="flex gap-2">
+                                                    <button
+                                                      onClick={() => handleEditComment(reply.id)}
+                                                      className="px-3 py-1 text-xs bg-pink-600 text-white rounded-lg hover:bg-pink-700"
+                                                    >
+                                                      Save
+                                                    </button>
+                                                    <button
+                                                      onClick={cancelEdit}
+                                                      className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                                                    >
+                                                      Cancel
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                <p className="text-gray-700 text-sm mb-2">{reply.content}</p>
+                                              )}
+                                              <div className="flex items-center gap-3">
+                                                <button 
+                                                  onClick={() => handleLikeComment(reply.id)}
+                                                  className="flex items-center gap-1 text-gray-600 hover:text-pink-600 text-xs transition-colors"
+                                                >
+                                                  <FaHeart />
+                                                  <span>{reply.like_count || 0}</span>
+                                                </button>
+                                                {isReplyAuthor && !isEditingReply && (
+                                                  <>
+                                                    <button 
+                                                      onClick={() => startEdit(reply)}
+                                                      className="flex items-center gap-1 text-gray-600 hover:text-blue-600 text-xs transition-colors"
+                                                    >
+                                                      <FaEdit />
+                                                      Edit
+                                                    </button>
+                                                    <button 
+                                                      onClick={() => handleDeleteComment(reply.id)}
+                                                      className="flex items-center gap-1 text-gray-600 hover:text-red-600 text-xs transition-colors"
+                                                    >
+                                                      <FaTrash />
+                                                      Delete
+                                                    </button>
+                                                  </>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
                           </div>
-                        )}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="font-semibold text-gray-900">
-                              {comment.author.full_name}
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              {formatDate(comment.created_at)}
-                            </span>
-                          </div>
-                          <p className="text-gray-700 mb-2">{comment.content}</p>
-                          <div className="flex items-center gap-4">
-                            <button className="flex items-center gap-1 text-gray-600 hover:text-pink-600 text-sm">
-                              <FaHeart />
-                              <span>{comment.like_count || 0}</span>
-                            </button>
-                            <button className="flex items-center gap-1 text-gray-600 hover:text-pink-600 text-sm">
-                              <FaReply />
-                              Reply
-                            </button>
-                          </div>
-                        </div>
-                      </>
-                    )}
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>

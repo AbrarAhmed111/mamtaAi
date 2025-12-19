@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FaBook, FaComments, FaFolderOpen, FaPlus, FaSearch, FaFilter, FaHeart, FaEye, FaComment, FaDownload, FaStar, FaCheckCircle } from 'react-icons/fa'
+import { FaBook, FaComments, FaFolderOpen, FaPlus, FaSearch, FaFilter, FaHeart, FaEye, FaComment, FaDownload, FaStar, FaCheckCircle, FaBookmark } from 'react-icons/fa'
 import Link from 'next/link'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
@@ -18,6 +18,7 @@ interface BlogPost {
   view_count: number | null
   like_count: number | null
   comment_count: number | null
+  bookmark_count: number | null
   is_expert_content: boolean | null
   published_at: string | null
   author: {
@@ -77,10 +78,91 @@ export default function CommunityPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [user, setUser] = useState<any>(null)
+  const [favoritedPosts, setFavoritedPosts] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     loadData()
+    loadUser()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, selectedCategory])
+
+  useEffect(() => {
+    if (user) {
+      loadFavoritedPosts()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
+
+  const loadUser = async () => {
+    try {
+      const res = await fetch('/api/me')
+      const data = await res.json()
+      setUser(data)
+    } catch (error) {
+      console.error('Failed to load user')
+    }
+  }
+
+  const loadFavoritedPosts = async () => {
+    try {
+      const res = await fetch('/api/community/blog/favorites')
+      const data = await res.json()
+      if (data.posts) {
+        const favoriteIds = new Set<string>(data.posts.map((p: BlogPost) => p.id))
+        setFavoritedPosts(favoriteIds)
+      }
+    } catch (error) {
+      console.error('Failed to load favorites')
+    }
+  }
+
+  const handleToggleFavorite = async (e: React.MouseEvent, postId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    if (!user) {
+      toast.error('Please sign in to save favorites')
+      return
+    }
+
+    const isFavorited = favoritedPosts.has(postId)
+    
+    try {
+      const method = isFavorited ? 'DELETE' : 'POST'
+      const res = await fetch(`/api/community/blog/${postId}/favorite`, {
+        method,
+      })
+
+      if (res.ok) {
+        const newFavorited = new Set(favoritedPosts)
+        if (isFavorited) {
+          newFavorited.delete(postId)
+        } else {
+          newFavorited.add(postId)
+        }
+        setFavoritedPosts(newFavorited)
+        toast.success(isFavorited ? 'Removed from favorites' : 'Saved to favorites!')
+        
+        // Update the post in the list
+        setBlogPosts(prev => prev.map(p => {
+          if (p.id === postId) {
+            return {
+              ...p,
+              bookmark_count: isFavorited 
+                ? Math.max(0, (p.bookmark_count || 0) - 1)
+                : (p.bookmark_count || 0) + 1
+            }
+          }
+          return p
+        }))
+      } else {
+        toast.error('Failed to update favorite')
+      }
+    } catch (error) {
+      toast.error('Failed to update favorite')
+    }
+  }
 
   const loadData = async () => {
     setLoading(true)
@@ -142,7 +224,7 @@ export default function CommunityPage() {
 
   return (
     <div className="w-full">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-full mx-auto">
         {/* Header */}
         <div className="mb-8 flex items-start justify-between">
           <div>
@@ -231,13 +313,24 @@ export default function CommunityPage() {
               ))}
             </select>
           )}
-          <Link
-            href={`/dashboard/community/${activeTab}/create`}
-            className="px-6 py-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 transition-all flex items-center gap-2"
-          >
-            <FaPlus />
-            Create New
-          </Link>
+          <div className="flex gap-2">
+            {activeTab === 'blog' && (
+              <Link
+                href="/dashboard/community/favorites"
+                className="px-6 py-2 bg-pink-100 text-pink-700 rounded-lg hover:bg-pink-200 transition-all flex items-center gap-2"
+              >
+                <FaBookmark />
+                My Favorites
+              </Link>
+            )}
+            <Link
+              href={`/dashboard/community/${activeTab}/create`}
+              className="px-6 py-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 transition-all flex items-center gap-2"
+            >
+              <FaPlus />
+              Create New
+            </Link>
+          </div>
         </div>
 
         {/* Content */}
@@ -269,73 +362,94 @@ export default function CommunityPage() {
                     </div>
                   </div>
                 ) : (
-                  filteredBlogPosts.map((post) => (
-                    <Link
-                      key={post.id}
-                      href={`/dashboard/community/blog/${post.id}`}
-                      className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all overflow-hidden group flex flex-col"
-                    >
-                      {post.featured_image_url && (
-                        <div className="relative h-48 w-full overflow-hidden">
-                          <Image
-                            src={post.featured_image_url}
-                            alt={post.title}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform"
-                          />
-                        </div>
-                      )}
-                      <div className="p-6 flex flex-col flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          {post.is_expert_content && (
-                            <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded">
-                              Expert
-                            </span>
-                          )}
-                          <span className="px-2 py-1 bg-pink-100 text-pink-700 text-xs font-semibold rounded">
-                            {post.category}
-                          </span>
-                        </div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-pink-600 transition-colors">
-                          {post.title}
-                        </h3>
-                        {post.excerpt && (
-                          <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-1">{post.excerpt}</p>
+                  filteredBlogPosts.map((post) => {
+                    const isFavorited = favoritedPosts.has(post.id)
+                    return (
+                      <div
+                        key={post.id}
+                        className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all overflow-hidden group flex flex-col relative"
+                      >
+                        {/* Favorite Button */}
+                        {user && (
+                          <button
+                            onClick={(e) => handleToggleFavorite(e, post.id)}
+                            className={`absolute top-4 right-4 z-10 p-2 rounded-full transition-colors ${
+                              isFavorited
+                                ? 'bg-pink-100 text-pink-600 hover:bg-pink-200'
+                                : 'bg-white/80 text-gray-600 hover:bg-pink-50 hover:text-pink-600'
+                            }`}
+                            title={isFavorited ? 'Remove from favorites' : 'Save to favorites'}
+                          >
+                            <FaBookmark className={isFavorited ? 'fill-current' : ''} />
+                          </button>
                         )}
-                        <div className="flex items-center justify-between text-sm text-gray-500 mt-auto pt-4 border-t border-gray-100">
-                          <div className="flex items-center gap-4">
-                            <span className="flex items-center gap-1">
-                              <FaEye /> {post.view_count || 0}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <FaHeart /> {post.like_count || 0}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <FaComment /> {post.comment_count || 0}
-                            </span>
-                          </div>
-                          {post.author && (
-                            <div className="flex items-center gap-2">
-                              {post.author.avatar_url ? (
-                                <Image
-                                  src={post.author.avatar_url}
-                                  alt={post.author.full_name}
-                                  width={24}
-                                  height={24}
-                                  className="rounded-full object-cover h-10 w-10"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center text-xs">
-                                  {post.author.full_name[0]}
-                                </div>
-                              )}
-                              <span className="text-xs">{post.author.full_name}</span>
+                        <Link
+                          href={`/dashboard/community/blog/${post.id}`}
+                          className="flex flex-col flex-1"
+                        >
+                          {post.featured_image_url && (
+                            <div className="relative h-48 w-full overflow-hidden">
+                              <Image
+                                src={post.featured_image_url}
+                                alt={post.title}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform"
+                              />
                             </div>
                           )}
-                        </div>
+                          <div className="p-6 flex flex-col flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              {post.is_expert_content && (
+                                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded">
+                                  Expert
+                                </span>
+                              )}
+                              <span className="px-2 py-1 bg-pink-100 text-pink-700 text-xs font-semibold rounded">
+                                {post.category}
+                              </span>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-pink-600 transition-colors">
+                              {post.title}
+                            </h3>
+                            {post.excerpt && (
+                              <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-1">{post.excerpt}</p>
+                            )}
+                            <div className="flex items-center justify-between text-sm text-gray-500 mt-auto pt-4 border-t border-gray-100">
+                              <div className="flex items-center gap-4">
+                                <span className="flex items-center gap-1">
+                                  <FaEye /> {post.view_count || 0}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <FaHeart /> {post.like_count || 0}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <FaComment /> {post.comment_count || 0}
+                                </span>
+                              </div>
+                              {post.author && (
+                                <div className="flex items-center gap-2">
+                                  {post.author.avatar_url ? (
+                                    <Image
+                                      src={post.author.avatar_url}
+                                      alt={post.author.full_name}
+                                      width={24}
+                                      height={24}
+                                      className="rounded-full object-cover h-10 w-10"
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center text-xs">
+                                      {post.author.full_name[0]}
+                                    </div>
+                                  )}
+                                  <span className="text-xs">{post.author.full_name}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </Link>
                       </div>
-                    </Link>
-                  ))
+                    )
+                  })
                 )}
               </div>
             )}

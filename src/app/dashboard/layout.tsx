@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/supabase/context'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { user, signOut } = useAuth()
+  const { user, signOut, loading } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev)
@@ -41,6 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           greeting={getGreeting()}
           userName={displayUser.name.split(' ')[0]}
           userAvatarUrl={displayUser.avatar}
+          isLoading={loading}
           onMenuToggle={toggleMobileMenu}
           onSettingsClick={() => {
             window.location.href = '/dashboard/settings'
@@ -54,7 +55,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }}
         />
 
-        <div className="flex-1 p-4 sm:p-6">{children}</div>
+        <div className="flex-1 p-4 sm:p-6 w-full">{children}</div>
       </div>
     </div>
   )

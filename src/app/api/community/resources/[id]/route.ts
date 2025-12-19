@@ -11,20 +11,21 @@ export async function GET(
 
     // Increment view count
     const { data: currentResource } = await supabase
-      .from('shared_resources')
-      .select('view_count')
+      .from('shared_resources' as any)
+      .select('*')
       .eq('id', id)
       .single()
     
     if (currentResource) {
+      const currentCount = (currentResource && 'view_count' in currentResource ? (currentResource as any).view_count : 0) || 0
       await supabase
-        .from('shared_resources')
-        .update({ view_count: (currentResource.view_count || 0) + 1 })
+        .from('shared_resources' as any)
+        .update({ view_count: currentCount + 1 } as any)
         .eq('id', id)
     }
 
     const { data, error } = await supabase
-      .from('shared_resources')
+      .from('shared_resources' as any)
       .select(`
         *,
         uploader:profiles!shared_resources_uploader_id_fkey (
@@ -67,17 +68,18 @@ export async function PATCH(
 
     // Check if user is the uploader
     const { data: resource } = await supabase
-      .from('shared_resources')
-      .select('uploader_id')
+      .from('shared_resources' as any)
+      .select('*')
       .eq('id', id)
       .single()
 
-    if (!resource || resource.uploader_id !== user.id) {
+    const resourceData = resource as any
+    if (!resourceData || resourceData.uploader_id !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { data, error } = await supabase
-      .from('shared_resources')
+      .from('shared_resources' as any)
       .update({
         ...body,
         updated_at: new Date().toISOString(),
@@ -115,17 +117,18 @@ export async function DELETE(
 
     // Check if user is the uploader
     const { data: resource } = await supabase
-      .from('shared_resources')
-      .select('uploader_id')
+      .from('shared_resources' as any)
+      .select('*')
       .eq('id', id)
       .single()
 
-    if (!resource || resource.uploader_id !== user.id) {
+    const resourceData = resource as any
+    if (!resourceData || resourceData.uploader_id !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { error } = await supabase
-      .from('shared_resources')
+      .from('shared_resources' as any)
       .update({ is_active: false })
       .eq('id', id)
 

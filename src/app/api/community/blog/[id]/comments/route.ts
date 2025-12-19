@@ -22,6 +22,7 @@ export async function GET(
       .eq('post_id', id)
       .eq('is_hidden', false)
       .order('created_at', { ascending: true })
+      .order('parent_comment_id', { ascending: true, nullsFirst: true })
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })

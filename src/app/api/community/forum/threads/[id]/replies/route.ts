@@ -22,6 +22,7 @@ export async function GET(
       .eq('thread_id', id)
       .eq('is_hidden', false)
       .order('created_at', { ascending: true })
+      .order('parent_reply_id', { ascending: true, nullsFirst: true })
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })

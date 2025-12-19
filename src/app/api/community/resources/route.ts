@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0')
 
     let query = supabase
-      .from('shared_resources')
+      .from('shared_resources' as any)
       .select(`
         id,
         title,
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await supabase
-      .from('shared_resources')
+      .from('shared_resources' as any)
       .insert({
         uploader_id: user.id,
         title,

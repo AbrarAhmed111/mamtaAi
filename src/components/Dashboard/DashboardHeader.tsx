@@ -15,6 +15,7 @@ interface DashboardHeaderProps {
   onMenuToggle?: () => void;
   onSignOut?: () => void;
   userAvatarUrl?: string;
+  isLoading?: boolean;
 }
 
 export default function DashboardHeader({
@@ -26,7 +27,8 @@ export default function DashboardHeader({
   onSettingsClick,
   onMenuToggle,
   onSignOut,
-  userAvatarUrl
+  userAvatarUrl,
+  isLoading = false
 }: DashboardHeaderProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -83,19 +85,28 @@ export default function DashboardHeader({
 
             {/* User dropdown */}
             <div className="relative">
-              <button
-                className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-pink-200 hover:bg-pink-50 transition-colors"
-                onClick={() => setOpen(prev => !prev)}
-              >
-                <Image
-                  src={userAvatarUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(userName) + '&background=E5E7EB&color=111827&size=64'}
-                  alt={userName}
-                  width={32}
-                  height={32}
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-                <span className="hidden sm:inline text-sm font-medium text-gray-700">{userName}</span>
-              </button>
+              {isLoading ? (
+                <div className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-pink-200">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
+                  <div className="hidden sm:block">
+                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-pink-200 hover:bg-pink-50 transition-colors"
+                  onClick={() => setOpen(prev => !prev)}
+                >
+                  <Image
+                    src={userAvatarUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(userName) + '&background=E5E7EB&color=111827&size=64'}
+                    alt={userName}
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                  <span className="hidden sm:inline text-sm font-medium text-gray-700">{userName}</span>
+                </button>
+              )}
               {open && (
                 <div className="absolute right-0 mt-2 w-48 bg-white border border-pink-100 rounded-xl shadow-lg z-50 overflow-hidden">
                   <Link

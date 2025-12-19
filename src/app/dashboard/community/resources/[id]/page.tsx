@@ -44,6 +44,7 @@ export default function ResourcePage() {
 
   useEffect(() => {
     loadResource()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   const loadResource = async () => {
@@ -128,7 +129,7 @@ export default function ResourcePage() {
 
   return (
     <div className="w-full">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-full mx-auto">
         {/* Back Button */}
         <Link
           href="/dashboard/community"

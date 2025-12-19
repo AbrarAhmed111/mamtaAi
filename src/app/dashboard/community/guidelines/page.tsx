@@ -5,7 +5,7 @@ import Link from 'next/link'
 
 export default function CommunityGuidelinesPage() {
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-full mx-auto">
       <Link
         href="/dashboard/community"
         className="inline-flex items-center gap-2 text-pink-600 hover:text-pink-700 mb-6"

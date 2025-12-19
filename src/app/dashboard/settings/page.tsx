@@ -50,6 +50,7 @@ export default function SettingsPage() {
     if (profile) {
       loadStats()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile])
 
   const loadProfile = async () => {
@@ -131,7 +132,7 @@ export default function SettingsPage() {
 
       const data = await res.json()
       if (res.ok && data.url) {
-        setFormData({ ...formData, avatar_url: data.url })
+        setFormData(prev => ({ ...prev, avatar_url: data.url }))
         toast.success('Avatar uploaded successfully')
         return data.url
       } else {
@@ -198,7 +199,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-full mx-auto">
       <div className="mb-6">
         <Link
           href="/dashboard"
