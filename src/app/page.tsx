@@ -32,16 +32,103 @@ import {
   FaInstagram,
   FaLinkedin,
   FaBars,
-  FaTimes
+  FaTimes,
+  FaClock,
+  FaLock,
+  FaCheckCircle
 } from 'react-icons/fa';
 import logo from '@/assets/img/smallLogo.png'
 import motherAndBaby from '@/assets/img/motherandbaby.png'
 import Image from 'next/image';
 
 
+function FAQAccordion() {
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
+
+  const faqs = [
+    {
+      question: "How accurate is the cry translation?",
+      answer: "MamtaAI uses advanced machine learning algorithms trained on thousands of cry samples, achieving over 95% accuracy in identifying common baby needs like hunger, sleep, discomfort, and pain. Our AI continuously learns and improves from user feedback to provide even more accurate results over time."
+    },
+    {
+      question: "Is my baby's data secure?",
+      answer: "Absolutely. We use end-to-end encryption and follow strict privacy protocols. Your baby's information is never shared with third parties, and you have full control over your data. We are HIPAA compliant and meet the highest standards for health data protection and privacy."
+    },
+    {
+      question: "Can I use it for multiple babies?",
+      answer: "Yes! MamtaAI supports multiple baby profiles, allowing you to track and understand each child's unique communication patterns and needs. You can easily switch between profiles and maintain separate records for each baby."
+    },
+    {
+      question: "Do I need special equipment?",
+      answer: "No special equipment is required. You can use your smartphone's microphone to record cries, or upload existing audio files. Optional oximeter integration is available for enhanced health monitoring, but it's completely optional."
+    },
+    {
+      question: "Is there a mobile app?",
+      answer: "MamtaAI is fully accessible through your web browser and works seamlessly on mobile devices. Our responsive design ensures a great experience on any device. A dedicated mobile app is coming soon for even better convenience and offline capabilities."
+    },
+    {
+      question: "Can I cancel my subscription anytime?",
+      answer: "Yes, you can cancel your subscription at any time with no penalties or hidden fees. Your data will remain accessible during your active subscription period, and you can export your data before cancellation if needed."
+    },
+    {
+      question: "How does the AI learn my baby's specific patterns?",
+      answer: "MamtaAI uses a combination of general AI models trained on thousands of cry samples and personalized learning based on your feedback. When you confirm or correct predictions, the system adapts to better understand your baby's unique communication style over time."
+    },
+    {
+      question: "What languages are supported?",
+      answer: "Currently, MamtaAI supports English interface with cry analysis that works universally across all languages. We're working on adding multi-language support for the interface in the near future."
+    },
+    {
+      question: "Can healthcare professionals use MamtaAI?",
+      answer: "Yes! Many pediatricians and healthcare professionals use MamtaAI as a supplementary tool to better understand their young patients. However, it's important to note that MamtaAI is not a replacement for professional medical advice and should be used as a supportive tool."
+    },
+    {
+      question: "What age range does MamtaAI work best for?",
+      answer: "MamtaAI is designed to work with babies from newborn to 24 months old. The AI has been trained on cry samples across this age range and can accurately interpret cries throughout your baby's early development stages."
+    }
+  ];
+
+  return (
+    <div className="space-y-4">
+      {faqs.map((faq, index) => (
+        <div
+          key={index}
+          className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl"
+        >
+          <button
+            onClick={() => setOpenIndex(openIndex === index ? null : index)}
+            className="w-full px-6 py-5 text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-inset group"
+          >
+            <h3 className="text-lg md:text-xl font-semibold text-gray-900 pr-8 group-hover:text-pink-600 transition-colors">
+              {faq.question}
+            </h3>
+            <div className="flex-shrink-0">
+              <div className={`w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center transition-transform duration-300 ${openIndex === index ? 'rotate-180' : ''}`}>
+                <FaArrowRight className="h-4 w-4 text-white transform -rotate-90" />
+              </div>
+            </div>
+          </button>
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              openIndex === index ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+            }`}
+          >
+            <div className="px-6 pb-5 pt-0">
+              <div className="pt-4 border-t border-gray-100">
+                <p className="text-gray-600 leading-relaxed text-base md:text-lg">
+                  {faq.answer}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function HomeContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeModule, setActiveModule] = useState(0);
   const { user } = useAuth();
   const router = useRouter();
   const qs = useSearchParams();
@@ -56,93 +143,6 @@ function HomeContent() {
       router.replace('/verify-email?error=true&message=' + encodeURIComponent(desc || 'Email link is invalid or has expired'))
     }
   }, [qs, router]);
-
-  const modules = [
-    {
-      id: 1,
-      title: "User Registration & Authentication",
-      icon: FaShieldAlt,
-      description: "Secure user accounts and profile management for parents",
-      features: ["Signup/Login", "Password Reset", "Profile Management", "Secure Access"]
-    },
-    {
-      id: 2,
-      title: "Baby Profile Management",
-      icon: FaBaby,
-      description: "Organized baby information for personalized predictions",
-      features: ["Multiple Babies", "Medical History", "Feeding Records", "Sleep Tracking"]
-    },
-    {
-      id: 3,
-      title: "Audio Recording",
-      icon: FaMicrophone,
-      description: "High-quality cry capture with noise reduction",
-      features: ["Live Recording", "Upload Audio", "Noise Reduction", "Save Recordings"]
-    },
-    {
-      id: 4,
-      title: "Community Support & Parent Network",
-      icon: FaUsers,
-      description: "Connect with other parents and access expert guidance",
-      features: ["Community Blog", "Discussion Forums", "Resource Sharing", "Trustpilot Reviews"]
-    },
-    {
-      id: 5,
-      title: "Feature Extraction (AI/ML)",
-      icon: FaBrain,
-      description: "Advanced audio analysis using machine learning",
-      features: ["MFCC Extraction", "Spectrogram Analysis", "Pitch Analysis", "Duration Analysis"]
-    },
-    {
-      id: 6,
-      title: "Baby Cry Classification (AI Model)",
-      icon: FaCog,
-      description: "Core AI intelligence for cry interpretation",
-      features: ["Model Training", "Cry Prediction", "Confidence Scoring", "Model Improvement"]
-    },
-    {
-      id: 7,
-      title: "Translation Output",
-      icon: FaMobile,
-      description: "User-friendly results and actionable suggestions",
-      features: ["Text Display", "Multiple Suggestions", "Urgency Indicators", "Solution Tips"]
-    },
-    {
-      id: 8,
-      title: "Parent Dashboard",
-      icon: FaChartLine,
-      description: "Comprehensive analytics and insights",
-      features: ["Daily Stats", "Graphical Reports", "Cry History", "Health Suggestions"]
-    },
-    {
-      id: 9,
-      title: "Secure Notification & Data Privacy",
-      icon: FaBell,
-      description: "Real-time alerts with robust security",
-      features: ["Real-Time Notifications", "Custom Alerts", "Encrypted Data", "Privacy Control"]
-    },
-    {
-      id: 10,
-      title: "Oximeter Module (Hardware Integration)",
-      icon: FaHeartbeat,
-      description: "Real-time vital signs monitoring",
-      features: ["Oximeter Readings", "Data Visualization", "Health Alerts", "Vital History"]
-    },
-    {
-      id: 11,
-      title: "Payment & Subscription",
-      icon: FaCreditCard,
-      description: "Flexible subscription plans and secure payments",
-      features: ["Plan Selection", "Secure Payments", "Subscription Management", "Premium Benefits"]
-    },
-    {
-      id: 12,
-      title: "Learning & Feedback System",
-      icon: FaGraduationCap,
-      description: "Continuous AI improvement through user feedback",
-      features: ["User Feedback", "Model Re-training", "Custom Labels", "Personalized Adaptation"]
-    }
-  ];
 
   const testimonials = [
     {
@@ -194,12 +194,12 @@ function HomeContent() {
                   Home
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300"></span>
                 </a>
-                <a href="#modules" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-pink-600 transition-colors duration-200 group">
-                  Modules
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300"></span>
-                </a>
                 <a href="#features" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-pink-600 transition-colors duration-200 group">
                   Features
+                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300"></span>
+                </a>
+                <a href="#faq" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-pink-600 transition-colors duration-200 group">
+                  FAQ
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300"></span>
                 </a>
                 <a href="#testimonials" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-pink-600 transition-colors duration-200 group">
@@ -255,8 +255,8 @@ function HomeContent() {
           <div className="md:hidden bg-white/95 backdrop-blur-lg border-t border-gray-200/50 shadow-lg">
             <div className="px-4 pt-2 pb-3 space-y-1">
               <a href="#home" className="block px-3 py-3 text-base font-medium text-gray-900 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Home</a>
-              <a href="#modules" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Modules</a>
               <a href="#features" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Features</a>
+              <a href="#faq" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">FAQ</a>
               <a href="#testimonials" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Testimonials</a>
               <a href="#contact" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Contact</a>
                 <div className="pt-4 border-t border-gray-200">
@@ -396,45 +396,6 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* Modules Section */}
-      <section id="modules" className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Comprehensive AI-Powered Modules
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our 12 integrated modules work together to provide the most accurate and comprehensive baby cry analysis system.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {modules.map((module, index) => (
-              <div
-                key={module.id}
-                className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 p-6 border border-gray-100"
-              >
-                <div className="flex items-center mb-4">
-                  <div className="bg-blue-100 p-3 rounded-lg mr-4">
-                    <module.icon className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900">{module.title}</h3>
-                </div>
-                <p className="text-gray-600 mb-4">{module.description}</p>
-                <ul className="space-y-2">
-                  {module.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-center text-sm text-gray-600">
-                      <FaCheck className="h-4 w-4 text-green-500 mr-2" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Features Section */}
       <section id="features" className="py-16 bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -496,6 +457,86 @@ function HomeContent() {
               <p className="text-gray-600">Detailed insights and patterns to better understand your baby&apos;s behavior.</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Benefits Section */}
+      <section className="py-16 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Why Parents Love MamtaAI
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Discover the benefits that make parenting easier and more confident
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div className="bg-pink-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                <FaHeartbeat className="h-6 w-6 text-pink-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Reduce Stress</h3>
+              <p className="text-gray-600">No more guessing games. Know exactly what your baby needs, reducing parental anxiety and stress.</p>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div className="bg-blue-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                <FaClock className="h-6 w-6 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Save Time</h3>
+              <p className="text-gray-600">Get instant answers instead of trying multiple solutions. Respond faster to your baby&apos;s needs.</p>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div className="bg-green-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                <FaGraduationCap className="h-6 w-6 text-green-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Learn & Grow</h3>
+              <p className="text-gray-600">Build confidence as a parent by understanding your baby&apos;s communication patterns over time.</p>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div className="bg-purple-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                <FaUsers className="h-6 w-6 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Community Support</h3>
+              <p className="text-gray-600">Connect with other parents, share experiences, and access expert guidance in our community.</p>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div className="bg-orange-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                <FaShieldAlt className="h-6 w-6 text-orange-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Privacy Protected</h3>
+              <p className="text-gray-600">Your baby&apos;s data is encrypted and secure. We prioritize your family&apos;s privacy above all.</p>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div className="bg-indigo-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                <FaChartLine className="h-6 w-6 text-indigo-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Track Progress</h3>
+              <p className="text-gray-600">Monitor your baby&apos;s patterns and health trends with detailed analytics and insights.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section id="faq" className="py-20 bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-xl text-gray-600">
+              Everything you need to know about MamtaAI
+            </p>
+          </div>
+
+          <FAQAccordion />
         </div>
       </section>
 
@@ -623,9 +664,13 @@ function HomeContent() {
               <div>
                 <h3 className="text-lg font-semibold mb-6 text-white">Product</h3>
                 <ul className="space-y-3">
-                  <li><a href="#modules" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
+                  <li><a href="#features" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
                     <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                     Features
+                  </a></li>
+                  <li><a href="#faq" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
+                    <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    FAQ
                   </a></li>
                   <li><a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
                     <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
