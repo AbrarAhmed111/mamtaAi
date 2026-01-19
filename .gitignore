@@ -35,3 +35,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 previousProject/
+
+# python backend (separate project)
+/mamtaai_python_backend
+
+# python backend (separate project)
+/mamtaai_python_backend
