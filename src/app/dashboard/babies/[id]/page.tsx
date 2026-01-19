@@ -28,6 +28,7 @@ export default function BabyDetailPage() {
 
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
+  const [selectedBaby, setSelectedBaby] = useState<{ id: string; name: string; avatar: string } | null>(null)
 
   const age = useMemo(() => formatAge(birthDate), [birthDate])
   const avatar = baby?.avatar_url || '/api/placeholder/256/256'
@@ -51,6 +52,12 @@ export default function BabyDetailPage() {
         setHeightCm(data.baby.birth_height_cm != null ? String(data.baby.birth_height_cm) : '')
         setBloodType(data.baby.blood_type || '')
         setNotes(data.baby.medical_notes || '')
+        // Set selected baby for recording component
+        setSelectedBaby({
+          id: data.baby.id,
+          name: data.baby.name,
+          avatar: data.baby.avatar_url || '/api/placeholder/96/96'
+        })
       } finally {
         setLoading(false)
       }
@@ -85,23 +92,26 @@ export default function BabyDetailPage() {
     }
   }
 
-  const startRecording = () => {
-    setIsRecording(true)
-    setRecordingTime(0)
-    const start = Date.now()
-    const timer = setInterval(() => {
-      setRecordingTime(Math.floor((Date.now() - start) / 1000))
-    }, 1000)
-    setTimeout(() => {
-      clearInterval(timer)
-      setIsRecording(false)
-      toast.success('Recording saved (demo)')
-    }, 8000)
-  }
-
-  const stopRecording = () => {
-    setIsRecording(false)
-    toast.success('Recording stopped (demo)')
+  const handleSaveRecording = async (blob: Blob, durationSeconds: number) => {
+    if (!babyId) {
+      toast.error('Baby ID not found')
+      return
+    }
+    try {
+      const fd = new FormData()
+      fd.append('file', blob, `recording_${Date.now()}.webm`)
+      fd.append('baby_id', babyId)
+      fd.append('duration_seconds', String(durationSeconds || 0))
+      const res = await fetch('/api/recordings', { method: 'POST', body: fd })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(json?.error || 'Failed to save recording')
+        return
+      }
+      toast.success('Recording saved successfully')
+    } catch (error) {
+      toast.error('Failed to save recording')
+    }
   }
 
   const handleDelete = async () => {
@@ -316,10 +326,9 @@ export default function BabyDetailPage() {
       <section className="bg-white rounded-2xl border border-pink-100 p-5 shadow-sm bg-gradient-to-br from-white to-pink-50/20">
         <h2 className="text-lg font-semibold text-gray-900 mb-3">Create New Recording</h2>
         <RecordingSection
-          isRecording={isRecording}
-          recordingTime={recordingTime}
-          onStartRecording={startRecording}
-          onStopRecording={stopRecording}
+          onSave={handleSaveRecording}
+          selectedBaby={selectedBaby}
+          babyId={babyId}
         />
       </section>
     </div>

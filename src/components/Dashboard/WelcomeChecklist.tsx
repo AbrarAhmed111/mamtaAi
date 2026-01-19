@@ -1,6 +1,7 @@
 'use client';
 
 import { FaCheck } from 'react-icons/fa';
+import Spinner from '@/components/ui/spinner';
 
 interface ChecklistItem {
   id: string;
@@ -9,6 +10,7 @@ interface ChecklistItem {
   completed: boolean;
   icon: React.ComponentType<any>;
   action: string;
+  loading?: boolean;
 }
 
 interface WelcomeChecklistProps {
@@ -46,10 +48,18 @@ export default function WelcomeChecklist({
                     className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
                       item.completed
                         ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-lg'
+                        : item.loading
+                        ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-600'
                         : 'bg-gradient-to-br from-pink-100 to-rose-100 text-pink-600'
                     }`}
                   >
-                    {item.completed ? <FaCheck className="text-lg" /> : <Icon className="text-lg" />}
+                    {item.loading ? (
+                      <Spinner size={20} color={item.completed ? 'white' : 'pink'} />
+                    ) : item.completed ? (
+                      <FaCheck className="text-lg" />
+                    ) : (
+                      <Icon className="text-lg" />
+                    )}
                   </div>
                   <div>
                     <h4 className={`font-semibold text-lg ${

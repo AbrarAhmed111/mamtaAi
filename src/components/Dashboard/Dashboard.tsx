@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast, Toaster } from '@/components/ui/sonner';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Spinner from '@/components/ui/spinner';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FaBaby, FaCamera, FaUsers } from 'react-icons/fa';
+import { FaBaby, FaCamera, FaUsers, FaPlay, FaStop, FaPause } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import DashboardHeader from './DashboardHeader';
 import WelcomeChecklist from './WelcomeChecklist';
 import RecordingSection from './RecordingSection';
 import BabyProfiles from './BabyProfiles';
+import BabySelectionModal from './BabySelectionModal';
+import ProcessingProgress from './ProcessingProgress';
 // import BadgesSection from './BadgesSection';
 import QuickActions from './QuickActions';
 
@@ -22,6 +24,7 @@ interface ChecklistItem {
   completed: boolean;
   icon: React.ComponentType<any>;
   action: string;
+  loading?: boolean;
 }
 
 // Badge system removed
@@ -89,6 +92,7 @@ export default function Dashboard({
   const [babiesLoading, setBabiesLoading] = useState(false);
   const [showSelectBaby, setShowSelectBaby] = useState(false);
   const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
+  const [shouldStartRecording, setShouldStartRecording] = useState(false);
   const [showAddBaby, setShowAddBaby] = useState(false);
   const [adding, setAdding] = useState(false);
   const [babyName, setBabyName] = useState('');
@@ -115,6 +119,11 @@ export default function Dashboard({
   const [hasCommunity, setHasCommunity] = useState(false);
   const [recentRecs, setRecentRecs] = useState<Array<{ id: string; fileUrl: string; durationSeconds: number | null; recordedAt: string; babyId: string; babyName: string; babyAvatar?: string | null }>>([]);
   const [recentLoading, setRecentLoading] = useState(false);
+  const [playingRecordingId, setPlayingRecordingId] = useState<string | null>(null);
+  const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
+  const [showProcessingProgress, setShowProcessingProgress] = useState(false);
+  const [processingAudio, setProcessingAudio] = useState<{ blob: Blob; durationSeconds: number } | null>(null);
+  const [processingResult, setProcessingResult] = useState<any>(null);
 
   useEffect(() => {
     // Points and badges removed
@@ -180,13 +189,13 @@ export default function Dashboard({
   useEffect(() => {
     setChecklist(prev =>
       prev.map(item => {
-        if (item.id === 'add-baby') return { ...item, completed: hasBaby };
-        if (item.id === 'first-cry') return { ...item, completed: hasRecording };
-        if (item.id === 'join-community') return { ...item, completed: hasCommunity };
-        return item;
+        if (item.id === 'add-baby') return { ...item, completed: hasBaby, loading: statsLoading };
+        if (item.id === 'first-cry') return { ...item, completed: hasRecording, loading: statsLoading };
+        if (item.id === 'join-community') return { ...item, completed: hasCommunity, loading: statsLoading };
+        return { ...item, loading: statsLoading };
       }),
     );
-  }, [hasBaby, hasRecording, hasCommunity]);
+  }, [hasBaby, hasRecording, hasCommunity, statsLoading]);
 
   const loadRecentRecordings = async () => {
     try {
@@ -228,14 +237,17 @@ export default function Dashboard({
   };
 
   const startRecording = () => {
-    // Deprecated simulation removed; real recording is controlled inside RecordingSection
-    setIsRecording(true);
+    // Trigger actual recording start in RecordingSection
+    // RecordingSection will set isRecording internally when recording actually starts
+    setShouldStartRecording(true);
     setRecordingTime(0);
   };
 
   const stopRecording = () => {
     // Do not auto-complete checklist on stop; completion is driven by saved recording (stats)
     setIsRecording(false);
+    setShouldStartRecording(false); // Reset flag when stopping
+    setRecordingTime(0);
   };
 
   const getGreeting = () => {
@@ -321,6 +333,61 @@ export default function Dashboard({
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
+  const handlePlayRecording = (recording: { id: string; fileUrl: string; babyName: string }) => {
+    // Stop any currently playing audio
+    Object.values(audioRefs.current).forEach(audio => {
+      if (audio && !audio.paused) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    });
+
+    if (playingRecordingId === recording.id) {
+      // If clicking the same recording, stop it
+      setPlayingRecordingId(null);
+      return;
+    }
+
+    // Create or get audio element
+    if (!audioRefs.current[recording.id]) {
+      const audio = new Audio(recording.fileUrl);
+      audioRefs.current[recording.id] = audio;
+      audio.onended = () => {
+        setPlayingRecordingId(null);
+      };
+      audio.onerror = () => {
+        toast.error('Failed to play recording');
+        setPlayingRecordingId(null);
+      };
+    }
+
+    const audio = audioRefs.current[recording.id];
+    audio.play();
+    setPlayingRecordingId(recording.id);
+  };
+
+  const handleStopRecording = () => {
+    Object.values(audioRefs.current).forEach(audio => {
+      if (audio && !audio.paused) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    });
+    setPlayingRecordingId(null);
+  };
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(audioRefs.current).forEach(audio => {
+        if (audio) {
+          audio.pause();
+          audio.src = '';
+        }
+      });
+    };
+  }, []);
+
   return (
     <>
      
@@ -356,69 +423,23 @@ export default function Dashboard({
           </div>
         )}
         
-        {showSelectBaby && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-4">
-              <h3 className="text-lg font-semibold">Select your baby</h3>
-              <p className="text-sm text-gray-600 mt-1">Choose which baby this recording is for.</p>
-              {babies.length === 0 ? (
-                <div className="mt-4 text-center">
-                  <p className="text-gray-700 font-medium">No babies found</p>
-                  <p className="text-gray-500 text-sm mt-1">Please add a baby before recording a cry.</p>
-                </div>
-              ) : (
-                <div className="mt-3 space-y-2 max-h-60 overflow-auto">
-                  {babies.map(b => (
-                    <label key={b.id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="selectedBaby"
-                        checked={selectedBabyId === b.id}
-                        onChange={() => setSelectedBabyId(b.id)}
-                      />
-                      <span className="font-medium text-gray-800">{b.name}</span>
-                      <span className="ml-auto text-xs text-gray-500">{b.age}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-              <div className="mt-4 flex justify-end gap-2">
-                <button
-                  onClick={() => setShowSelectBaby(false)}
-                  className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                {babies.length === 0 ? (
-                  <Link
-                    href="/dashboard/babies/add-baby"
-                    onClick={() => {
-                      setShowSelectBaby(false);
-                      handleAddBaby();
-                    }}
-                    className="px-4 py-2 text-sm rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg"
-                  >
-                    Add Baby
-                  </Link>
-                ) : (
-                  <button
-                    onClick={() => {
-                      if (!selectedBabyId) {
-                        toast.error('Please select a baby');
-                        return;
-                      }
-                      setShowSelectBaby(false);
-                      startRecording();
-                    }}
-                    className="px-4 py-2 text-sm rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg"
-                  >
-                    Continue
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        <BabySelectionModal
+          isOpen={showSelectBaby}
+          babies={babies}
+          selectedBabyId={selectedBabyId}
+          onSelectBaby={(babyId) => setSelectedBabyId(babyId)}
+          onConfirm={() => {
+            if (!selectedBabyId) {
+              toast.error('Please select a baby');
+              return;
+            }
+            setShowSelectBaby(false);
+            startRecording();
+          }}
+          onCancel={() => setShowSelectBaby(false)}
+          onAddBaby={handleAddBaby}
+          isLoading={babiesLoading}
+        />
 
         <div className="p-0">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
@@ -434,41 +455,20 @@ export default function Dashboard({
               {isParent && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">
                 <RecordingSection
-                  isRecording={isRecording}
-                  recordingTime={recordingTime}
-                onStartRecording={handleStartRecording}
+                  onStartRecording={handleStartRecording}
                   onStopRecording={stopRecording}
-                onSave={async (blob, durationSeconds) => {
-                  try {
+                  shouldStartRecording={shouldStartRecording}
+                  selectedBaby={selectedBabyId ? babies.find(b => b.id === selectedBabyId) || null : null}
+                  onProcessingStart={(blob, durationSeconds) => {
                     const targetBabyId = selectedBabyId || (babies[0]?.id || null);
                     if (!targetBabyId) {
                       toast.error('Please add/select a baby first');
                       return;
                     }
-                    const fd = new FormData();
-                    fd.append('file', blob, `recording_${Date.now()}.webm`);
-                    fd.append('baby_id', targetBabyId);
-                    fd.append('duration_seconds', String(durationSeconds || 0));
-                    const res = await fetch('/api/recordings', { method: 'POST', body: fd });
-                    const json = await res.json().catch(() => ({}));
-                    if (!res.ok) {
-                      toast.error(json?.error || 'Failed to save recording');
-                      return;
-                    }
-                    toast.success('Recording saved');
-                    // Refresh stats
-                    try {
-                      const statsRes = await fetch('/api/user/stats', { cache: 'no-store' });
-                      const s = await statsRes.json().catch(() => ({}));
-                      setHasRecording(Boolean(s?.hasRecording));
-                    } catch {}
-                    // Refresh recordings list (if rendered)
-                    await loadRecentRecordings();
-                  } catch {
-                    toast.error('Failed to save recording');
-                  }
-                }}
-              />
+                    setProcessingAudio({ blob, durationSeconds });
+                    setShowProcessingProgress(true);
+                  }}
+                />
             </div>
           )}
             </div>
@@ -520,19 +520,39 @@ export default function Dashboard({
               <div className="text-gray-600 text-sm">No recordings yet.</div>
             ) : (
               <ul className="space-y-3">
-                {recentRecs.map(r => (
-                  <li key={r.id} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={r.babyAvatar || '/api/placeholder/40/40'} alt={r.babyName} className="w-8 h-8 rounded-full object-cover border" />
-                      <div>
-                        <div className="font-medium text-gray-900">{r.babyName}</div>
-                        <div className="text-gray-600">{new Date(r.recordedAt).toLocaleString()} • {r.durationSeconds ? `${r.durationSeconds}s` : ''}</div>
+                {recentRecs.map(r => {
+                  const isPlaying = playingRecordingId === r.id;
+                  return (
+                    <li key={r.id} className="flex items-center justify-between text-sm p-3 rounded-lg hover:bg-pink-50/50 transition-colors">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={r.babyAvatar || '/api/placeholder/40/40'} alt={r.babyName} className="w-10 h-10 rounded-full object-cover border-2 border-pink-200 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 truncate">{r.babyName}</div>
+                          <div className="text-gray-600 text-xs">
+                            {new Date(r.recordedAt).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit'
+                            })} • {r.durationSeconds ? `${Math.floor(r.durationSeconds / 60)}:${String(Math.floor(r.durationSeconds % 60)).padStart(2, '0')}` : '—'}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <a href={r.fileUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Open</a>
-                  </li>
-                ))}
+                      <button
+                        onClick={() => isPlaying ? handleStopRecording() : handlePlayRecording(r)}
+                        className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-110 flex-shrink-0"
+                        title={isPlaying ? 'Stop playback' : 'Play recording'}
+                      >
+                        {isPlaying ? (
+                          <FaStop className="text-xs" />
+                        ) : (
+                          <FaPlay className="text-xs ml-0.5" />
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -802,6 +822,32 @@ export default function Dashboard({
           </div>
         </div>
       )}
+      {/* Processing Progress Modal */}
+      {showProcessingProgress && processingAudio && (
+        <ProcessingProgress
+          isOpen={showProcessingProgress}
+          onClose={() => {
+            setShowProcessingProgress(false);
+            setProcessingAudio(null);
+            setProcessingResult(null);
+            // Refresh stats and recordings
+            void loadRecentRecordings();
+            try {
+              fetch('/api/user/stats', { cache: 'no-store' }).then(res => res.json()).then(s => {
+                setHasRecording(Boolean(s?.hasRecording));
+              }).catch(() => {});
+            } catch {}
+          }}
+          onComplete={(result) => {
+            setProcessingResult(result);
+            toast.success('Audio processed successfully!');
+          }}
+          audioFile={processingAudio.blob}
+          babyId={selectedBabyId || (babies[0]?.id || '')}
+          babyName={selectedBabyId ? babies.find(b => b.id === selectedBabyId)?.name : babies[0]?.name}
+        />
+      )}
+
       {/* Toast container (scoped fallback) */}
       <Toaster position="top-center" />
     </>
