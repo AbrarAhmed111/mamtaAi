@@ -185,7 +185,9 @@ export default function ProcessingProgress({
                       const saveFormData = new FormData();
                       saveFormData.append('file', audioFile); // Original file for reference
                       saveFormData.append('baby_id', babyId);
-                      saveFormData.append('processed_audio_base64', processedAudioBase64);
+                      if (processedAudioBase64) {
+                        saveFormData.append('processed_audio_base64', processedAudioBase64);
+                      }
                       if (durationSeconds) {
                         saveFormData.append('duration_seconds', String(durationSeconds));
                       }
@@ -318,6 +320,7 @@ export default function ProcessingProgress({
 
         {/* Progress Steps */}
         <div className="p-6">
+        
           {hasError ? (
             <div className="text-center py-8">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -436,8 +439,10 @@ export default function ProcessingProgress({
 
               {/* Results */}
               {isCompleted && result && (
-                <div className="mt-6 p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
-                  <h4 className="text-lg font-bold text-gray-900 mb-4">Classification Results</h4>
+                <div className="mt-6 space-y-4">
+                  
+                  <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
+                    <h4 className="text-lg font-bold text-gray-900 mb-4">Classification Results</h4>
                   {result.prediction || result.predicted_cry_type ? (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -484,6 +489,7 @@ export default function ProcessingProgress({
                       <p className="text-sm mt-2">Please train a model first to get predictions.</p>
                     </div>
                   )}
+                  </div>
                 </div>
               )}
             </div>
@@ -493,3 +499,4 @@ export default function ProcessingProgress({
     </div>
   );
 }
+

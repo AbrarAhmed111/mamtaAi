@@ -202,7 +202,9 @@ export default function Dashboard({
       setRecentLoading(true);
       const res = await fetch('/api/recordings', { cache: 'no-store' });
       const json = await res.json().catch(() => ({}));
-      setRecentRecs(Array.isArray(json?.items) ? json.items : []);
+      const allRecordings = Array.isArray(json?.items) ? json.items : [];
+      // Limit to latest 5 recordings for dashboard display
+      setRecentRecs(allRecordings.slice(0, 5));
     } finally {
       setRecentLoading(false);
     }
