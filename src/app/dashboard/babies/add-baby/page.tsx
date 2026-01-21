@@ -86,8 +86,6 @@ export default function AddBabyPage() {
     const n = Number(value)
     if (Number.isNaN(n) || n < 0.45 || n > 20) {
       setWeightError('Weight must be between 0.45 and 20 kg')
-    if (Number.isNaN(n) || n < 0.45 || n > 20) {
-      setWeightError('Weight must be between 0.45 and 20 kg')
       return false
     }
     setWeightError('')
