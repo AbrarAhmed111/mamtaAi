@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { FaMicrophone, FaPlay, FaStop } from 'react-icons/fa';
+import { FaMicrophone, FaPlay, FaStop, FaUser } from 'react-icons/fa';
 import { Tooltip } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui/sonner';
 import Spinner from '@/components/ui/spinner';
@@ -11,6 +11,7 @@ interface SelectedBaby {
   id: string;
   name: string;
   avatar: string;
+  gender?: string | null;
 }
 
 interface RecordingSectionProps {
@@ -314,14 +315,34 @@ export default function RecordingSection({
             {selectedBaby ? (
               <div className="relative w-24 h-24 rounded-full mx-auto ring-4 ring-red-200 ring-offset-2 animate-pulse">
                 <div className="absolute inset-0 rounded-full bg-red-500 opacity-20 animate-ping"></div>
-                <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-red-500">
-                  <Image
-                    src={selectedBaby.avatar || '/api/placeholder/96/96'}
-                    alt={selectedBaby.name}
-                    fill
-                    className="object-cover"
-                    sizes="96px"
-                  />
+                <div
+                  className={`relative w-full h-full rounded-full overflow-hidden border-4 border-red-500 flex items-center justify-center ${
+                    selectedBaby.gender === 'male'
+                      ? 'bg-blue-50'
+                      : selectedBaby.gender === 'female'
+                      ? 'bg-pink-50'
+                      : 'bg-gray-50'
+                  }`}
+                >
+                  {selectedBaby.avatar ? (
+                    <Image
+                      src={selectedBaby.avatar}
+                      alt={selectedBaby.name}
+                      fill
+                      className="object-cover"
+                      sizes="96px"
+                    />
+                  ) : (
+                    <FaUser
+                      className={`text-3xl ${
+                        selectedBaby.gender === 'male'
+                          ? 'text-blue-300'
+                          : selectedBaby.gender === 'female'
+                          ? 'text-pink-300'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  )}
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center border-2 border-white">
                   <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>

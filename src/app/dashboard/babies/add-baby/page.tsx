@@ -31,6 +31,28 @@ export default function AddBabyPage() {
   const [relationshipError, setRelationshipError] = useState('')
   const [avatarError, setAvatarError] = useState('')
 
+  const validateName = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) {
+      setNameError('Name is required')
+      return false
+    }
+    if (trimmed.length < 2) {
+      setNameError('Name must be at least 2 characters')
+      return false
+    }
+    if (trimmed.length > 50) {
+      setNameError('Name must be 50 characters or fewer')
+      return false
+    }
+    if (!/^[a-zA-Z\s.'-]+$/.test(trimmed)) {
+      setNameError('Name can only contain letters and basic punctuation')
+      return false
+    }
+    setNameError('')
+    return true
+  }
+
   const validateDob = (value: string) => {
     if (!value) {
       setDobError('Birth date is required')
@@ -56,29 +78,108 @@ export default function AddBabyPage() {
     return true
   }
 
+  const validateWeight = (value: string) => {
+    if (value === '') {
+      setWeightError('')
+      return true
+    }
+    const n = Number(value)
+    if (Number.isNaN(n) || n < 0 || n > 20) {
+      setWeightError('Weight must be between 0 and 20 kg')
+      return false
+    }
+    setWeightError('')
+    return true
+  }
+
+  const validateHeight = (value: string) => {
+    if (value === '') {
+      setHeightError('')
+      return true
+    }
+    const n = Number(value)
+    if (Number.isNaN(n) || n < 20 || n > 80) {
+      setHeightError('Height must be between 20 and 80 cm')
+      return false
+    }
+    setHeightError('')
+    return true
+  }
+
+  const validateBloodType = (value: string) => {
+    if (!value) {
+      setBloodError('')
+      return true
+    }
+    if (!['A+','A-','B+','B-','AB+','AB-','O+','O-'].includes(value)) {
+      setBloodError('Invalid blood type')
+      return false
+    }
+    setBloodError('')
+    return true
+  }
+
+  const validateRelationship = (value: string) => {
+    if (!value) {
+      setRelationshipError('Please select your relationship')
+      return false
+    }
+    setRelationshipError('')
+    return true
+  }
+
+  const validateAvatarFile = (file: File | null) => {
+    if (!file) {
+      setAvatarError('')
+      return true
+    }
+    if (!file.type.startsWith('image/')) {
+      setAvatarError('Avatar must be an image file')
+      return false
+    }
+    const maxBytes = 5 * 1024 * 1024
+    if (file.size > maxBytes) {
+      setAvatarError('Avatar image must be 5MB or smaller')
+      return false
+    }
+    setAvatarError('')
+    return true
+  }
+
+  const validateAvatarUrl = (value: string) => {
+    if (!value.trim()) {
+      setAvatarError('')
+      return true
+    }
+    try {
+      const u = new URL(value.trim())
+      if (!['http:', 'https:'].includes(u.protocol)) {
+        setAvatarError('Avatar URL must be http or https')
+        return false
+      }
+      setAvatarError('')
+      return true
+    } catch {
+      setAvatarError('Invalid avatar URL')
+      return false
+    }
+  }
+
   const submit = async () => {
     setFormError('')
-    if (!name.trim()) setNameError('Name is required')
-    if (!relationship) setRelationshipError('Please select your relationship')
+    const okName = validateName(name)
     const okDob = validateDob(birthDate)
-    if (!name.trim() || !relationship || !okDob || nameError || dobError || weightError || heightError || bloodError || relationshipError) return
-
-    if (weightKg !== '') {
-      const n = Number(weightKg)
-      if (Number.isNaN(n) || n < 0 || n > 20) {
-        setWeightError('Weight must be between 0 and 20 kg')
-        return
-      }
+    const okRelationship = validateRelationship(relationship)
+    const okWeight = validateWeight(weightKg)
+    const okHeight = validateHeight(heightCm)
+    const okBlood = validateBloodType(bloodType)
+    const okAvatarFile = validateAvatarFile(avatarFile)
+    const okAvatarUrl = validateAvatarUrl(avatarUrl)
+    if (!okName || !okDob || !okRelationship || !okWeight || !okHeight || !okBlood || !okAvatarFile || !okAvatarUrl) {
+      return
     }
-    if (heightCm !== '') {
-      const n = Number(heightCm)
-      if (Number.isNaN(n) || n < 20 || n > 80) {
-        setHeightError('Height must be between 20 and 80 cm')
-        return
-      }
-    }
-    if (bloodType && !['A+','A-','B+','B-','AB+','AB-','O+','O-'].includes(bloodType)) {
-      setBloodError('Invalid blood type')
+    if (notes.length > 500) {
+      setFormError('Medical notes must be 500 characters or fewer')
       return
     }
 
@@ -171,7 +272,7 @@ export default function AddBabyPage() {
                 if (nameError) setNameError('')
               }}
               onBlur={() => {
-                if (!name.trim()) setNameError('Name is required')
+                validateName(name)
               }}
               placeholder="e.g., Ayaan"
             />
@@ -215,7 +316,7 @@ export default function AddBabyPage() {
                   onChange={e => {
                     const f = e.target.files?.[0] || null
                     setAvatarFile(f || null)
-                    setAvatarError('')
+                    validateAvatarFile(f || null)
                     if (f) {
                       try {
                         const url = URL.createObjectURL(f)
@@ -238,7 +339,6 @@ export default function AddBabyPage() {
                   value={avatarUrl}
                   onChange={e => {
                     setAvatarUrl(e.target.value)
-                    setAvatarError('')
                     const val = e.target.value.trim()
                     if (val) {
                       try {
@@ -251,6 +351,7 @@ export default function AddBabyPage() {
                       setAvatarPreview('')
                     }
                   }}
+                  onBlur={() => validateAvatarUrl(avatarUrl)}
                 />
               </div>
             </div>
@@ -290,7 +391,7 @@ export default function AddBabyPage() {
               if (relationshipError) setRelationshipError('')
             }}
             onBlur={() => {
-              if (!relationship) setRelationshipError('Please select your relationship')
+              validateRelationship(relationship)
             }}
           >
             <option value="">Select relationship</option>
@@ -323,12 +424,7 @@ export default function AddBabyPage() {
                 if (weightError) setWeightError('')
               }}
               onBlur={() => {
-                if (weightKg !== '') {
-                  const n = Number(weightKg)
-                  if (Number.isNaN(n) || n < 0 || n > 20) {
-                    setWeightError('Weight must be between 0 and 20 kg')
-                  }
-                }
+                validateWeight(weightKg)
               }}
               placeholder="e.g., 3.2"
             />
@@ -348,12 +444,7 @@ export default function AddBabyPage() {
                 if (heightError) setHeightError('')
               }}
               onBlur={() => {
-                if (heightCm !== '') {
-                  const n = Number(heightCm)
-                  if (Number.isNaN(n) || n < 20 || n > 80) {
-                    setHeightError('Height must be between 20 and 80 cm')
-                  }
-                }
+                validateHeight(heightCm)
               }}
               placeholder="e.g., 50"
             />
@@ -369,9 +460,7 @@ export default function AddBabyPage() {
                 if (bloodError) setBloodError('')
               }}
               onBlur={() => {
-                if (bloodType && !['A+','A-','B+','B-','AB+','AB-','O+','O-'].includes(bloodType)) {
-                  setBloodError('Invalid blood type')
-                }
+                validateBloodType(bloodType)
               }}
             >
               <option value="">Select blood type (optional)</option>

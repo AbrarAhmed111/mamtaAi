@@ -77,7 +77,7 @@ export async function GET(_req: NextRequest) {
         duration_seconds,
         recorded_at,
         baby_id,
-        babies:babies!recordings_baby_id_fkey ( name, avatar_url )
+        babies:babies!recordings_baby_id_fkey ( name, avatar_url, gender )
       `)
       .eq('recorded_by', user.id)
       .order('recorded_at', { ascending: false })
@@ -92,6 +92,7 @@ export async function GET(_req: NextRequest) {
       babyId: r.baby_id,
       babyName: r.babies?.name || 'Unknown',
       babyAvatar: r.babies?.avatar_url || null,
+      babyGender: r.babies?.gender || null,
     }))
     return NextResponse.json({ items })
   } catch (e: any) {

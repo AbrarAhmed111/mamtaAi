@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import Spinner from '@/components/ui/spinner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/sonner';
-import { FaPlay, FaStop, FaTrash, FaBaby, FaFilter, FaSearch, FaCalendarAlt, FaClock, FaTimes } from 'react-icons/fa';
+import { FaPlay, FaStop, FaTrash, FaBaby, FaFilter, FaSearch, FaCalendarAlt, FaClock, FaTimes, FaUser } from 'react-icons/fa';
 import BabySelectionModal from '@/components/Dashboard/BabySelectionModal';
 import RecordingSection from '@/components/Dashboard/RecordingSection';
 
@@ -19,6 +19,7 @@ interface Recording {
   babyId: string;
   babyName: string;
   babyAvatar: string | null;
+  babyGender?: string | null;
 }
 
 export default function RecordingsPage() {
@@ -33,7 +34,7 @@ export default function RecordingsPage() {
   
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
   const [babies, setBabies] = useState<Array<{ id: string; name: string }>>([]);
-  const [babiesForModal, setBabiesForModal] = useState<Array<{ id: string; name: string; age: string; avatar: string }>>([]);
+  const [babiesForModal, setBabiesForModal] = useState<Array<{ id: string; name: string; age: string; avatar: string | null; gender?: string | null }>>([]);
   const [showSelectBaby, setShowSelectBaby] = useState(false);
   const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
   const [showRecordingModal, setShowRecordingModal] = useState(false);
@@ -82,7 +83,8 @@ export default function RecordingsPage() {
         id: b.id,
         name: b.name,
         age: formatAge(b.birth_date),
-        avatar: b.avatar_url || '/api/placeholder/64/64',
+        avatar: b.avatar_url || null,
+        gender: b.gender || null,
       }));
       setBabiesForModal(babiesForModalList);
     } catch (error) {
@@ -378,6 +380,18 @@ export default function RecordingsPage() {
             const isPlaying = playingId === recording.id;
             const isDeleting = deletingId === recording.id;
             const showConfirm = showDeleteConfirm === recording.id;
+            const avatarBgClass =
+              recording.babyGender === 'male'
+                ? 'bg-blue-50'
+                : recording.babyGender === 'female'
+                ? 'bg-pink-50'
+                : 'bg-gray-50';
+            const avatarIconClass =
+              recording.babyGender === 'male'
+                ? 'text-blue-400'
+                : recording.babyGender === 'female'
+                ? 'text-pink-400'
+                : 'text-gray-400';
 
             return (
               <div
@@ -387,14 +401,18 @@ export default function RecordingsPage() {
                 <div className="flex items-start gap-4">
                   {/* Baby Avatar */}
                   <Link href={`/dashboard/babies/${recording.babyId}`}>
-                    <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-pink-200 flex-shrink-0 cursor-pointer hover:border-pink-400 transition-colors">
-                      <Image
-                        src={recording.babyAvatar || '/api/placeholder/64/64'}
-                        alt={recording.babyName}
-                        fill
-                        className="object-cover"
-                        sizes="64px"
-                      />
+                    <div className={`relative w-16 h-16 rounded-full overflow-hidden border-2 border-pink-200 flex-shrink-0 cursor-pointer hover:border-pink-400 transition-colors flex items-center justify-center ${avatarBgClass}`}>
+                      {recording.babyAvatar ? (
+                        <Image
+                          src={recording.babyAvatar}
+                          alt={recording.babyName}
+                          fill
+                          className="object-cover"
+                          sizes="64px"
+                        />
+                      ) : (
+                        <FaUser className={`text-xl ${avatarIconClass}`} />
+                      )}
                     </div>
                   </Link>
 

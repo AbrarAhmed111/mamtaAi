@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Spinner from '@/components/ui/spinner';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FaBaby, FaCamera, FaUsers, FaPlay, FaStop, FaPause } from 'react-icons/fa';
+import { FaBaby, FaCamera, FaUsers, FaPlay, FaStop, FaPause, FaUser } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import DashboardHeader from './DashboardHeader';
 import WelcomeChecklist from './WelcomeChecklist';
@@ -33,7 +33,8 @@ interface Baby {
   id: string;
   name: string;
   age: string;
-  avatar: string;
+  avatar?: string | null;
+  gender?: string | null;
   lastCry: Date;
   totalCries: number;
 }
@@ -117,7 +118,7 @@ export default function Dashboard({
   const [hasBaby, setHasBaby] = useState(false);
   const [hasRecording, setHasRecording] = useState(false);
   const [hasCommunity, setHasCommunity] = useState(false);
-  const [recentRecs, setRecentRecs] = useState<Array<{ id: string; fileUrl: string; durationSeconds: number | null; recordedAt: string; babyId: string; babyName: string; babyAvatar?: string | null }>>([]);
+  const [recentRecs, setRecentRecs] = useState<Array<{ id: string; fileUrl: string; durationSeconds: number | null; recordedAt: string; babyId: string; babyName: string; babyAvatar?: string | null; babyGender?: string | null }>>([]);
   const [recentLoading, setRecentLoading] = useState(false);
   const [playingRecordingId, setPlayingRecordingId] = useState<string | null>(null);
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
@@ -154,7 +155,8 @@ export default function Dashboard({
         id: b.id,
         name: b.name,
         age: formatAge(b.birth_date),
-        avatar: b.avatar_url || '/api/placeholder/64/64',
+        avatar: b.avatar_url || null,
+        gender: b.gender || null,
         lastCry: new Date(),
         totalCries: 0,
       }));
@@ -524,11 +526,29 @@ export default function Dashboard({
               <ul className="space-y-3">
                 {recentRecs.map(r => {
                   const isPlaying = playingRecordingId === r.id;
+                  const avatarBgClass =
+                    r.babyGender === 'male'
+                      ? 'bg-blue-50'
+                      : r.babyGender === 'female'
+                      ? 'bg-pink-50'
+                      : 'bg-gray-50';
+                  const avatarIconClass =
+                    r.babyGender === 'male'
+                      ? 'text-blue-400'
+                      : r.babyGender === 'female'
+                      ? 'text-pink-400'
+                      : 'text-gray-400';
                   return (
                     <li key={r.id} className="flex items-center justify-between text-sm p-3 rounded-lg hover:bg-pink-50/50 transition-colors">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={r.babyAvatar || '/api/placeholder/40/40'} alt={r.babyName} className="w-10 h-10 rounded-full object-cover border-2 border-pink-200 flex-shrink-0" />
+                        <div className={`w-10 h-10 rounded-full overflow-hidden border-2 border-pink-200 flex-shrink-0 flex items-center justify-center ${avatarBgClass}`}>
+                          {r.babyAvatar ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={r.babyAvatar} alt={r.babyName} className="w-full h-full object-cover" />
+                          ) : (
+                            <FaUser className={`text-sm ${avatarIconClass}`} />
+                          )}
+                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-gray-900 truncate">{r.babyName}</div>
                           <div className="text-gray-600 text-xs">

@@ -8,13 +8,13 @@ import Spinner from '@/components/ui/spinner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip } from '@/components/ui/tooltip'
 import { toast } from '@/components/ui/sonner'
-import { FaTrash, FaPlus, FaBaby, FaArrowRight, FaEye } from 'react-icons/fa'
+import { FaTrash, FaPlus, FaBaby, FaArrowRight, FaEye, FaUser } from 'react-icons/fa'
 
 interface Baby {
   id: string
   name: string
   age: string
-  avatar: string
+  avatar?: string | null
   lastCry: Date
   totalCries: number
 }
@@ -37,7 +37,7 @@ export default function BabiesPage() {
           id: b.id as string,
           name: b.name as string,
           age: formatAge(b.birth_date as string),
-          avatar: (b.avatar_url as string) || '/api/placeholder/64/64',
+          avatar: (b.avatar_url as string) || null,
           lastCry: new Date(),
           totalCries: 0,
           relations: (b.relations as Array<any>) || [],
@@ -124,6 +124,18 @@ export default function BabiesPage() {
               {babies.map(b => {
                 const tooltip = b.relations.map(r => `${r.name} ${r.relationship?.charAt(0).toUpperCase()}${r.relationship?.slice(1)}`).join('\n')
                 const isConfirming = confirmDeleteId === b.id
+                const avatarBgClass =
+                  b.gender === 'male'
+                    ? 'bg-blue-50'
+                    : b.gender === 'female'
+                    ? 'bg-pink-50'
+                    : 'bg-gray-50'
+                const avatarIconClass =
+                  b.gender === 'male'
+                    ? 'text-blue-400'
+                    : b.gender === 'female'
+                    ? 'text-pink-400'
+                    : 'text-gray-400'
                 return (
                   <div
                     key={b.id}
@@ -135,13 +147,19 @@ export default function BabiesPage() {
                     >
                       <div className="flex items-center gap-4">
                         <div className="relative">
-                          <Image
-                            src={b.avatar}
-                            alt={b.name}
-                            width={56}
-                            height={56}
-                            className="w-14 h-14 rounded-full object-cover border-2 border-pink-200 shadow-sm"
-                          />
+                          <div className={`w-14 h-14 rounded-full border-2 border-pink-200 shadow-sm flex items-center justify-center overflow-hidden ${avatarBgClass}`}>
+                            {b.avatar ? (
+                              <Image
+                                src={b.avatar}
+                                alt={b.name}
+                                width={56}
+                                height={56}
+                                className="w-14 h-14 object-cover"
+                              />
+                            ) : (
+                              <FaUser className={avatarIconClass} />
+                            )}
+                          </div>
                           <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-pink-400 rounded-full border-2 border-white flex items-center justify-center">
                             <FaBaby className="text-white text-xs" />
                           </div>
@@ -220,6 +238,18 @@ export default function BabiesPage() {
                   {babies.map(b => {
                     const tooltip = b.relations.map(r => `${r.name} ${r.relationship?.charAt(0).toUpperCase()}${r.relationship?.slice(1)}`).join('\n')
                     const isConfirming = confirmDeleteId === b.id
+                    const avatarBgClass =
+                      b.gender === 'male'
+                        ? 'bg-blue-50'
+                        : b.gender === 'female'
+                        ? 'bg-pink-50'
+                        : 'bg-gray-50'
+                    const avatarIconClass =
+                      b.gender === 'male'
+                        ? 'text-blue-400'
+                        : b.gender === 'female'
+                        ? 'text-pink-400'
+                        : 'text-gray-400'
                     return (
                       <tr 
                         key={b.id} 
@@ -228,13 +258,19 @@ export default function BabiesPage() {
                       >
                         <td className="py-4 pr-4">
                           <div className="relative">
-                            <Image
-                              src={b.avatar}
-                              alt={b.name}
-                              width={48}
-                              height={48}
-                              className="w-12 h-12 rounded-full object-cover border-2 border-pink-200 shadow-sm"
-                            />
+                            <div className={`w-12 h-12 rounded-full border-2 border-pink-200 shadow-sm flex items-center justify-center overflow-hidden ${avatarBgClass}`}>
+                              {b.avatar ? (
+                                <Image
+                                  src={b.avatar}
+                                  alt={b.name}
+                                  width={48}
+                                  height={48}
+                                  className="w-12 h-12 object-cover"
+                                />
+                              ) : (
+                                <FaUser className={`text-sm ${avatarIconClass}`} />
+                              )}
+                            </div>
                             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-pink-400 rounded-full border-2 border-white"></div>
                           </div>
                         </td>

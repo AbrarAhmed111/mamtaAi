@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { FaBaby, FaTimes } from 'react-icons/fa';
+import { FaBaby, FaTimes, FaUser } from 'react-icons/fa';
 
 interface Baby {
   id: string;
   name: string;
   age: string;
-  avatar: string;
+  avatar?: string | null;
+  gender?: string | null;
 }
 
 interface BabySelectionModalProps {
@@ -90,6 +91,18 @@ export default function BabySelectionModal({
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {babies.map((baby) => {
                 const isSelected = selectedBabyId === baby.id;
+                const avatarBgClass =
+                  baby.gender === 'male'
+                    ? 'bg-blue-50'
+                    : baby.gender === 'female'
+                    ? 'bg-pink-50'
+                    : 'bg-gray-50';
+                const avatarIconClass =
+                  baby.gender === 'male'
+                    ? 'text-blue-400'
+                    : baby.gender === 'female'
+                    ? 'text-pink-400'
+                    : 'text-gray-400';
                 return (
                   <button
                     key={baby.id}
@@ -100,14 +113,18 @@ export default function BabySelectionModal({
                         : 'border-gray-200 hover:border-pink-200 hover:bg-gray-50'
                     }`}
                   >
-                    <div className="relative w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-white shadow-sm">
-                      <Image
-                        src={baby.avatar || '/api/placeholder/64/64'}
-                        alt={baby.name}
-                        fill
-                        className="object-cover"
-                        sizes="56px"
-                      />
+                    <div className={`relative w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-white shadow-sm flex items-center justify-center ${avatarBgClass}`}>
+                      {baby.avatar ? (
+                        <Image
+                          src={baby.avatar}
+                          alt={baby.name}
+                          fill
+                          className="object-cover"
+                          sizes="56px"
+                        />
+                      ) : (
+                        <FaUser className={`text-xl ${avatarIconClass}`} />
+                      )}
                     </div>
                     <div className="flex-1 text-left min-w-0">
                       <h4 className="font-semibold text-gray-900 truncate">{baby.name}</h4>

@@ -1,13 +1,14 @@
 'use client';
 
-import { FaBaby, FaPlus } from 'react-icons/fa';
+import { FaBaby, FaPlus, FaUser } from 'react-icons/fa';
 import Link from 'next/link';
 
 interface Baby {
   id: string;
   name: string;
   age: string;
-  avatar?: string;
+  avatar?: string | null;
+  gender?: string | null;
   lastCry?: Date | null;
   totalCries?: number | null;
 }
@@ -40,7 +41,20 @@ export default function BabyProfiles({
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {babies.map((baby) => (
+        {babies.map((baby) => {
+          const avatarBgClass =
+            baby.gender === 'male'
+              ? 'bg-blue-50'
+              : baby.gender === 'female'
+              ? 'bg-pink-50'
+              : 'bg-gray-50';
+          const avatarIconClass =
+            baby.gender === 'male'
+              ? 'text-blue-400'
+              : baby.gender === 'female'
+              ? 'text-pink-400'
+              : 'text-gray-400';
+          return (
           <Link
             key={baby.id}
             href={`/dashboard/babies/${baby.id}`}
@@ -49,13 +63,17 @@ export default function BabyProfiles({
           >
             <div className="flex items-center space-x-4">
               <div className="relative">
-                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-pink-200 shadow-sm">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={baby.avatar || '/api/placeholder/64/64'}
-                    alt={baby.name}
-                    className="w-full h-full object-cover"
-                  />
+                <div className={`w-14 h-14 rounded-full overflow-hidden border-2 border-pink-200 shadow-sm flex items-center justify-center ${avatarBgClass}`}>
+                  {baby.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={baby.avatar}
+                      alt={baby.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <FaUser className={`text-xl ${avatarIconClass}`} />
+                  )}
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-pink-400 rounded-full border-2 border-white flex items-center justify-center">
                   <FaBaby className="text-white text-xs" />
@@ -67,7 +85,7 @@ export default function BabyProfiles({
               </div>
             </div>
           </Link>
-        ))}
+        )})}
       </div>
     </div>
   );

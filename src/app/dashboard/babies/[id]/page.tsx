@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Spinner from '@/components/ui/spinner'
 import { toast } from '@/components/ui/sonner'
 import RecordingSection from '@/components/Dashboard/RecordingSection'
-import { FaTrash, FaExclamationTriangle } from 'react-icons/fa'
+import { FaTrash, FaExclamationTriangle, FaUser } from 'react-icons/fa'
 
 export default function BabyDetailPage() {
   const params = useParams<{ id: string }>()
@@ -62,7 +62,7 @@ export default function BabyDetailPage() {
   const [selectedBaby, setSelectedBaby] = useState<{ id: string; name: string; avatar: string } | null>(null)
 
   const age = useMemo(() => formatAge(birthDate), [birthDate])
-  const avatar = baby?.avatar_url || '/api/placeholder/256/256'
+  const avatar = baby?.avatar_url || ''
 
   useEffect(() => {
     const load = async () => {
@@ -87,7 +87,8 @@ export default function BabyDetailPage() {
         setSelectedBaby({
           id: data.baby.id,
           name: data.baby.name,
-          avatar: data.baby.avatar_url || '/api/placeholder/96/96'
+          avatar: data.baby.avatar_url || '',
+          gender: data.baby.gender || null
         })
       } finally {
         setLoading(false)
@@ -405,8 +406,22 @@ export default function BabyDetailPage() {
       <section className="w-full overflow-hidden rounded-2xl border border-pink-100 bg-gradient-to-br from-white to-pink-50/30 shadow-sm">
         <div className="flex flex-col md:flex-row">
           <div className="md:w-1/3 w-full">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={avatar} alt={name} className="w-full h-64 md:h-full object-cover" />
+            {avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatar} alt={name} className="w-full h-64 md:h-full object-cover" />
+            ) : (
+              <div
+                className={`w-full h-64 md:h-full flex items-center justify-center ${
+                  gender === 'male' ? 'bg-blue-50' : gender === 'female' ? 'bg-pink-50' : 'bg-gray-50'
+                }`}
+              >
+                <FaUser
+                  className={`text-5xl ${
+                    gender === 'male' ? 'text-blue-300' : gender === 'female' ? 'text-pink-300' : 'text-gray-300'
+                  }`}
+                />
+              </div>
+            )}
           </div>
           <div className="flex-1 p-6">
             <div className="flex items-start justify-between">
