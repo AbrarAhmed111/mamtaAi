@@ -10,7 +10,7 @@ import Spinner from '@/components/ui/spinner';
 interface SelectedBaby {
   id: string;
   name: string;
-  avatar: string;
+  avatar?: string | null;
   gender?: string | null;
 }
 
