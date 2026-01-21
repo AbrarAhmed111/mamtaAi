@@ -150,6 +150,7 @@ export default function Dashboard({
         name: string;
         birth_date: string;
         avatar_url?: string | null;
+        gender?: string | null;
       }>;
       const mapped: Baby[] = dbBabies.map(b => ({
         id: b.id,
