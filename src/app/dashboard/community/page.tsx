@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { FaBook, FaComments, FaFolderOpen, FaPlus, FaSearch, FaFilter, FaEye, FaComment, FaDownload, FaStar, FaCheckCircle } from 'react-icons/fa'
 import Link from 'next/link'
@@ -70,7 +70,7 @@ interface Resource {
   } | null
 }
 
-export default function CommunityPage() {
+function CommunityPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>('blog')
@@ -566,6 +566,18 @@ export default function CommunityPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function CommunityPage() {
+  return (
+    <Suspense fallback={
+      <div className="w-full flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600"></div>
+      </div>
+    }>
+      <CommunityPageContent />
+    </Suspense>
   )
 }
 

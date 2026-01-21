@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: favoritesError.message }, { status: 500 })
     }
 
-    const postIds = favorites?.map(f => f.post_id) || []
+    const postIds = (favorites as any)?.map((f: any) => f.post_id) || []
 
     if (postIds.length === 0) {
       return NextResponse.json({ posts: [] })
