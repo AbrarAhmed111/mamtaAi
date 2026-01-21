@@ -84,8 +84,10 @@ export default function AddBabyPage() {
       return true
     }
     const n = Number(value)
-    if (Number.isNaN(n) || n < 0 || n > 20) {
-      setWeightError('Weight must be between 0 and 20 kg')
+    if (Number.isNaN(n) || n < 0.45 || n > 20) {
+      setWeightError('Weight must be between 0.45 and 20 kg')
+    if (Number.isNaN(n) || n < 0.45 || n > 20) {
+      setWeightError('Weight must be between 0.45 and 20 kg')
       return false
     }
     setWeightError('')
@@ -415,7 +417,7 @@ export default function AddBabyPage() {
             <input
               type="number"
               step="0.1"
-              min="0"
+              min="0.45"
               max="20"
               className="w-full rounded-md border border-gray-300 px-3 py-2"
               value={weightKg}
