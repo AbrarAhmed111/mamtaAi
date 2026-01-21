@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { FaHeart, FaComment, FaEye, FaArrowLeft, FaEdit, FaTrash, FaReply, FaBookmark } from 'react-icons/fa'
+import { FaComment, FaEye, FaArrowLeft, FaEdit, FaTrash, FaReply, FaBookmark, FaExclamationTriangle } from 'react-icons/fa'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
+import { supabase } from '@/lib/supabase/client'
 
 interface BlogPost {
   id: string
@@ -61,21 +62,58 @@ export default function BlogPostPage() {
   const [replyingToId, setReplyingToId] = useState<string | null>(null)
   const [replyContent, setReplyContent] = useState('')
   const [isFavorited, setIsFavorited] = useState(false)
+  const [savedPost, setSavedPost] = useState(false)
   const [bookmarkCount, setBookmarkCount] = useState(0)
+  const [deleteCommentId, setDeleteCommentId] = useState<string | null>(null)
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
+  const [showDeletePostModal, setShowDeletePostModal] = useState(false)
+  const [deletingPost, setDeletingPost] = useState(false)
 
   useEffect(() => {
     loadPost()
     loadComments()
     loadUser()
+    loadFavoriteStatus()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
+  }, [id, user])
 
+
+  // Real-time subscription for comments
   useEffect(() => {
-    if (user) {
-      checkFavoriteStatus()
+    const channel = supabase
+      .channel(`blog_comments_${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'blog_comments',
+          filter: `post_id=eq.${id}`,
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            // New comment added - reload comments to get full data with author
+            loadComments()
+            loadPost() // Update comment count
+          } else if (payload.eventType === 'UPDATE') {
+            // Comment updated (e.g., like count changed)
+            if (payload.new) {
+              loadComments() // Reload to get updated data
+            }
+          } else if (payload.eventType === 'DELETE') {
+            // Comment deleted
+            setComments((prev) => prev.filter((c) => c.id !== payload.old.id))
+            loadPost() // Update comment count
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, id])
+  }, [id])
 
   const loadUser = async () => {
     try {
@@ -106,20 +144,23 @@ export default function BlogPostPage() {
     }
   }
 
-  const checkFavoriteStatus = async () => {
-    if (!user) return
+  const loadFavoriteStatus = async () => {
+    if (!user) {
+      setIsFavorited(false)
+      return
+    }
     try {
       const res = await fetch(`/api/community/blog/${id}/favorite`)
       const data = await res.json()
       setIsFavorited(data.is_favorited || false)
     } catch (error) {
-      console.error('Failed to check favorite status')
+      console.error('Failed to load favorite status')
     }
   }
 
   const handleToggleFavorite = async () => {
     if (!user) {
-      toast.error('Please sign in to save favorites')
+      toast.error('Please log in to save posts')
       return
     }
 
@@ -133,15 +174,17 @@ export default function BlogPostPage() {
         const newFavorited = !isFavorited
         setIsFavorited(newFavorited)
         setBookmarkCount(prev => newFavorited ? prev + 1 : Math.max(0, prev - 1))
-        toast.success(newFavorited ? 'Post saved to favorites!' : 'Removed from favorites')
-        loadPost() // Refresh to get updated bookmark count
+        toast.success(newFavorited ? 'Saved to favorites!' : 'Removed from favorites')
+        // Reload post to get updated bookmark count
+        loadPost()
       } else {
-        toast.error('Failed to update favorite')
+        toast.error('Failed to update favorite status')
       }
     } catch (error) {
-      toast.error('Failed to update favorite')
+      toast.error('Failed to update favorite status')
     }
   }
+
 
   const loadComments = async () => {
     try {
@@ -209,8 +252,7 @@ export default function BlogPostPage() {
   }
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!confirm('Are you sure you want to delete this comment?')) return
-
+    setDeletingCommentId(commentId)
     try {
       const res = await fetch(`/api/community/blog/comments/${commentId}`, {
         method: 'DELETE',
@@ -220,31 +262,17 @@ export default function BlogPostPage() {
         toast.success('Comment deleted!')
         loadComments()
         loadPost() // Refresh to update comment count
+        setDeleteCommentId(null)
       } else {
         toast.error('Failed to delete comment')
       }
     } catch (error) {
       toast.error('Failed to delete comment')
+    } finally {
+      setDeletingCommentId(null)
     }
   }
 
-  const handleLikeComment = async (commentId: string) => {
-    try {
-      const res = await fetch(`/api/community/blog/comments/${commentId}/like`, {
-        method: 'POST',
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        // Update the comment in the list
-        setComments(comments.map(c => 
-          c.id === commentId ? { ...c, like_count: data.like_count } : c
-        ))
-      }
-    } catch (error) {
-      toast.error('Failed to like comment')
-    }
-  }
 
   const startEdit = (comment: Comment) => {
     setEditingCommentId(comment.id)
@@ -264,6 +292,29 @@ export default function BlogPostPage() {
   const cancelReply = () => {
     setReplyingToId(null)
     setReplyContent('')
+  }
+
+  const handleDeletePost = async () => {
+    setDeletingPost(true)
+    try {
+      const res = await fetch(`/api/community/blog/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (res.ok) {
+        toast.success('Blog post deleted!')
+        // Go back to previous page
+        router.back()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to delete post')
+      }
+    } catch (error) {
+      toast.error('Failed to delete post')
+    } finally {
+      setDeletingPost(false)
+      setShowDeletePostModal(false)
+    }
   }
 
   // Group comments by parent
@@ -293,9 +344,89 @@ export default function BlogPostPage() {
   return (
     <div className="w-full">
       <div className="max-w-full mx-auto">
+        {/* Delete Post Modal */}
+        {showDeletePostModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowDeletePostModal(false)}>
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl border border-red-200" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <FaExclamationTriangle className="text-red-600 text-xl" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Delete Blog Post?</h3>
+              </div>
+              <div className="mb-6">
+                <p className="text-gray-700 mb-2">
+                  Are you sure you want to delete this blog post?
+                </p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-3">
+                  <p className="text-sm text-red-800 font-medium">
+                    ⚠️ Warning: This action cannot be undone. All comments and associated data will be permanently deleted.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeletePostModal(false)}
+                  disabled={deletingPost}
+                  className="flex-1 px-4 py-2.5 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeletePost}
+                  disabled={deletingPost}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors disabled:opacity-50"
+                >
+                  {deletingPost ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Comment Modal */}
+        {deleteCommentId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setDeleteCommentId(null)}>
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl border border-red-200" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <FaExclamationTriangle className="text-red-600 text-xl" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Delete Comment?</h3>
+              </div>
+              <div className="mb-6">
+                <p className="text-gray-700 mb-2">
+                  Are you sure you want to delete this comment?
+                </p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-3">
+                  <p className="text-sm text-red-800 font-medium">
+                    ⚠️ Warning: This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteCommentId(null)}
+                  disabled={deletingCommentId !== null}
+                  className="flex-1 px-4 py-2.5 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteComment(deleteCommentId)}
+                  disabled={deletingCommentId !== null}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors disabled:opacity-50"
+                >
+                  {deletingCommentId === deleteCommentId ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Back Button */}
         <Link
-          href="/dashboard/community"
+          href="/dashboard/community?tab=blog"
           className="inline-flex items-center gap-2 text-pink-600 hover:text-pink-700 mb-6"
         >
           <FaArrowLeft />
@@ -380,10 +511,6 @@ export default function BlogPostPage() {
             )}
 
             <div className="flex items-center gap-6 pt-6 border-t border-gray-200">
-              <button className="flex items-center gap-2 text-gray-600 hover:text-pink-600 transition-colors">
-                <FaHeart />
-                <span>{post.like_count || 0}</span>
-              </button>
               <div className="flex items-center gap-2 text-gray-600">
                 <FaComment />
                 <span>{post.comment_count || 0}</span>
@@ -393,16 +520,22 @@ export default function BlogPostPage() {
                 <span>{post.view_count || 0}</span>
               </div>
               <button
-                onClick={handleToggleFavorite}
-                className={`flex items-center gap-2 transition-colors ${
+                onClick={() => {
+                  setSavedPost(true)
+                  setTimeout(() => setSavedPost(false), 600)
+                  handleToggleFavorite()
+                }}
+                className={`flex items-center gap-2 transition-all duration-200 ${
                   isFavorited
                     ? 'text-pink-600 hover:text-pink-700'
                     : 'text-gray-600 hover:text-pink-600'
-                }`}
+                } ${savedPost ? 'scale-110' : ''}`}
                 title={isFavorited ? 'Remove from favorites' : 'Save to favorites'}
               >
-                <FaBookmark className={isFavorited ? 'fill-current' : ''} />
-                <span>{bookmarkCount || 0}</span>
+                <FaBookmark className={`transition-all duration-200 ${isFavorited ? 'fill-current' : ''} ${savedPost ? 'animate-bounce' : ''}`} />
+                <span className={`transition-all duration-200 ${savedPost ? 'scale-110 font-semibold' : ''}`}>
+                  {bookmarkCount || 0}
+                </span>
               </button>
               {isAuthor && (
                 <div className="ml-auto flex gap-2">
@@ -410,7 +543,10 @@ export default function BlogPostPage() {
                     <FaEdit className="inline mr-1" />
                     Edit
                   </button>
-                  <button className="px-4 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200">
+                  <button 
+                    onClick={() => setShowDeletePostModal(true)}
+                    className="px-4 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                  >
                     <FaTrash className="inline mr-1" />
                     Delete
                   </button>
@@ -434,12 +570,12 @@ export default function BlogPostPage() {
                 onChange={(e) => setCommentContent(e.target.value)}
                 placeholder="Write a comment..."
                 rows={4}
-                className="w-full p-4 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent mb-4"
+                className="w-full p-4 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent mb-4 transition-all duration-200 focus:scale-[1.01]"
               />
               <button
                 type="submit"
                 disabled={submitting || !commentContent.trim()}
-                className="px-6 py-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 disabled:opacity-50 transition-all"
+                className="px-6 py-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 disabled:opacity-50 transition-all duration-200 hover:scale-105 active:scale-95 transform"
               >
                 {submitting ? 'Posting...' : 'Post Comment'}
               </button>
@@ -516,17 +652,18 @@ export default function BlogPostPage() {
                               <p className="text-gray-700 mb-2">{comment.content}</p>
                             )}
                             <div className="flex items-center gap-4">
-                              <button 
-                                onClick={() => handleLikeComment(comment.id)}
-                                className="flex items-center gap-1 text-gray-600 hover:text-pink-600 text-sm transition-colors"
-                              >
-                                <FaHeart />
-                                <span>{comment.like_count || 0}</span>
-                              </button>
                               {user && (
                                 <button 
-                                  onClick={() => startReply(comment.id)}
-                                  className="flex items-center gap-1 text-gray-600 hover:text-pink-600 text-sm transition-colors"
+                                  onClick={() => {
+                                    startReply(comment.id)
+                                    // Add a subtle animation
+                                    const btn = document.activeElement as HTMLElement
+                                    if (btn) {
+                                      btn.classList.add('animate-pulse')
+                                      setTimeout(() => btn.classList.remove('animate-pulse'), 300)
+                                    }
+                                  }}
+                                  className="flex items-center gap-1 text-gray-600 hover:text-pink-600 text-sm transition-all duration-200 hover:scale-105"
                                 >
                                   <FaReply />
                                   Reply
@@ -542,7 +679,7 @@ export default function BlogPostPage() {
                                     Edit
                                   </button>
                                   <button 
-                                    onClick={() => handleDeleteComment(comment.id)}
+                                    onClick={() => setDeleteCommentId(comment.id)}
                                     className="flex items-center gap-1 text-gray-600 hover:text-red-600 text-sm transition-colors"
                                   >
                                     <FaTrash />
@@ -551,40 +688,6 @@ export default function BlogPostPage() {
                                 </>
                               )}
                             </div>
-
-                            {/* Reply Form */}
-                            {isReplying && (
-                              <div className="mt-4 pl-4 border-l-2 border-pink-200">
-                                <form onSubmit={(e) => {
-                                  e.preventDefault()
-                                  handleSubmitComment(e)
-                                }} className="mb-4">
-                                  <textarea
-                                    value={replyContent}
-                                    onChange={(e) => setReplyContent(e.target.value)}
-                                    placeholder="Write a reply..."
-                                    rows={3}
-                                    className="w-full p-3 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent mb-2"
-                                  />
-                                  <div className="flex gap-2">
-                                    <button
-                                      type="submit"
-                                      disabled={submitting || !replyContent.trim()}
-                                      className="px-4 py-1 text-sm bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50"
-                                    >
-                                      {submitting ? 'Posting...' : 'Post Reply'}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={cancelReply}
-                                      className="px-4 py-1 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                                    >
-                                      Cancel
-                                    </button>
-                                  </div>
-                                </form>
-                              </div>
-                            )}
 
                             {/* Nested Replies */}
                             {replies.length > 0 && (
@@ -652,13 +755,6 @@ export default function BlogPostPage() {
                                                 <p className="text-gray-700 text-sm mb-2">{reply.content}</p>
                                               )}
                                               <div className="flex items-center gap-3">
-                                                <button 
-                                                  onClick={() => handleLikeComment(reply.id)}
-                                                  className="flex items-center gap-1 text-gray-600 hover:text-pink-600 text-xs transition-colors"
-                                                >
-                                                  <FaHeart />
-                                                  <span>{reply.like_count || 0}</span>
-                                                </button>
                                                 {isReplyAuthor && !isEditingReply && (
                                                   <>
                                                     <button 
@@ -669,7 +765,7 @@ export default function BlogPostPage() {
                                                       Edit
                                                     </button>
                                                     <button 
-                                                      onClick={() => handleDeleteComment(reply.id)}
+                                                      onClick={() => setDeleteCommentId(reply.id)}
                                                       className="flex items-center gap-1 text-gray-600 hover:text-red-600 text-xs transition-colors"
                                                     >
                                                       <FaTrash />
@@ -685,6 +781,40 @@ export default function BlogPostPage() {
                                     </div>
                                   )
                                 })}
+                              </div>
+                            )}
+
+                            {/* Reply Form - Shown after replies */}
+                            {isReplying && (
+                              <div className="mt-4 pl-4 border-l-2 border-pink-200">
+                                <form onSubmit={(e) => {
+                                  e.preventDefault()
+                                  handleSubmitComment(e)
+                                }} className="mb-4">
+                                  <textarea
+                                    value={replyContent}
+                                    onChange={(e) => setReplyContent(e.target.value)}
+                                    placeholder="Write a reply..."
+                                    rows={3}
+                                    className="w-full p-3 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent mb-2 transition-all duration-200 focus:scale-[1.01]"
+                                  />
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="submit"
+                                      disabled={submitting || !replyContent.trim()}
+                                      className="px-4 py-1 text-sm bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 transition-all duration-200 hover:scale-105 active:scale-95 transform"
+                                    >
+                                      {submitting ? 'Posting...' : 'Post Reply'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={cancelReply}
+                                      className="px-4 py-1 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </form>
                               </div>
                             )}
                           </div>

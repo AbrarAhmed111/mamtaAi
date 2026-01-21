@@ -132,7 +132,7 @@ export default function ResourcePage() {
       <div className="max-w-full mx-auto">
         {/* Back Button */}
         <Link
-          href="/dashboard/community"
+          href="/dashboard/community?tab=resources"
           className="inline-flex items-center gap-2 text-pink-600 hover:text-pink-700 mb-6"
         >
           <FaArrowLeft />

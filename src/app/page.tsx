@@ -747,14 +747,42 @@ function HomeContent() {
 
             {/* Bottom Section */}
             <div className="border-t border-white/10 mt-12 pt-8">
-              <div className="flex flex-col md:flex-row justify-between items-center">
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="text-blue-200 text-sm mb-4 md:mb-0">
                   © 2024 MamtaAI. All rights reserved. Made with ❤️ for parents everywhere.
                 </div>
-                <div className="flex space-x-6 text-sm">
-                  <a href="#" className="text-blue-200 hover:text-white transition-colors duration-200">Terms of Service</a>
-                  <a href="#" className="text-blue-200 hover:text-white transition-colors duration-200">Privacy Policy</a>
-                  <a href="#" className="text-blue-200 hover:text-white transition-colors duration-200">Cookie Policy</a>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6">
+                  <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
+                    <a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 whitespace-nowrap">Terms of Service</a>
+                    <a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 whitespace-nowrap">Privacy Policy</a>
+                    <a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 whitespace-nowrap">Cookie Policy</a>
+                  </div>
+                  {/* Trustpilot Badge */}
+                  <a 
+                    href="https://www.trustpilot.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex flex-col items-center gap-2 bg-white px-4 py-3 rounded-lg hover:shadow-lg transition-all duration-200 whitespace-nowrap"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FaStar className="h-5 w-5 text-[#00b67a]" />
+                      <span className="font-semibold text-gray-900 text-sm">Trustpilot</span>
+                    </div>
+                    {/* Star Rating - 4.5 stars */}
+                    <div className="flex items-center gap-0.5">
+                      {/* 4 full stars */}
+                      {[...Array(4)].map((_, i) => (
+                        <FaStar key={i} className="h-3 w-3 text-[#00b67a]" />
+                      ))}
+                      {/* Half star */}
+                      <div className="relative w-3 h-3">
+                        <FaStar className="absolute inset-0 h-3 w-3 text-gray-300" />
+                        <div className="absolute inset-0 overflow-hidden" style={{ width: '50%' }}>
+                          <FaStar className="h-3 w-3 text-[#00b67a]" />
+                        </div>
+                      </div>
+                    </div>
+                  </a>
                 </div>
               </div>
             </div>

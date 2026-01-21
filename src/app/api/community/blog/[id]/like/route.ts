@@ -18,31 +18,31 @@ export async function POST(
 
     const { id } = await params
 
-    // Check if reply exists
-    const { data: reply, error: replyError } = await supabase
-      .from('forum_replies')
+    // Check if post exists
+    const { data: post, error: postError } = await supabase
+      .from('blog_posts')
       .select('id')
       .eq('id', id)
       .single()
 
-    if (replyError || !reply) {
-      return NextResponse.json({ error: 'Reply not found' }, { status: 404 })
+    if (postError || !post) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
     }
 
-    // Check if user has already liked this reply
+    // Check if user has already liked this post
     const { data: existingLike } = await supabase
-      .from('forum_reply_likes')
+      .from('blog_post_likes')
       .select('id')
-      .eq('reply_id', id)
+      .eq('post_id', id)
       .eq('user_id', user.id)
       .single()
 
     if (existingLike) {
       // User has already liked, so unlike (delete)
       const { error: deleteError } = await supabase
-        .from('forum_reply_likes')
+        .from('blog_post_likes')
         .delete()
-        .eq('reply_id', id)
+        .eq('post_id', id)
         .eq('user_id', user.id)
 
       if (deleteError) {
@@ -50,20 +50,20 @@ export async function POST(
       }
 
       // Get updated like count (trigger has updated it)
-      const { data: updatedReply } = await supabase
-        .from('forum_replies')
+      const { data: updatedPost } = await supabase
+        .from('blog_posts')
         .select('like_count')
         .eq('id', id)
         .single()
 
-      return NextResponse.json({ like_count: updatedReply?.like_count || 0, liked: false })
+      return NextResponse.json({ like_count: updatedPost?.like_count || 0, liked: false })
     }
 
     // Insert like into junction table (trigger will update like_count automatically)
     const { error: insertError } = await supabase
-      .from('forum_reply_likes')
+      .from('blog_post_likes')
       .insert({
-        reply_id: id,
+        post_id: id,
         user_id: user.id,
       })
 
@@ -72,38 +72,36 @@ export async function POST(
       if (insertError.code === '23505') {
         // Try to delete instead
         const { error: deleteError } = await supabase
-          .from('forum_reply_likes')
+          .from('blog_post_likes')
           .delete()
-          .eq('reply_id', id)
+          .eq('post_id', id)
           .eq('user_id', user.id)
 
         if (deleteError) {
           return NextResponse.json({ error: deleteError.message }, { status: 500 })
         }
 
-        const { data: updatedReply } = await supabase
-          .from('forum_replies')
+        const { data: updatedPost } = await supabase
+          .from('blog_posts')
           .select('like_count')
           .eq('id', id)
           .single()
 
-        return NextResponse.json({ like_count: updatedReply?.like_count || 0, liked: false })
+        return NextResponse.json({ like_count: updatedPost?.like_count || 0, liked: false })
       }
       return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
     // Get updated like count (trigger has updated it)
-    const { data: updatedReply } = await supabase
-      .from('forum_replies')
+    const { data: updatedPost } = await supabase
+      .from('blog_posts')
       .select('like_count')
       .eq('id', id)
       .single()
 
-    return NextResponse.json({ like_count: updatedReply?.like_count || 0, liked: true })
+    return NextResponse.json({ like_count: updatedPost?.like_count || 0, liked: true })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }
 }
-
-
 

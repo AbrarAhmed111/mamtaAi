@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { FaHeart, FaReply, FaEye, FaArrowLeft, FaLock, FaCheckCircle, FaThumbtack, FaEdit, FaTrash } from 'react-icons/fa'
+import { FaReply, FaEye, FaArrowLeft, FaLock, FaCheckCircle, FaThumbtack, FaEdit, FaTrash, FaExclamationTriangle } from 'react-icons/fa'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
+import { supabase } from '@/lib/supabase/client'
 
 interface ForumThread {
   id: string
@@ -63,11 +64,52 @@ export default function ForumThreadPage() {
   const [editContent, setEditContent] = useState('')
   const [replyingToId, setReplyingToId] = useState<string | null>(null)
   const [nestedReplyContent, setNestedReplyContent] = useState('')
+  const [deleteReplyId, setDeleteReplyId] = useState<string | null>(null)
+  const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null)
+  const [showDeleteThreadModal, setShowDeleteThreadModal] = useState(false)
+  const [deletingThread, setDeletingThread] = useState(false)
 
   useEffect(() => {
     loadThread()
     loadReplies()
     loadUser()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  // Real-time subscription for replies
+  useEffect(() => {
+    const channel = supabase
+      .channel(`forum_replies_${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'forum_replies',
+          filter: `thread_id=eq.${id}`,
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            // New reply added - reload replies to get full data with author
+            loadReplies()
+            loadThread() // Update reply count
+          } else if (payload.eventType === 'UPDATE') {
+            // Reply updated (e.g., like count changed)
+            if (payload.new) {
+              loadReplies() // Reload to get updated data
+            }
+          } else if (payload.eventType === 'DELETE') {
+            // Reply deleted
+            setReplies((prev) => prev.filter((r) => r.id !== payload.old.id))
+            loadThread() // Update reply count
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
@@ -166,8 +208,7 @@ export default function ForumThreadPage() {
   }
 
   const handleDeleteReply = async (replyId: string) => {
-    if (!confirm('Are you sure you want to delete this reply?')) return
-
+    setDeletingReplyId(replyId)
     try {
       const res = await fetch(`/api/community/forum/replies/${replyId}`, {
         method: 'DELETE',
@@ -177,31 +218,17 @@ export default function ForumThreadPage() {
         toast.success('Reply deleted!')
         loadReplies()
         loadThread() // Refresh to update reply count
+        setDeleteReplyId(null)
       } else {
         toast.error('Failed to delete reply')
       }
     } catch (error) {
       toast.error('Failed to delete reply')
+    } finally {
+      setDeletingReplyId(null)
     }
   }
 
-  const handleLikeReply = async (replyId: string) => {
-    try {
-      const res = await fetch(`/api/community/forum/replies/${replyId}/like`, {
-        method: 'POST',
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        // Update the reply in the list
-        setReplies(replies.map(r => 
-          r.id === replyId ? { ...r, like_count: data.like_count } : r
-        ))
-      }
-    } catch (error) {
-      toast.error('Failed to like reply')
-    }
-  }
 
   const startEdit = (reply: Reply) => {
     setEditingReplyId(reply.id)
@@ -221,6 +248,29 @@ export default function ForumThreadPage() {
   const cancelReply = () => {
     setReplyingToId(null)
     setNestedReplyContent('')
+  }
+
+  const handleDeleteThread = async () => {
+    setDeletingThread(true)
+    try {
+      const res = await fetch(`/api/community/forum/threads/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (res.ok) {
+        toast.success('Thread deleted!')
+        // Go back to previous page
+        router.back()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to delete thread')
+      }
+    } catch (error) {
+      toast.error('Failed to delete thread')
+    } finally {
+      setDeletingThread(false)
+      setShowDeleteThreadModal(false)
+    }
   }
 
   // Group replies by parent
@@ -246,13 +296,94 @@ export default function ForumThreadPage() {
   }
 
   const canReply = !thread.is_locked && user
+  const isThreadAuthor = user?.id === thread.author?.id
 
   return (
     <div className="w-full">
       <div className="max-w-full mx-auto">
+        {/* Delete Thread Modal */}
+        {showDeleteThreadModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowDeleteThreadModal(false)}>
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl border border-red-200" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <FaExclamationTriangle className="text-red-600 text-xl" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Delete Thread?</h3>
+              </div>
+              <div className="mb-6">
+                <p className="text-gray-700 mb-2">
+                  Are you sure you want to delete this thread?
+                </p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-3">
+                  <p className="text-sm text-red-800 font-medium">
+                    ⚠️ Warning: This action cannot be undone. All replies and associated data will be permanently deleted.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteThreadModal(false)}
+                  disabled={deletingThread}
+                  className="flex-1 px-4 py-2.5 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteThread}
+                  disabled={deletingThread}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors disabled:opacity-50"
+                >
+                  {deletingThread ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Reply Modal */}
+        {deleteReplyId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setDeleteReplyId(null)}>
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl border border-red-200" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <FaExclamationTriangle className="text-red-600 text-xl" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Delete Reply?</h3>
+              </div>
+              <div className="mb-6">
+                <p className="text-gray-700 mb-2">
+                  Are you sure you want to delete this reply?
+                </p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-3">
+                  <p className="text-sm text-red-800 font-medium">
+                    ⚠️ Warning: This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteReplyId(null)}
+                  disabled={deletingReplyId !== null}
+                  className="flex-1 px-4 py-2.5 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteReply(deleteReplyId)}
+                  disabled={deletingReplyId !== null}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors disabled:opacity-50"
+                >
+                  {deletingReplyId === deleteReplyId ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Back Button */}
         <Link
-          href="/dashboard/community"
+          href="/dashboard/community?tab=forums"
           className="inline-flex items-center gap-2 text-pink-600 hover:text-pink-700 mb-6"
         >
           <FaArrowLeft />
@@ -337,10 +468,6 @@ export default function ForumThreadPage() {
             )}
 
             <div className="flex items-center gap-6 pt-6 border-t border-gray-200">
-              <button className="flex items-center gap-2 text-gray-600 hover:text-pink-600 transition-colors">
-                <FaHeart />
-                <span>{thread.like_count || 0}</span>
-              </button>
               <div className="flex items-center gap-2 text-gray-600">
                 <FaReply />
                 <span>{thread.reply_count || 0}</span>
@@ -349,6 +476,21 @@ export default function ForumThreadPage() {
                 <FaEye />
                 <span>{thread.view_count || 0}</span>
               </div>
+              {isThreadAuthor && (
+                <div className="ml-auto flex gap-2">
+                  <button className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                    <FaEdit className="inline mr-1" />
+                    Edit
+                  </button>
+                  <button 
+                    onClick={() => setShowDeleteThreadModal(true)}
+                    className="px-4 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                  >
+                    <FaTrash className="inline mr-1" />
+                    Delete
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </article>
@@ -367,12 +509,12 @@ export default function ForumThreadPage() {
                 onChange={(e) => setReplyContent(e.target.value)}
                 placeholder="Write a reply..."
                 rows={4}
-                className="w-full p-4 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent mb-4"
+                className="w-full p-4 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent mb-4 transition-all duration-200 focus:scale-[1.01]"
               />
               <button
                 type="submit"
                 disabled={submitting || !replyContent.trim()}
-                className="px-6 py-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 disabled:opacity-50 transition-all"
+                className="px-6 py-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 disabled:opacity-50 transition-all duration-200 hover:scale-105 active:scale-95 transform"
               >
                 {submitting ? 'Posting...' : 'Post Reply'}
               </button>
@@ -469,17 +611,18 @@ export default function ForumThreadPage() {
                               <p className="text-gray-700 mb-2">{reply.content}</p>
                             )}
                             <div className="flex items-center gap-4">
-                              <button 
-                                onClick={() => handleLikeReply(reply.id)}
-                                className="flex items-center gap-1 text-gray-600 hover:text-pink-600 text-sm transition-colors"
-                              >
-                                <FaHeart />
-                                <span>{reply.like_count || 0}</span>
-                              </button>
                               {user && (
                                 <button 
-                                  onClick={() => startReply(reply.id)}
-                                  className="flex items-center gap-1 text-gray-600 hover:text-pink-600 text-sm transition-colors"
+                                  onClick={() => {
+                                    startReply(reply.id)
+                                    // Add a subtle animation
+                                    const btn = document.activeElement as HTMLElement
+                                    if (btn) {
+                                      btn.classList.add('animate-pulse')
+                                      setTimeout(() => btn.classList.remove('animate-pulse'), 300)
+                                    }
+                                  }}
+                                  className="flex items-center gap-1 text-gray-600 hover:text-pink-600 text-sm transition-all duration-200 hover:scale-105"
                                 >
                                   <FaReply />
                                   Reply
@@ -495,7 +638,7 @@ export default function ForumThreadPage() {
                                     Edit
                                   </button>
                                   <button 
-                                    onClick={() => handleDeleteReply(reply.id)}
+                                    onClick={() => setDeleteReplyId(reply.id)}
                                     className="flex items-center gap-1 text-gray-600 hover:text-red-600 text-sm transition-colors"
                                   >
                                     <FaTrash />
@@ -504,40 +647,6 @@ export default function ForumThreadPage() {
                                 </>
                               )}
                             </div>
-
-                            {/* Nested Reply Form */}
-                            {isReplying && (
-                              <div className="mt-4 pl-4 border-l-2 border-pink-200">
-                                <form onSubmit={(e) => {
-                                  e.preventDefault()
-                                  handleSubmitReply(e)
-                                }} className="mb-4">
-                                  <textarea
-                                    value={nestedReplyContent}
-                                    onChange={(e) => setNestedReplyContent(e.target.value)}
-                                    placeholder="Write a reply..."
-                                    rows={3}
-                                    className="w-full p-3 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent mb-2"
-                                  />
-                                  <div className="flex gap-2">
-                                    <button
-                                      type="submit"
-                                      disabled={submitting || !nestedReplyContent.trim()}
-                                      className="px-4 py-1 text-sm bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50"
-                                    >
-                                      {submitting ? 'Posting...' : 'Post Reply'}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={cancelReply}
-                                      className="px-4 py-1 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                                    >
-                                      Cancel
-                                    </button>
-                                  </div>
-                                </form>
-                              </div>
-                            )}
 
                             {/* Nested Replies */}
                             {nestedReplies.length > 0 && (
@@ -605,13 +714,6 @@ export default function ForumThreadPage() {
                                                 <p className="text-gray-700 text-sm mb-2">{nestedReply.content}</p>
                                               )}
                                               <div className="flex items-center gap-3">
-                                                <button 
-                                                  onClick={() => handleLikeReply(nestedReply.id)}
-                                                  className="flex items-center gap-1 text-gray-600 hover:text-pink-600 text-xs transition-colors"
-                                                >
-                                                  <FaHeart />
-                                                  <span>{nestedReply.like_count || 0}</span>
-                                                </button>
                                                 {isNestedAuthor && !isEditingNested && (
                                                   <>
                                                     <button 
@@ -622,7 +724,7 @@ export default function ForumThreadPage() {
                                                       Edit
                                                     </button>
                                                     <button 
-                                                      onClick={() => handleDeleteReply(nestedReply.id)}
+                                                      onClick={() => setDeleteReplyId(nestedReply.id)}
                                                       className="flex items-center gap-1 text-gray-600 hover:text-red-600 text-xs transition-colors"
                                                     >
                                                       <FaTrash />
@@ -638,6 +740,40 @@ export default function ForumThreadPage() {
                                     </div>
                                   )
                                 })}
+                              </div>
+                            )}
+
+                            {/* Nested Reply Form - Shown after nested replies */}
+                            {isReplying && (
+                              <div className="mt-4 pl-4 border-l-2 border-pink-200">
+                                <form onSubmit={(e) => {
+                                  e.preventDefault()
+                                  handleSubmitReply(e)
+                                }} className="mb-4">
+                                  <textarea
+                                    value={nestedReplyContent}
+                                    onChange={(e) => setNestedReplyContent(e.target.value)}
+                                    placeholder="Write a reply..."
+                                    rows={3}
+                                    className="w-full p-3 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent mb-2 transition-all duration-200 focus:scale-[1.01]"
+                                  />
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="submit"
+                                      disabled={submitting || !nestedReplyContent.trim()}
+                                      className="px-4 py-1 text-sm bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 transition-all duration-200 hover:scale-105 active:scale-95 transform"
+                                    >
+                                      {submitting ? 'Posting...' : 'Post Reply'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={cancelReply}
+                                      className="px-4 py-1 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </form>
                               </div>
                             )}
                           </div>

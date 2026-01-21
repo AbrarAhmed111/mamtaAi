@@ -130,7 +130,7 @@ export default function CreateResourcePage() {
   return (
     <div className="w-full max-w-full mx-auto">
       <Link
-        href="/dashboard/community"
+        href="/dashboard/community?tab=resources"
         className="inline-flex items-center gap-2 text-pink-600 hover:text-pink-700 mb-6"
       >
         <FaArrowLeft />
@@ -304,7 +304,7 @@ export default function CreateResourcePage() {
           {/* Submit */}
           <div className="flex gap-4 pt-4">
             <Link
-              href="/dashboard/community"
+              href="/dashboard/community?tab=resources"
               className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancel

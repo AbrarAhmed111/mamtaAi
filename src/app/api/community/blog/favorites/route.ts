@@ -13,15 +13,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get favorites from user metadata
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
+    // Get favorite post IDs from junction table
+    const { data: favorites, error: favoritesError } = await supabase
+      .from('blog_post_favorites')
+      .select('post_id')
+      .eq('user_id', user.id)
 
-    // Access favorite_posts from profile metadata
-    const postIds = (profile && 'favorite_posts' in profile ? (profile as any).favorite_posts as string[] : []) || []
+    if (favoritesError) {
+      return NextResponse.json({ error: favoritesError.message }, { status: 500 })
+    }
+
+    const postIds = favorites?.map(f => f.post_id) || []
 
     if (postIds.length === 0) {
       return NextResponse.json({ posts: [] })

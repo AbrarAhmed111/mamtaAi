@@ -77,18 +77,77 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { title, content, category_id, tags = [] } = body
 
-    if (!title || !content || !category_id) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    // Strict validation
+    // Title validation
+    if (!title || typeof title !== 'string') {
+      return NextResponse.json({ error: 'Title is required' }, { status: 400 })
+    }
+    const trimmedTitle = title.trim()
+    if (trimmedTitle.length < 10) {
+      return NextResponse.json({ error: 'Title must be at least 10 characters' }, { status: 400 })
+    }
+    if (trimmedTitle.length > 200) {
+      return NextResponse.json({ error: 'Title must be 200 characters or less' }, { status: 400 })
+    }
+    if (/[<>{}[\]\\]/.test(trimmedTitle)) {
+      return NextResponse.json({ error: 'Title contains invalid characters' }, { status: 400 })
+    }
+
+    // Content validation
+    if (!content || typeof content !== 'string') {
+      return NextResponse.json({ error: 'Content is required' }, { status: 400 })
+    }
+    const trimmedContent = content.trim()
+    if (trimmedContent.length < 50) {
+      return NextResponse.json({ error: 'Content must be at least 50 characters' }, { status: 400 })
+    }
+    if (trimmedContent.length > 10000) {
+      return NextResponse.json({ error: 'Content must be 10,000 characters or less' }, { status: 400 })
+    }
+
+    // Category validation
+    if (!category_id || typeof category_id !== 'string') {
+      return NextResponse.json({ error: 'Category is required' }, { status: 400 })
+    }
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(category_id)) {
+      return NextResponse.json({ error: 'Invalid category ID format' }, { status: 400 })
+    }
+    // Verify category exists
+    const { data: categoryExists } = await supabase
+      .from('forum_categories')
+      .select('id')
+      .eq('id', category_id)
+      .single()
+    
+    if (!categoryExists) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 400 })
+    }
+
+    // Tags validation
+    if (tags && Array.isArray(tags)) {
+      if (tags.length > 10) {
+        return NextResponse.json({ error: 'Maximum 10 tags allowed' }, { status: 400 })
+      }
+      for (const tag of tags) {
+        if (typeof tag !== 'string' || tag.length > 30) {
+          return NextResponse.json({ error: 'Each tag must be 30 characters or less' }, { status: 400 })
+        }
+        if (!/^[a-zA-Z0-9\s-]+$/.test(tag)) {
+          return NextResponse.json({ error: 'Tags can only contain letters, numbers, spaces, and hyphens' }, { status: 400 })
+        }
+      }
     }
 
     const { data, error } = await supabase
       .from('forum_threads')
       .insert({
         author_id: user.id,
-        title,
-        content,
+        title: trimmedTitle,
+        content: trimmedContent,
         category_id,
-        tags,
+        tags: tags || [],
       })
       .select(`
         *,

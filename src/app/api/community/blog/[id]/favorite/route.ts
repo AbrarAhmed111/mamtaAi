@@ -18,45 +18,43 @@ export async function POST(
 
     const { id } = await params
 
-    // Get user profile with favorite_posts (using metadata as fallback)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    // Access favorite_posts from profile metadata or use empty array
-    const favoritePosts = (profile && 'favorite_posts' in profile ? (profile as any).favorite_posts as string[] : []) || []
-    
-    // Check if already favorited
-    if (favoritePosts.includes(id)) {
-      return NextResponse.json({ error: 'Already favorited' }, { status: 400 })
-    }
-
-    // Add to favorites in user metadata
-    const updatedFavorites = [...favoritePosts, id]
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ favorite_posts: updatedFavorites } as any)
-      .eq('id', user.id)
-
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 })
-    }
-
-    // Increment bookmark count on post
-    const { data: post } = await supabase
+    // Check if post exists
+    const { data: post, error: postError } = await supabase
       .from('blog_posts')
-      .select('*')
+      .select('id')
       .eq('id', id)
       .single()
 
-    if (post) {
-      const currentCount = (post && 'bookmark_count' in post ? (post as any).bookmark_count : 0) || 0
-      await supabase
-        .from('blog_posts')
-        .update({ bookmark_count: currentCount + 1 } as any)
-        .eq('id', id)
+    if (postError || !post) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
+    }
+
+    // Check if already favorited
+    const { data: existingFavorite } = await supabase
+      .from('blog_post_favorites')
+      .select('id')
+      .eq('post_id', id)
+      .eq('user_id', user.id)
+      .single()
+
+    if (existingFavorite) {
+      return NextResponse.json({ error: 'Already favorited' }, { status: 400 })
+    }
+
+    // Insert favorite into junction table (trigger will update bookmark_count automatically)
+    const { error: insertError } = await supabase
+      .from('blog_post_favorites')
+      .insert({
+        post_id: id,
+        user_id: user.id,
+      })
+
+    if (insertError) {
+      // Handle unique constraint violation (already favorited)
+      if (insertError.code === '23505') {
+        return NextResponse.json({ error: 'Already favorited' }, { status: 400 })
+      }
+      return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
     return NextResponse.json({ favorited: true })
@@ -82,44 +80,15 @@ export async function DELETE(
 
     const { id } = await params
 
-    // Get user profile with favorite_posts
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
+    // Delete favorite from junction table (trigger will update bookmark_count automatically)
+    const { error: deleteError } = await supabase
+      .from('blog_post_favorites')
+      .delete()
+      .eq('post_id', id)
+      .eq('user_id', user.id)
 
-    // Access favorite_posts from profile metadata
-    const currentFavorites = (profile && 'favorite_posts' in profile ? (profile as any).favorite_posts as string[] : []) || []
-    
-    if (!currentFavorites.length || !currentFavorites.includes(id)) {
-      return NextResponse.json({ favorited: false })
-    }
-
-    // Remove from favorites in user metadata
-    const favoritePosts = currentFavorites.filter((pid: string) => pid !== id)
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ favorite_posts: favoritePosts } as any)
-      .eq('id', user.id)
-
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 })
-    }
-
-    // Decrement bookmark count on post
-    const { data: post } = await supabase
-      .from('blog_posts')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (post) {
-      const currentCount = (post && 'bookmark_count' in post ? (post as any).bookmark_count : 0) || 0
-      await supabase
-        .from('blog_posts')
-        .update({ bookmark_count: Math.max(0, currentCount - 1) } as any)
-        .eq('id', id)
+    if (deleteError) {
+      return NextResponse.json({ error: deleteError.message }, { status: 500 })
     }
 
     return NextResponse.json({ favorited: false })
@@ -145,18 +114,15 @@ export async function GET(
 
     const { id } = await params
 
-    // Check user metadata for favorites
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
+    // Check if post is favorited using junction table
+    const { data: favorite } = await supabase
+      .from('blog_post_favorites')
+      .select('id')
+      .eq('post_id', id)
+      .eq('user_id', user.id)
       .single()
 
-    // Access favorite_posts from profile metadata
-    const favoritePosts = (profile && 'favorite_posts' in profile ? (profile as any).favorite_posts as string[] : []) || []
-    const isFavorited = favoritePosts.includes(id)
-
-    return NextResponse.json({ is_favorited: isFavorited })
+    return NextResponse.json({ is_favorited: !!favorite })
   } catch (e: any) {
     return NextResponse.json({ is_favorited: false })
   }

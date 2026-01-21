@@ -83,12 +83,99 @@ export async function POST(request: NextRequest) {
       author_credentials,
     } = body
 
-    if (!title || !content || !category) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    // Strict validation
+    const validCategories = ['Feeding', 'Sleep', 'Health', 'Development', 'Activities', 'Products', 'Tips', 'Stories', 'Other']
+    const validAgeGroups = ['all', 'newborn', '0-3months', '3-6months', '6-12months', '1-2years']
+
+    // Title validation
+    if (!title || typeof title !== 'string') {
+      return NextResponse.json({ error: 'Title is required' }, { status: 400 })
+    }
+    const trimmedTitle = title.trim()
+    if (trimmedTitle.length < 10) {
+      return NextResponse.json({ error: 'Title must be at least 10 characters' }, { status: 400 })
+    }
+    if (trimmedTitle.length > 200) {
+      return NextResponse.json({ error: 'Title must be 200 characters or less' }, { status: 400 })
+    }
+    if (/[<>{}[\]\\]/.test(trimmedTitle)) {
+      return NextResponse.json({ error: 'Title contains invalid characters' }, { status: 400 })
     }
 
-    // Generate slug from title
-    const slug = title
+    // Content validation
+    if (!content || typeof content !== 'string') {
+      return NextResponse.json({ error: 'Content is required' }, { status: 400 })
+    }
+    const trimmedContent = content.trim()
+    if (trimmedContent.length < 100) {
+      return NextResponse.json({ error: 'Content must be at least 100 characters' }, { status: 400 })
+    }
+    if (trimmedContent.length > 50000) {
+      return NextResponse.json({ error: 'Content must be 50,000 characters or less' }, { status: 400 })
+    }
+
+    // Category validation
+    if (!category || typeof category !== 'string' || !validCategories.includes(category)) {
+      return NextResponse.json({ error: 'Please select a valid category' }, { status: 400 })
+    }
+
+    // Excerpt validation
+    if (excerpt && typeof excerpt === 'string' && excerpt.length > 500) {
+      return NextResponse.json({ error: 'Excerpt must be 500 characters or less' }, { status: 400 })
+    }
+
+    // Subcategory validation
+    if (subcategory && typeof subcategory === 'string' && subcategory.length > 100) {
+      return NextResponse.json({ error: 'Subcategory must be 100 characters or less' }, { status: 400 })
+    }
+
+    // Age group validation
+    if (age_group && !validAgeGroups.includes(age_group)) {
+      return NextResponse.json({ error: 'Invalid age group' }, { status: 400 })
+    }
+
+    // Tags validation
+    if (tags && Array.isArray(tags)) {
+      if (tags.length > 10) {
+        return NextResponse.json({ error: 'Maximum 10 tags allowed' }, { status: 400 })
+      }
+      for (const tag of tags) {
+        if (typeof tag !== 'string' || tag.length > 30) {
+          return NextResponse.json({ error: 'Each tag must be 30 characters or less' }, { status: 400 })
+        }
+        if (!/^[a-zA-Z0-9\s-]+$/.test(tag)) {
+          return NextResponse.json({ error: 'Tags can only contain letters, numbers, spaces, and hyphens' }, { status: 400 })
+        }
+      }
+    }
+
+    // Image URL validation
+    if (featured_image_url && typeof featured_image_url === 'string' && featured_image_url.trim()) {
+      try {
+        const urlObj = new URL(featured_image_url)
+        if (!['http:', 'https:'].includes(urlObj.protocol)) {
+          return NextResponse.json({ error: 'Image URL must use http or https protocol' }, { status: 400 })
+        }
+        const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+        const pathname = urlObj.pathname.toLowerCase()
+        if (!validExtensions.some(ext => pathname.endsWith(ext))) {
+          return NextResponse.json({ error: 'Image URL must point to a valid image file' }, { status: 400 })
+        }
+      } catch {
+        return NextResponse.json({ error: 'Invalid image URL format' }, { status: 400 })
+      }
+    }
+
+    // Expert content validation
+    if (is_expert_content && (!author_credentials || typeof author_credentials !== 'string' || !author_credentials.trim())) {
+      return NextResponse.json({ error: 'Credentials are required for expert content' }, { status: 400 })
+    }
+    if (author_credentials && typeof author_credentials === 'string' && author_credentials.length > 200) {
+      return NextResponse.json({ error: 'Credentials must be 200 characters or less' }, { status: 400 })
+    }
+
+    // Generate slug from trimmed title
+    const slug = trimmedTitle
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '')
@@ -110,17 +197,17 @@ export async function POST(request: NextRequest) {
       .from('blog_posts')
       .insert({
         author_id: user.id,
-        title,
+        title: trimmedTitle,
         slug: finalSlug,
-        content,
-        excerpt: excerpt || content.substring(0, 200),
+        content: trimmedContent,
+        excerpt: excerpt?.trim() || trimmedContent.substring(0, 200),
         category,
-        subcategory,
-        tags,
+        subcategory: subcategory?.trim() || null,
+        tags: tags || [],
         age_group: age_group || 'all',
-        featured_image_url,
+        featured_image_url: featured_image_url?.trim() || null,
         is_expert_content,
-        author_credentials,
+        author_credentials: author_credentials?.trim() || null,
         status: 'published',
         published_at: new Date().toISOString(),
       })

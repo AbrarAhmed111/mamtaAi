@@ -12,7 +12,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <Providers>
       <AuthProvider>
-        <html lang="en">
+        <html lang="en" suppressHydrationWarning>
           <head>
             {/* Favicons served from /public/favicons */}
             <link rel="icon" href="/favicons/favicon.ico" sizes="any" />

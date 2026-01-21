@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FaBook, FaComments, FaFolderOpen, FaPlus, FaSearch, FaFilter, FaHeart, FaEye, FaComment, FaDownload, FaStar, FaCheckCircle, FaBookmark } from 'react-icons/fa'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { FaBook, FaComments, FaFolderOpen, FaPlus, FaSearch, FaFilter, FaEye, FaComment, FaDownload, FaStar, FaCheckCircle } from 'react-icons/fa'
 import Link from 'next/link'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
@@ -70,6 +71,8 @@ interface Resource {
 }
 
 export default function CommunityPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>('blog')
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([])
   const [forumThreads, setForumThreads] = useState<ForumThread[]>([])
@@ -79,7 +82,15 @@ export default function CommunityPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [user, setUser] = useState<any>(null)
-  const [favoritedPosts, setFavoritedPosts] = useState<Set<string>>(new Set())
+
+  // Initialize tab from URL query parameter
+  useEffect(() => {
+    const tabParam = searchParams.get('tab')
+    if (tabParam && ['blog', 'forums', 'resources'].includes(tabParam)) {
+      setActiveTab(tabParam as Tab)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   useEffect(() => {
     loadData()
@@ -89,7 +100,6 @@ export default function CommunityPage() {
 
   useEffect(() => {
     if (user) {
-      loadFavoritedPosts()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
@@ -104,65 +114,6 @@ export default function CommunityPage() {
     }
   }
 
-  const loadFavoritedPosts = async () => {
-    try {
-      const res = await fetch('/api/community/blog/favorites')
-      const data = await res.json()
-      if (data.posts) {
-        const favoriteIds = new Set<string>(data.posts.map((p: BlogPost) => p.id))
-        setFavoritedPosts(favoriteIds)
-      }
-    } catch (error) {
-      console.error('Failed to load favorites')
-    }
-  }
-
-  const handleToggleFavorite = async (e: React.MouseEvent, postId: string) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    if (!user) {
-      toast.error('Please sign in to save favorites')
-      return
-    }
-
-    const isFavorited = favoritedPosts.has(postId)
-    
-    try {
-      const method = isFavorited ? 'DELETE' : 'POST'
-      const res = await fetch(`/api/community/blog/${postId}/favorite`, {
-        method,
-      })
-
-      if (res.ok) {
-        const newFavorited = new Set(favoritedPosts)
-        if (isFavorited) {
-          newFavorited.delete(postId)
-        } else {
-          newFavorited.add(postId)
-        }
-        setFavoritedPosts(newFavorited)
-        toast.success(isFavorited ? 'Removed from favorites' : 'Saved to favorites!')
-        
-        // Update the post in the list
-        setBlogPosts(prev => prev.map(p => {
-          if (p.id === postId) {
-            return {
-              ...p,
-              bookmark_count: isFavorited 
-                ? Math.max(0, (p.bookmark_count || 0) - 1)
-                : (p.bookmark_count || 0) + 1
-            }
-          }
-          return p
-        }))
-      } else {
-        toast.error('Failed to update favorite')
-      }
-    } catch (error) {
-      toast.error('Failed to update favorite')
-    }
-  }
 
   const loadData = async () => {
     setLoading(true)
@@ -247,6 +198,7 @@ export default function CommunityPage() {
             onClick={() => {
               setActiveTab('blog')
               setSelectedCategory(null)
+              router.push('/dashboard/community?tab=blog')
             }}
             className={`px-6 py-3 font-semibold transition-all ${
               activeTab === 'blog'
@@ -261,6 +213,7 @@ export default function CommunityPage() {
             onClick={() => {
               setActiveTab('forums')
               setSelectedCategory(null)
+              router.push('/dashboard/community?tab=forums')
             }}
             className={`px-6 py-3 font-semibold transition-all ${
               activeTab === 'forums'
@@ -275,6 +228,7 @@ export default function CommunityPage() {
             onClick={() => {
               setActiveTab('resources')
               setSelectedCategory(null)
+              router.push('/dashboard/community?tab=resources')
             }}
             className={`px-6 py-3 font-semibold transition-all ${
               activeTab === 'resources'
@@ -296,14 +250,14 @@ export default function CommunityPage() {
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
             />
           </div>
           {activeTab === 'forums' && forumCategories.length > 0 && (
             <select
               value={selectedCategory || ''}
               onChange={(e) => setSelectedCategory(e.target.value || null)}
-              className="px-4 py-2 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500"
+              className="px-4 py-2 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
             >
               <option value="">All Categories</option>
               {forumCategories.map((cat) => (
@@ -314,15 +268,6 @@ export default function CommunityPage() {
             </select>
           )}
           <div className="flex gap-2">
-            {activeTab === 'blog' && (
-              <Link
-                href="/dashboard/community/favorites"
-                className="px-6 py-2 bg-pink-100 text-pink-700 rounded-lg hover:bg-pink-200 transition-all flex items-center gap-2"
-              >
-                <FaBookmark />
-                My Favorites
-              </Link>
-            )}
             <Link
               href={`/dashboard/community/${activeTab}/create`}
               className="px-6 py-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 transition-all flex items-center gap-2"
@@ -363,26 +308,11 @@ export default function CommunityPage() {
                   </div>
                 ) : (
                   filteredBlogPosts.map((post) => {
-                    const isFavorited = favoritedPosts.has(post.id)
                     return (
                       <div
                         key={post.id}
                         className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all overflow-hidden group flex flex-col relative"
                       >
-                        {/* Favorite Button */}
-                        {user && (
-                          <button
-                            onClick={(e) => handleToggleFavorite(e, post.id)}
-                            className={`absolute top-4 right-4 z-10 p-2 rounded-full transition-colors ${
-                              isFavorited
-                                ? 'bg-pink-100 text-pink-600 hover:bg-pink-200'
-                                : 'bg-white/80 text-gray-600 hover:bg-pink-50 hover:text-pink-600'
-                            }`}
-                            title={isFavorited ? 'Remove from favorites' : 'Save to favorites'}
-                          >
-                            <FaBookmark className={isFavorited ? 'fill-current' : ''} />
-                          </button>
-                        )}
                         <Link
                           href={`/dashboard/community/blog/${post.id}`}
                           className="flex flex-col flex-1"
@@ -420,7 +350,6 @@ export default function CommunityPage() {
                                   <FaEye /> {post.view_count || 0}
                                 </span>
                                 <span className="flex items-center gap-1">
-                                  <FaHeart /> {post.like_count || 0}
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <FaComment /> {post.comment_count || 0}
@@ -519,7 +448,6 @@ export default function CommunityPage() {
                                 <FaComment /> {thread.reply_count || 0}
                               </span>
                               <span className="flex items-center gap-1">
-                                <FaHeart /> {thread.like_count || 0}
                               </span>
                               {thread.author && (
                                 <div className="flex items-center gap-2 ml-auto">

@@ -20,6 +20,30 @@ const nextConfig = {
           protocol: 'https',
           hostname: 'lh3.googleusercontent.com',
         },
+        {
+          protocol: 'https',
+          hostname: 'media.istockphoto.com',
+        },
+        {
+          protocol: 'https',
+          hostname: '**.istockphoto.com',
+        },
+        {
+          protocol: 'https',
+          hostname: 'images.unsplash.com',
+        },
+        {
+          protocol: 'https',
+          hostname: '**.unsplash.com',
+        },
+        {
+          protocol: 'https',
+          hostname: '**.pexels.com',
+        },
+        {
+          protocol: 'https',
+          hostname: '**.pixabay.com',
+        },
       ],
       unoptimized: false, // Set to true if you want to skip image optimization
     },
