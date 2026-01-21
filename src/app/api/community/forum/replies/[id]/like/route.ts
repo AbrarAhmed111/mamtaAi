@@ -31,7 +31,7 @@ export async function POST(
 
     // Check if user has already liked this reply
     const { data: existingLike } = await supabase
-      .from('forum_reply_likes')
+      .from('forum_reply_likes' as any)
       .select('id')
       .eq('reply_id', id)
       .eq('user_id', user.id)
@@ -40,7 +40,7 @@ export async function POST(
     if (existingLike) {
       // User has already liked, so unlike (delete)
       const { error: deleteError } = await supabase
-        .from('forum_reply_likes')
+        .from('forum_reply_likes' as any)
         .delete()
         .eq('reply_id', id)
         .eq('user_id', user.id)
@@ -61,7 +61,7 @@ export async function POST(
 
     // Insert like into junction table (trigger will update like_count automatically)
     const { error: insertError } = await supabase
-      .from('forum_reply_likes')
+      .from('forum_reply_likes' as any)
       .insert({
         reply_id: id,
         user_id: user.id,
@@ -72,7 +72,7 @@ export async function POST(
       if (insertError.code === '23505') {
         // Try to delete instead
         const { error: deleteError } = await supabase
-          .from('forum_reply_likes')
+          .from('forum_reply_likes' as any)
           .delete()
           .eq('reply_id', id)
           .eq('user_id', user.id)
