@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     // Get favorite post IDs from junction table
     const { data: favorites, error: favoritesError } = await supabase
-      .from('blog_post_favorites')
+      .from('blog_post_favorites' as any)
       .select('post_id')
       .eq('user_id', user.id)
 

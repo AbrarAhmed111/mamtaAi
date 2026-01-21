@@ -31,7 +31,7 @@ export async function POST(
 
     // Check if already favorited
     const { data: existingFavorite } = await supabase
-      .from('blog_post_favorites')
+      .from('blog_post_favorites' as any)
       .select('id')
       .eq('post_id', id)
       .eq('user_id', user.id)
@@ -43,7 +43,7 @@ export async function POST(
 
     // Insert favorite into junction table (trigger will update bookmark_count automatically)
     const { error: insertError } = await supabase
-      .from('blog_post_favorites')
+      .from('blog_post_favorites' as any)
       .insert({
         post_id: id,
         user_id: user.id,
@@ -82,7 +82,7 @@ export async function DELETE(
 
     // Delete favorite from junction table (trigger will update bookmark_count automatically)
     const { error: deleteError } = await supabase
-      .from('blog_post_favorites')
+      .from('blog_post_favorites' as any)
       .delete()
       .eq('post_id', id)
       .eq('user_id', user.id)
@@ -116,7 +116,7 @@ export async function GET(
 
     // Check if post is favorited using junction table
     const { data: favorite } = await supabase
-      .from('blog_post_favorites')
+      .from('blog_post_favorites' as any)
       .select('id')
       .eq('post_id', id)
       .eq('user_id', user.id)
