@@ -26,6 +26,37 @@ export default function BabyDetailPage() {
   const [bloodType, setBloodType] = useState<string>('')
   const [notes, setNotes] = useState<string>('')
 
+  type FeedingRecord = {
+    id: string
+    timestamp: string
+    feedingType: 'breast' | 'formula' | 'solid' | 'other'
+    amountMl?: number
+    notes?: string
+  }
+
+  type SleepRecord = {
+    id: string
+    startTime: string
+    endTime: string
+    durationMinutes: number
+    notes?: string
+  }
+
+  const [feedingRecords, setFeedingRecords] = useState<FeedingRecord[]>([])
+  const [sleepRecords, setSleepRecords] = useState<SleepRecord[]>([])
+  const [recordsLoading, setRecordsLoading] = useState(false)
+  const [savingFeeding, setSavingFeeding] = useState(false)
+  const [savingSleep, setSavingSleep] = useState(false)
+
+  const [feedingTime, setFeedingTime] = useState('')
+  const [feedingType, setFeedingType] = useState<FeedingRecord['feedingType']>('breast')
+  const [feedingAmount, setFeedingAmount] = useState('')
+  const [feedingNotes, setFeedingNotes] = useState('')
+
+  const [sleepStart, setSleepStart] = useState('')
+  const [sleepEnd, setSleepEnd] = useState('')
+  const [sleepNotes, setSleepNotes] = useState('')
+
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [selectedBaby, setSelectedBaby] = useState<{ id: string; name: string; avatar: string } | null>(null)
@@ -63,6 +94,46 @@ export default function BabyDetailPage() {
       }
     }
     load()
+  }, [babyId])
+
+  const loadActivityRecords = async () => {
+    if (!babyId) return
+    try {
+      setRecordsLoading(true)
+      const res = await fetch(`/api/babies/${babyId}/activities`, { cache: 'no-store' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error || 'Failed to load records')
+        return
+      }
+      const items = Array.isArray(data.items) ? data.items : []
+      const feeding = items
+        .filter((item: any) => item.activity_type === 'feeding')
+        .map((item: any) => ({
+          id: item.id,
+          timestamp: item.started_at,
+          feedingType: mapFeedingTypeFromDb(item.feeding_type || item.food_type),
+          amountMl: item.amount_ml ?? undefined,
+          notes: item.notes || undefined,
+        }))
+      const sleep = items
+        .filter((item: any) => item.activity_type === 'sleep')
+        .map((item: any) => ({
+          id: item.id,
+          startTime: item.started_at,
+          endTime: item.ended_at,
+          durationMinutes: item.duration_minutes ?? computeDurationMinutes(item.started_at, item.ended_at),
+          notes: item.notes || undefined,
+        }))
+      setFeedingRecords(feeding)
+      setSleepRecords(sleep)
+    } finally {
+      setRecordsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadActivityRecords()
   }, [babyId])
 
   const save = async () => {
@@ -140,6 +211,127 @@ export default function BabyDetailPage() {
       setDeleting(false)
       setShowDeleteConfirm(false)
     }
+  }
+
+  const addFeedingRecord = async () => {
+    if (!feedingTime) {
+      toast.error('Please select a feeding time')
+      return
+    }
+    const start = new Date(feedingTime)
+    if (Number.isNaN(start.getTime())) {
+      toast.error('Invalid feeding time')
+      return
+    }
+    if (start.getTime() > Date.now() + 5 * 60 * 1000) {
+      toast.error('Feeding time cannot be in the future')
+      return
+    }
+    if (feedingAmount !== '') {
+      const amount = Number(feedingAmount)
+      if (Number.isNaN(amount) || amount < 0 || amount > 1000) {
+        toast.error('Feeding amount must be between 0 and 1000 ml')
+        return
+      }
+    }
+    if (!babyId) return
+    try {
+      setSavingFeeding(true)
+      const payload = {
+        activity_type: 'feeding',
+        started_at: new Date(feedingTime).toISOString(),
+      feeding_type: feedingType,
+        amount_ml: feedingAmount !== '' ? Number(feedingAmount) : undefined,
+        notes: feedingNotes.trim() || undefined,
+      }
+      const res = await fetch(`/api/babies/${babyId}/activities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error || 'Failed to save feeding record')
+        return
+      }
+      setFeedingTime('')
+      setFeedingAmount('')
+      setFeedingNotes('')
+      await loadActivityRecords()
+    } finally {
+      setSavingFeeding(false)
+    }
+  }
+
+  const deleteFeedingRecord = async (id: string) => {
+    if (!babyId) return
+    const res = await fetch(`/api/babies/${babyId}/activities?activity_id=${id}`, { method: 'DELETE' })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      toast.error(data?.error || 'Failed to delete record')
+      return
+    }
+    await loadActivityRecords()
+  }
+
+  const addSleepRecord = async () => {
+    if (!sleepStart || !sleepEnd) {
+      toast.error('Please select both sleep start and end times')
+      return
+    }
+    const start = new Date(sleepStart)
+    const end = new Date(sleepEnd)
+    const durationMs = end.getTime() - start.getTime()
+    if (Number.isNaN(durationMs) || durationMs <= 0) {
+      toast.error('Sleep end time must be after start time')
+      return
+    }
+    if (start.getTime() > Date.now() + 5 * 60 * 1000 || end.getTime() > Date.now() + 5 * 60 * 1000) {
+      toast.error('Sleep times cannot be in the future')
+      return
+    }
+    if (durationMs > 24 * 60 * 60 * 1000) {
+      toast.error('Sleep duration cannot exceed 24 hours')
+      return
+    }
+    const durationMinutes = Math.round(durationMs / 60000)
+    if (!babyId) return
+    try {
+      setSavingSleep(true)
+      const payload = {
+        activity_type: 'sleep',
+        started_at: new Date(sleepStart).toISOString(),
+        ended_at: new Date(sleepEnd).toISOString(),
+        notes: sleepNotes.trim() || undefined,
+      }
+      const res = await fetch(`/api/babies/${babyId}/activities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error || 'Failed to save sleep record')
+        return
+      }
+      setSleepStart('')
+      setSleepEnd('')
+      setSleepNotes('')
+      await loadActivityRecords()
+    } finally {
+      setSavingSleep(false)
+    }
+  }
+
+  const deleteSleepRecord = async (id: string) => {
+    if (!babyId) return
+    const res = await fetch(`/api/babies/${babyId}/activities?activity_id=${id}`, { method: 'DELETE' })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      toast.error(data?.error || 'Failed to delete record')
+      return
+    }
+    await loadActivityRecords()
   }
 
   if (loading) {
@@ -322,6 +514,189 @@ export default function BabyDetailPage() {
         )}
       </section>
 
+      {/* Feeding & Sleep Records */}
+      <section className="bg-white rounded-2xl border border-pink-100 p-5 shadow-sm bg-gradient-to-br from-white to-pink-50/20">
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">Feeding & Sleep Records</h2>
+        {recordsLoading && (
+          <div className="mb-4 flex items-center gap-2 text-xs text-gray-500">
+            <Spinner size={14} />
+            <span>Loading records...</span>
+          </div>
+        )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="rounded-xl border border-pink-100 bg-white/80 p-4">
+            <h3 className="text-sm font-semibold text-pink-700">Add Feeding Record</h3>
+            <div className="mt-3 grid grid-cols-1 gap-3">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Time</label>
+                <input
+                  type="datetime-local"
+                  className="w-full rounded-lg border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                  value={feedingTime}
+                  onChange={e => setFeedingTime(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Type</label>
+                <select
+                  className="w-full rounded-lg border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                  value={feedingType}
+                  onChange={e => setFeedingType(e.target.value as FeedingRecord['feedingType'])}
+                >
+                  <option value="breast">Breast</option>
+                  <option value="formula">Formula</option>
+                  <option value="solid">Solid</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Amount (ml)</label>
+                <input
+                  type="number"
+                  className="w-full rounded-lg border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                  value={feedingAmount}
+                  onChange={e => setFeedingAmount(e.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Notes</label>
+                <textarea
+                  rows={2}
+                  className="w-full rounded-lg border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                  value={feedingNotes}
+                  onChange={e => setFeedingNotes(e.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+              <button
+                onClick={addFeedingRecord}
+                disabled={savingFeeding}
+                className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-pink-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white hover:from-pink-600 hover:to-rose-600 transition-colors"
+              >
+                {savingFeeding ? (
+                  <>
+                    <Spinner size={14} />
+                    <span className="ml-2">Saving...</span>
+                  </>
+                ) : (
+                  'Add Feeding Record'
+                )}
+              </button>
+            </div>
+            <div className="mt-4 space-y-2">
+              {recordsLoading && feedingRecords.length === 0 ? (
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <Spinner size={14} />
+                  <span>Loading feeding records...</span>
+                </div>
+              ) : feedingRecords.length === 0 ? (
+                <p className="text-xs text-gray-500">No feeding records yet.</p>
+              ) : (
+                feedingRecords.map(record => (
+                  <div key={record.id} className="flex items-start justify-between rounded-lg border border-gray-100 bg-white p-3 text-xs">
+                    <div className="space-y-1">
+                      <div className="font-semibold text-gray-900">{record.feedingType}</div>
+                      <div className="text-gray-600">{new Date(record.timestamp).toLocaleString()}</div>
+                      {record.amountMl !== undefined && (
+                        <div className="text-gray-600">Amount: {record.amountMl} ml</div>
+                      )}
+                      {record.notes && <div className="text-gray-600">{record.notes}</div>}
+                    </div>
+                    <button
+                      onClick={() => deleteFeedingRecord(record.id)}
+                      className="text-red-500 hover:text-red-600"
+                      title="Delete"
+                    >
+                      <FaTrash />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-pink-100 bg-white/80 p-4">
+            <h3 className="text-sm font-semibold text-pink-700">Add Sleep Record</h3>
+            <div className="mt-3 grid grid-cols-1 gap-3">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Start Time</label>
+                <input
+                  type="datetime-local"
+                  className="w-full rounded-lg border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                  value={sleepStart}
+                  onChange={e => setSleepStart(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">End Time</label>
+                <input
+                  type="datetime-local"
+                  className="w-full rounded-lg border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                  value={sleepEnd}
+                  onChange={e => setSleepEnd(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Notes</label>
+                <textarea
+                  rows={2}
+                  className="w-full rounded-lg border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                  value={sleepNotes}
+                  onChange={e => setSleepNotes(e.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+              <button
+                onClick={addSleepRecord}
+                disabled={savingSleep}
+                className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-pink-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white hover:from-pink-600 hover:to-rose-600 transition-colors"
+              >
+                {savingSleep ? (
+                  <>
+                    <Spinner size={14} />
+                    <span className="ml-2">Saving...</span>
+                  </>
+                ) : (
+                  'Add Sleep Record'
+                )}
+              </button>
+            </div>
+            <div className="mt-4 space-y-2">
+              {recordsLoading && sleepRecords.length === 0 ? (
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <Spinner size={14} />
+                  <span>Loading sleep records...</span>
+                </div>
+              ) : sleepRecords.length === 0 ? (
+                <p className="text-xs text-gray-500">No sleep records yet.</p>
+              ) : (
+                sleepRecords.map(record => (
+                  <div key={record.id} className="flex items-start justify-between rounded-lg border border-gray-100 bg-white p-3 text-xs">
+                    <div className="space-y-1">
+                      <div className="font-semibold text-gray-900">
+                        {new Date(record.startTime).toLocaleString()} → {new Date(record.endTime).toLocaleString()}
+                      </div>
+                      <div className="text-gray-600">
+                        Duration: {Math.floor(record.durationMinutes / 60)}h {record.durationMinutes % 60}m
+                      </div>
+                      {record.notes && <div className="text-gray-600">{record.notes}</div>}
+                    </div>
+                    <button
+                      onClick={() => deleteSleepRecord(record.id)}
+                      className="text-red-500 hover:text-red-600"
+                      title="Delete"
+                    >
+                      <FaTrash />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Recording */}
       <section className="bg-white rounded-2xl border border-pink-100 p-5 shadow-sm bg-gradient-to-br from-white to-pink-50/20">
         <h2 className="text-lg font-semibold text-gray-900 mb-3">Create New Recording</h2>
@@ -363,6 +738,32 @@ function formatAge(birthDateISO: string): string {
 function capitalize(s: string) {
   if (!s) return s
   return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+function mapFeedingTypeToDb(type: 'breast' | 'formula' | 'solid' | 'other') {
+  if (type === 'breast') return 'breast_both'
+  if (type === 'formula') return 'bottle'
+  if (type === 'solid') return 'solid'
+  return null
+}
+
+function mapFeedingTypeFromDb(type: string | null | undefined): 'breast' | 'formula' | 'solid' | 'other' {
+  if (type === 'breast_left' || type === 'breast_right' || type === 'breast_both') return 'breast'
+  if (type === 'bottle') return 'formula'
+  if (type === 'solid') return 'solid'
+  if (type === 'breast') return 'breast'
+  if (type === 'formula') return 'formula'
+  if (type === 'other') return 'other'
+  return 'other'
+}
+
+function computeDurationMinutes(start?: string, end?: string) {
+  if (!start || !end) return 0
+  const startDate = new Date(start)
+  const endDate = new Date(end)
+  const durationMs = endDate.getTime() - startDate.getTime()
+  if (Number.isNaN(durationMs) || durationMs <= 0) return 0
+  return Math.round(durationMs / 60000)
 }
 
 

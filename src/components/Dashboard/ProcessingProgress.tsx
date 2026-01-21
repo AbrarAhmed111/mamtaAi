@@ -148,6 +148,7 @@ export default function ProcessingProgress({
         let savedRecordingId: string | null = null;
         let savedFileUrl: string | null = null;
         let hasSaved = false; // Flag to prevent duplicate saves
+        let hasSavedFeatures = false;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -245,6 +246,19 @@ export default function ProcessingProgress({
                   setResult(data);
                   if (!abortControllerRef.current?.signal.aborted) {
                     onCompleteRef.current(data);
+                  }
+
+                  if (!hasSavedFeatures && savedRecordingId && data.features) {
+                    hasSavedFeatures = true;
+                    try {
+                      await fetch(`/api/recordings/${savedRecordingId}/features`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ features: data.features, extraction_method: 'streaming' })
+                      });
+                    } catch (featureError) {
+                      console.error('Failed to save extracted features:', featureError);
+                    }
                   }
                 }
 
