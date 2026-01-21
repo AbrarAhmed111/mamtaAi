@@ -59,7 +59,7 @@ export default function BabyDetailPage() {
 
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
-  const [selectedBaby, setSelectedBaby] = useState<{ id: string; name: string; avatar: string } | null>(null)
+  const [selectedBaby, setSelectedBaby] = useState<{ id: string; name: string; avatar: string; gender?: string | null } | null>(null)
 
   const age = useMemo(() => formatAge(birthDate), [birthDate])
   const avatar = baby?.avatar_url || ''
