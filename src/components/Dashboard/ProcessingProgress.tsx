@@ -149,6 +149,7 @@ export default function ProcessingProgress({
         let savedFileUrl: string | null = null;
         let hasSaved = false; // Flag to prevent duplicate saves
         let hasSavedFeatures = false;
+        let hasSavedPrediction = false;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -258,6 +259,25 @@ export default function ProcessingProgress({
                       });
                     } catch (featureError) {
                       console.error('Failed to save extracted features:', featureError);
+                    }
+                  }
+
+                  if (!hasSavedPrediction && savedRecordingId && (data.prediction || data.predicted_cry_type)) {
+                    hasSavedPrediction = true;
+                    try {
+                      await fetch(`/api/recordings/${savedRecordingId}/prediction`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          prediction: data.prediction,
+                          predicted_cry_type: data.predicted_cry_type,
+                          confidence_score: data.confidence_score,
+                          confidence_scores: data.confidence_scores,
+                          model_info: data.model_info
+                        })
+                      });
+                    } catch (predictionError) {
+                      console.error('Failed to save prediction:', predictionError);
                     }
                   }
                 }
