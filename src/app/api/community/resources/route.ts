@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0')
 
     let query = supabase
-      .from('shared_resources' as any)
+      .from('shared_resources')
       .select(`
         id,
         title,
@@ -93,26 +93,83 @@ export async function POST(request: NextRequest) {
       tags = [],
     } = body
 
-    if (!title || !file_url || !file_name || !resource_type || !category) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    // Strict validation
+    const validResourceTypes = ['guide', 'checklist', 'schedule', 'template', 'ebook', 'infographic', 'worksheet', 'other']
+    const validAgeGroups = ['all', 'newborn', '0-3months', '3-6months', '6-12months', '1-2years']
+
+    // Title validation
+    if (!title || typeof title !== 'string') {
+      return NextResponse.json({ error: 'Title is required' }, { status: 400 })
+    }
+    const trimmedTitle = title.trim()
+    if (trimmedTitle.length < 5) {
+      return NextResponse.json({ error: 'Title must be at least 5 characters' }, { status: 400 })
+    }
+    if (trimmedTitle.length > 200) {
+      return NextResponse.json({ error: 'Title must be 200 characters or less' }, { status: 400 })
+    }
+
+    // File validation
+    if (!file_url || typeof file_url !== 'string') {
+      return NextResponse.json({ error: 'File URL is required' }, { status: 400 })
+    }
+    if (!file_name || typeof file_name !== 'string') {
+      return NextResponse.json({ error: 'File name is required' }, { status: 400 })
+    }
+
+    // Resource type validation
+    if (!resource_type || typeof resource_type !== 'string' || !validResourceTypes.includes(resource_type)) {
+      return NextResponse.json({ error: 'Please select a valid resource type' }, { status: 400 })
+    }
+
+    // Category validation
+    if (!category || typeof category !== 'string') {
+      return NextResponse.json({ error: 'Category is required' }, { status: 400 })
+    }
+
+    // Description validation
+    if (description && typeof description === 'string' && description.length > 2000) {
+      return NextResponse.json({ error: 'Description must be 2000 characters or less' }, { status: 400 })
+    }
+
+    // Subcategory validation
+    if (subcategory && typeof subcategory === 'string' && subcategory.length > 100) {
+      return NextResponse.json({ error: 'Subcategory must be 100 characters or less' }, { status: 400 })
+    }
+
+    // Age group validation
+    if (age_group && !validAgeGroups.includes(age_group)) {
+      return NextResponse.json({ error: 'Invalid age group' }, { status: 400 })
+    }
+
+    // Tags validation
+    if (tags && Array.isArray(tags)) {
+      if (tags.length > 10) {
+        return NextResponse.json({ error: 'Maximum 10 tags allowed' }, { status: 400 })
+      }
+      for (const tag of tags) {
+        if (typeof tag !== 'string' || tag.length > 30) {
+          return NextResponse.json({ error: 'Each tag must be 30 characters or less' }, { status: 400 })
+        }
+      }
     }
 
     const { data, error } = await supabase
-      .from('shared_resources' as any)
+      .from('shared_resources')
       .insert({
         uploader_id: user.id,
-        title,
-        description,
+        title: trimmedTitle,
+        description: description?.trim() || null,
         file_url,
         file_name,
-        file_size_bytes,
-        file_type,
-        mime_type,
+        file_size_bytes: file_size_bytes || null,
+        file_type: file_type || null,
+        mime_type: mime_type || null,
         resource_type,
         category,
-        subcategory,
+        subcategory: subcategory?.trim() || null,
         age_group: age_group || 'all',
-        tags,
+        tags: tags || [],
       })
       .select()
       .single()

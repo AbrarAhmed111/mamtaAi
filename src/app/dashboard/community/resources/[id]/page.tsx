@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { FaDownload, FaEye, FaHeart, FaStar, FaArrowLeft, FaCheckCircle, FaFile } from 'react-icons/fa'
+import { FaDownload, FaEye, FaHeart, FaStar, FaArrowLeft, FaCheckCircle, FaFile, FaTrash, FaExclamationTriangle } from 'react-icons/fa'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
@@ -41,11 +41,25 @@ export default function ResourcePage() {
   const [resource, setResource] = useState<Resource | null>(null)
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     loadResource()
+    loadUser()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+  
+  const loadUser = async () => {
+    try {
+      const res = await fetch('/api/me')
+      const data = await res.json()
+      setUser(data)
+    } catch (error) {
+      console.error('Failed to load user')
+    }
+  }
 
   const loadResource = async () => {
     try {
@@ -66,6 +80,8 @@ export default function ResourcePage() {
   }
 
   const handleDownload = async () => {
+    if (!resource) return
+    
     setDownloading(true)
     try {
       const res = await fetch(`/api/community/resources/${id}/download`, {
@@ -74,14 +90,24 @@ export default function ResourcePage() {
 
       if (res.ok) {
         const data = await res.json()
-        // Open download URL in new tab
-        window.open(data.download_url, '_blank')
+        
+        // Create a temporary anchor element to trigger download
+        const link = document.createElement('a')
+        link.href = data.download_url
+        link.download = data.file_name || resource.file_name
+        link.target = '_blank'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        
         toast.success('Download started!')
         loadResource() // Refresh to update download count
       } else {
-        toast.error('Failed to initiate download')
+        const errorData = await res.json()
+        toast.error(errorData.error || 'Failed to initiate download')
       }
     } catch (error) {
+      console.error('Download error:', error)
       toast.error('Failed to download')
     } finally {
       setDownloading(false)
@@ -114,6 +140,30 @@ export default function ResourcePage() {
     if (type.includes('video')) return '🎥'
     return <FaFile />
   }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/community/resources/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (res.ok) {
+        toast.success('Resource deleted!')
+        router.back()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to delete resource')
+      }
+    } catch (error) {
+      toast.error('Failed to delete resource')
+    } finally {
+      setDeleting(false)
+      setShowDeleteModal(false)
+    }
+  }
+
+  const isResourceOwner = user && resource && resource.uploader && user.id === resource.uploader.id
 
   if (loading) {
     return (
@@ -246,18 +296,79 @@ export default function ResourcePage() {
                 )}
               </div>
 
-              <button
-                onClick={handleDownload}
-                disabled={downloading}
-                className="px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 disabled:opacity-50 transition-all flex items-center gap-2"
-              >
-                <FaDownload />
-                {downloading ? 'Downloading...' : 'Download'}
-              </button>
+              <div className="flex items-center gap-3">
+                {isResourceOwner && (
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-2"
+                  >
+                    <FaTrash />
+                    Delete
+                  </button>
+                )}
+                <button
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  className="px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 disabled:opacity-50 transition-all flex items-center gap-2"
+                >
+                  <FaDownload />
+                  {downloading ? 'Downloading...' : 'Download'}
+                </button>
+              </div>
             </div>
           </div>
         </article>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <FaExclamationTriangle className="text-red-600 text-xl" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Delete Resource</h3>
+                  <p className="text-sm text-gray-600">This action cannot be undone</p>
+                </div>
+              </div>
+              
+              <p className="text-gray-700 mb-6">
+                Are you sure you want to delete <strong>&ldquo;{resource?.title}&rdquo;</strong>? This will remove the resource from the community.
+              </p>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {deleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <FaTrash />
+                      Delete
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

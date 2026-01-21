@@ -61,28 +61,60 @@ export default function CreateResourcePage() {
     const file = e.target.files?.[0]
     if (!file) return
 
+    // Validate file size (10MB max)
+    const maxSize = 10 * 1024 * 1024
+    if (file.size > maxSize) {
+      toast.error('File size must be less than 10MB')
+      return
+    }
+
+    // Validate file type
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'text/plain',
+    ]
+    
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('File type not allowed. Allowed: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, GIF, TXT')
+      return
+    }
+
     setUploading(true)
     try {
-      // In a real app, you'd upload to Supabase Storage or another service
-      // For now, we'll use a placeholder URL
-      toast.error('File upload functionality needs to be configured with your storage service')
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', file)
       
-      // Example: You would upload to Supabase Storage here
-      // const formData = new FormData()
-      // formData.append('file', file)
-      // const res = await fetch('/api/upload', { method: 'POST', body: formData })
-      // const { url } = await res.json()
-      
-      setFormData({
-        ...formData,
-        file_name: file.name,
-        file_size_bytes: file.size,
-        file_type: file.type.split('/')[1] || 'unknown',
-        mime_type: file.type,
-        file_url: '', // Set this to the uploaded file URL
+      const res = await fetch('/api/uploads/resource', {
+        method: 'POST',
+        body: uploadFormData,
       })
+
+      const data = await res.json()
+
+      if (res.ok && data.url) {
+        setFormData({
+          ...formData,
+          file_name: data.file_name || file.name,
+          file_size_bytes: data.file_size_bytes || file.size,
+          file_type: data.file_type || file.type.split('/')[1] || 'unknown',
+          mime_type: data.mime_type || file.type,
+          file_url: data.url,
+        })
+        toast.success('File uploaded successfully!')
+      } else {
+        toast.error(data.error || 'Failed to upload file')
+      }
     } catch (error) {
-      toast.error('Failed to process file')
+      console.error('Upload error:', error)
+      toast.error('Failed to upload file. Please try again.')
     } finally {
       setUploading(false)
     }
@@ -90,8 +122,35 @@ export default function CreateResourcePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.title || !formData.file_url || !formData.file_name || !formData.resource_type || !formData.category) {
-      toast.error('Please fill in all required fields and upload a file')
+    
+    // Validation
+    if (!formData.title || !formData.title.trim()) {
+      toast.error('Title is required')
+      return
+    }
+    
+    if (formData.title.trim().length < 5) {
+      toast.error('Title must be at least 5 characters')
+      return
+    }
+    
+    if (formData.title.trim().length > 200) {
+      toast.error('Title must be 200 characters or less')
+      return
+    }
+    
+    if (!formData.file_url || !formData.file_name) {
+      toast.error('Please upload a file')
+      return
+    }
+    
+    if (!formData.resource_type) {
+      toast.error('Please select a resource type')
+      return
+    }
+    
+    if (!formData.category) {
+      toast.error('Please select a category')
       return
     }
 
@@ -101,14 +160,38 @@ export default function CreateResourcePage() {
         .split(',')
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0)
+      
+      // Validate tags
+      if (tagsArray.length > 10) {
+        toast.error('Maximum 10 tags allowed')
+        setLoading(false)
+        return
+      }
+      
+      for (const tag of tagsArray) {
+        if (tag.length > 30) {
+          toast.error('Each tag must be 30 characters or less')
+          setLoading(false)
+          return
+        }
+      }
 
       const res = await fetch('/api/community/resources', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
+          title: formData.title.trim(),
+          description: formData.description.trim() || null,
+          file_url: formData.file_url,
+          file_name: formData.file_name,
+          file_size_bytes: formData.file_size_bytes,
+          file_type: formData.file_type,
+          mime_type: formData.mime_type,
+          resource_type: formData.resource_type,
+          category: formData.category,
+          subcategory: formData.subcategory.trim() || null,
+          age_group: formData.age_group,
           tags: tagsArray,
-          subcategory: formData.subcategory || null,
         }),
       })
 
@@ -178,9 +261,15 @@ export default function CreateResourcePage() {
                 onChange={(e) => setFormData({ ...formData, file_url: e.target.value })}
               />
             )}
-            <p className="text-xs text-gray-500 mt-2">
-              Note: File upload needs to be configured with your storage service (e.g., Supabase Storage)
-            </p>
+            {formData.file_url && (
+              <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                <FaFile className="inline" />
+                File uploaded successfully
+              </p>
+            )}
+            {uploading && (
+              <p className="text-xs text-pink-600 mt-2">Uploading file...</p>
+            )}
           </div>
 
           {/* Title */}

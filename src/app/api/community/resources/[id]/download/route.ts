@@ -11,21 +11,21 @@ export async function POST(
 
     // Increment download count
     const { data: currentResource } = await supabase
-      .from('shared_resources' as any)
-      .select('*')
+      .from('shared_resources')
+      .select('download_count')
       .eq('id', id)
       .single()
 
     if (currentResource) {
-      const currentCount = (currentResource && 'download_count' in currentResource ? (currentResource as any).download_count : 0) || 0
+      const currentCount = currentResource.download_count || 0
       await supabase
-        .from('shared_resources' as any)
-        .update({ download_count: currentCount + 1 } as any)
+        .from('shared_resources')
+        .update({ download_count: currentCount + 1 })
         .eq('id', id)
     }
 
     const { data, error } = await supabase
-      .from('shared_resources' as any)
+      .from('shared_resources')
       .select('file_url, file_name')
       .eq('id', id)
       .single()
@@ -34,10 +34,9 @@ export async function POST(
       return NextResponse.json({ error: 'Resource not found' }, { status: 404 })
     }
 
-    const resourceData = data as any
     return NextResponse.json({ 
-      download_url: resourceData.file_url,
-      file_name: resourceData.file_name 
+      download_url: data.file_url,
+      file_name: data.file_name 
     })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
