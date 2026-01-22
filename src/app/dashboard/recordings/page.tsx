@@ -272,27 +272,6 @@ export default function RecordingsPage() {
             View and manage all your baby cry recordings
           </p>
         </div>
-        <button
-          onClick={() => {
-            if (babiesForModal.length === 0) {
-              toast.error('Please add a baby first');
-              router.push('/dashboard/babies/add-baby');
-              return;
-            }
-            if (babiesForModal.length === 1) {
-              // Auto-select if only one baby
-              setSelectedBabyId(babiesForModal[0].id);
-              setShowRecordingModal(true);
-            } else {
-              // Show selection modal if multiple babies
-              setShowSelectBaby(true);
-            }
-          }}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-        >
-          <FaBaby />
-          Record New
-        </button>
       </div>
 
       {/* Filters */}
@@ -510,7 +489,7 @@ export default function RecordingsPage() {
 
       {/* Baby Selection Modal */}
       <BabySelectionModal
-        isOpen={showSelectBaby}
+        isOpen={showSelectBaby && !showRecordingModal}
         babies={babiesForModal}
         selectedBabyId={selectedBabyId}
         onSelectBaby={(babyId) => setSelectedBabyId(babyId)}

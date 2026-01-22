@@ -253,6 +253,8 @@ export default function Dashboard({
     setIsRecording(false);
     setShouldStartRecording(false); // Reset flag when stopping
     setRecordingTime(0);
+    // Reset selectedBabyId so modal appears again next time (allows selecting different baby)
+    setSelectedBabyId(null);
   };
 
   const getGreeting = () => {
@@ -319,9 +321,17 @@ export default function Dashboard({
   };
 
   const handleStartRecording = () => {
+    // Don't show baby selection if recording is already in progress or baby is already selected
+    if (isRecording || shouldStartRecording) {
+      return; // Recording already started, don't interfere
+    }
+    if (selectedBabyId) {
+      // Baby already selected, just start recording
+      startRecording();
+      return;
+    }
     if (babies.length === 0) {
       toast.error('Please add your baby first.');
-      // Optionally surface the add baby flow
       setShowSelectBaby(false);
       return;
     }
@@ -460,7 +470,21 @@ export default function Dashboard({
               {isParent && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">
                 <RecordingSection
-                  onStartRecording={handleStartRecording}
+                  onStartRecording={() => {
+                    // This callback is called:
+                    // 1. When user clicks "Start Recording" button (before recording starts)
+                    // 2. After recording actually starts (line 220 in RecordingSection)
+                    // 
+                    // We need to trigger baby selection on first click, but not after recording starts
+                    // Check if we're already in the process of starting (shouldStartRecording) or already recording
+                    if (shouldStartRecording || isRecording) {
+                      // Recording is already starting/started, just confirm state
+                      setIsRecording(true);
+                      return;
+                    }
+                    // User clicked the button - trigger baby selection flow
+                    handleStartRecording();
+                  }}
                   onStopRecording={stopRecording}
                   shouldStartRecording={shouldStartRecording}
                   selectedBaby={selectedBabyId ? babies.find(b => b.id === selectedBabyId) || null : null}
@@ -853,6 +877,8 @@ export default function Dashboard({
             setShowProcessingProgress(false);
             setProcessingAudio(null);
             setProcessingResult(null);
+            // Reset selectedBabyId so modal appears again next time
+            setSelectedBabyId(null);
             // Refresh stats and recordings
             void loadRecentRecordings();
             try {

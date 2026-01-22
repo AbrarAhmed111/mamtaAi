@@ -330,9 +330,9 @@ export default function ProcessingProgress({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl transform transition-all">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] transform transition-all flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
           <div>
             <h3 className="text-xl font-bold text-gray-900">
               {hasError ? 'Processing Error' : isCompleted ? 'Processing Complete' : 'Processing Audio'}
@@ -353,7 +353,7 @@ export default function ProcessingProgress({
         </div>
 
         {/* Progress Steps */}
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto flex-1">
         
           {hasError ? (
             <div className="text-center py-8">
