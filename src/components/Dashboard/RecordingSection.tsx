@@ -398,6 +398,7 @@ export default function RecordingSection({
                 <div>
                   <p className="text-lg font-medium text-gray-900">Ready to Record</p>
                   <p className="text-gray-600">Tap the button when your baby starts crying</p>
+                  <p className="text-sm text-amber-600 mt-2 font-medium">💡 For best results, audio should not be longer than 8 seconds</p>
                 </div>
                 <Tooltip content="Start recording a cry">
                   <button
