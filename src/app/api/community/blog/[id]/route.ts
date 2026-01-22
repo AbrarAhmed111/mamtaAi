@@ -27,7 +27,7 @@ export async function GET(
         // Try to use blog_post_views table if it exists, otherwise use cookie as fallback
         try {
           const { data: existingView } = await supabase
-            .from('blog_post_views')
+            .from('blog_post_views' as any)
             .select('id')
             .eq('post_id', id)
             .eq('viewer_id', user.id)
@@ -69,7 +69,7 @@ export async function GET(
           if (user) {
             try {
               await supabase
-                .from('blog_post_views')
+                .from('blog_post_views' as any)
                 .insert({
                   post_id: id,
                   viewer_id: user.id,
