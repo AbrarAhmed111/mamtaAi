@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { FaComment, FaEye, FaArrowLeft, FaEdit, FaTrash, FaReply, FaBookmark, FaExclamationTriangle } from 'react-icons/fa'
 import Image from 'next/image'
@@ -68,12 +68,34 @@ export default function BlogPostPage() {
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
   const [showDeletePostModal, setShowDeletePostModal] = useState(false)
   const [deletingPost, setDeletingPost] = useState(false)
+  const hasIncrementedViewRef = useRef(false)
 
   useEffect(() => {
-    loadPost()
-    loadComments()
     loadUser()
-    loadFavoriteStatus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (id) {
+      // Only increment view on initial load (check localStorage as additional safeguard)
+      const viewKey = `blog_view_${id}`
+      const hasViewed = typeof window !== 'undefined' && localStorage.getItem(viewKey)
+      
+      if (!hasIncrementedViewRef.current && !hasViewed) {
+        loadPost(true) // Pass true to increment view
+        hasIncrementedViewRef.current = true
+        // Store in localStorage to prevent duplicate views even if page is refreshed
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(viewKey, '1')
+        }
+      } else {
+        loadPost(false) // Don't increment view on subsequent loads
+      }
+      loadComments()
+      if (user) {
+        loadFavoriteStatus()
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, user])
 
@@ -94,7 +116,7 @@ export default function BlogPostPage() {
           if (payload.eventType === 'INSERT') {
             // New comment added - reload comments to get full data with author
             loadComments()
-            loadPost() // Update comment count
+            loadPost(false) // Update comment count, but don't increment view
           } else if (payload.eventType === 'UPDATE') {
             // Comment updated (e.g., like count changed)
             if (payload.new) {
@@ -103,7 +125,7 @@ export default function BlogPostPage() {
           } else if (payload.eventType === 'DELETE') {
             // Comment deleted
             setComments((prev) => prev.filter((c) => c.id !== payload.old.id))
-            loadPost() // Update comment count
+            loadPost(false) // Update comment count, but don't increment view
           }
         }
       )
@@ -125,9 +147,12 @@ export default function BlogPostPage() {
     }
   }
 
-  const loadPost = async () => {
+  const loadPost = async (incrementView: boolean = false) => {
     try {
-      const res = await fetch(`/api/community/blog/${id}`)
+      const url = incrementView 
+        ? `/api/community/blog/${id}?increment_view=true`
+        : `/api/community/blog/${id}`
+      const res = await fetch(url)
       const data = await res.json()
       if (data.post) {
         setPost(data.post)
@@ -175,8 +200,8 @@ export default function BlogPostPage() {
         setIsFavorited(newFavorited)
         setBookmarkCount(prev => newFavorited ? prev + 1 : Math.max(0, prev - 1))
         toast.success(newFavorited ? 'Saved to favorites!' : 'Removed from favorites')
-        // Reload post to get updated bookmark count
-        loadPost()
+        // Reload post to get updated bookmark count, but don't increment view
+        loadPost(false)
       } else {
         toast.error('Failed to update favorite status')
       }
@@ -217,7 +242,7 @@ export default function BlogPostPage() {
         setReplyingToId(null)
         toast.success(replyingToId ? 'Reply added!' : 'Comment added!')
         loadComments()
-        loadPost() // Refresh to update comment count
+        loadPost(false) // Refresh to update comment count, but don't increment view
       } else {
         toast.error('Failed to add comment')
       }
@@ -261,7 +286,7 @@ export default function BlogPostPage() {
       if (res.ok) {
         toast.success('Comment deleted!')
         loadComments()
-        loadPost() // Refresh to update comment count
+        loadPost(false) // Refresh to update comment count, but don't increment view
         setDeleteCommentId(null)
       } else {
         toast.error('Failed to delete comment')

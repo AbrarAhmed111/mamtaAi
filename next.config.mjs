@@ -44,6 +44,26 @@ const nextConfig = {
           protocol: 'https',
           hostname: '**.pixabay.com',
         },
+        {
+          protocol: 'https',
+          hostname: 'static.vecteezy.com',
+        },
+        {
+          protocol: 'https',
+          hostname: '**.static.vecteezy.com',
+        },
+        {
+          protocol: 'https',
+          hostname: '**.vecteezy.com',
+        },
+        {
+          protocol: 'https',
+          hostname: 'www.google.com',
+        },
+        {
+          protocol: 'https',
+          hostname: '**.google.com',
+        },
       ],
       unoptimized: false, // Set to true if you want to skip image optimization
     },

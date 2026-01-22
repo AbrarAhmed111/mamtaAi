@@ -9,18 +9,77 @@ export async function GET(
     const supabase = await createServerClient()
     const { id } = await params
 
-    // Increment view count
-    const { data: currentPost } = await supabase
-      .from('blog_posts')
-      .select('view_count')
-      .eq('id', id)
-      .single()
-    
-    if (currentPost) {
-      await supabase
-        .from('blog_posts')
-        .update({ view_count: (currentPost.view_count || 0) + 1 })
-        .eq('id', id)
+    // Check if this is a view increment request (only increment once per session)
+    const { searchParams } = new URL(request.url)
+    const shouldIncrementView = searchParams.get('increment_view') === 'true'
+
+    // Only increment view count if explicitly requested (first load only)
+    if (shouldIncrementView) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      // Check if user has already viewed this post (to prevent duplicate views)
+      let shouldIncrement = false
+
+      if (user) {
+        // For logged-in users: check if they've viewed this post before
+        // Try to use blog_post_views table if it exists, otherwise use cookie as fallback
+        try {
+          const { data: existingView } = await supabase
+            .from('blog_post_views')
+            .select('id')
+            .eq('post_id', id)
+            .eq('viewer_id', user.id)
+            .maybeSingle()
+
+          if (!existingView) {
+            shouldIncrement = true
+          }
+        } catch (error) {
+          // Table doesn't exist, fall back to cookie-based approach
+          const viewCookie = request.cookies.get(`blog_view_${id}_${user.id}`)
+          if (!viewCookie) {
+            shouldIncrement = true
+          }
+        }
+      } else {
+        // For anonymous users, use cookie-based approach
+        const viewCookie = request.cookies.get(`blog_view_${id}`)
+        if (!viewCookie) {
+          shouldIncrement = true
+        }
+      }
+
+      if (shouldIncrement) {
+        // Increment view count
+        const { data: currentPost } = await supabase
+          .from('blog_posts')
+          .select('view_count')
+          .eq('id', id)
+          .single()
+        
+        if (currentPost) {
+          await supabase
+            .from('blog_posts')
+            .update({ view_count: (currentPost.view_count || 0) + 1 })
+            .eq('id', id)
+
+          // Try to record the view in blog_post_views table (if it exists)
+          if (user) {
+            try {
+              await supabase
+                .from('blog_post_views')
+                .insert({
+                  post_id: id,
+                  viewer_id: user.id,
+                })
+            } catch (error) {
+              // Table doesn't exist, that's okay - we'll use cookies
+            }
+          }
+        }
+      }
     }
 
     const { data, error } = await supabase
@@ -41,7 +100,26 @@ export async function GET(
       return NextResponse.json({ error: 'Post not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ post: data })
+    const response = NextResponse.json({ post: data })
+    
+    // Set cookie to prevent duplicate views (works for both logged-in and anonymous users)
+    if (shouldIncrementView) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      
+      // Use user-specific cookie for logged-in users, generic for anonymous
+      const cookieName = user ? `blog_view_${id}_${user.id}` : `blog_view_${id}`
+      
+      response.cookies.set(cookieName, '1', {
+        maxAge: 60 * 60 * 24, // 24 hours
+        httpOnly: false, // Allow client-side access
+        sameSite: 'lax',
+        path: '/',
+      })
+    }
+
+    return response
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }
