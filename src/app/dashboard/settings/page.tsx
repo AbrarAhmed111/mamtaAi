@@ -499,7 +499,7 @@ export default function SettingsPage() {
             </h2>
             <p className="text-sm text-gray-600 mb-6">
               Choose what we can notify you about. In-app sound and bell highlight apply on the dashboard when new items
-              arrive. Category toggles will also filter email and push as those channels go live.
+              arrive. Family and community toggles control those notification categories.
             </p>
 
             <div className="rounded-lg border border-pink-100 bg-gradient-to-br from-white to-pink-50/20 px-4">
@@ -511,25 +511,11 @@ export default function SettingsPage() {
                 onChange={(v) => setNotifPrefs((p) => ({ ...p, familyInvites: v }))}
               />
               <ToggleRow
-                id="pref-insights"
-                label="Insights & tips"
-                description="Personalized summaries and guidance in the app."
-                checked={notifPrefs.insights}
-                onChange={(v) => setNotifPrefs((p) => ({ ...p, insights: v }))}
-              />
-              <ToggleRow
                 id="pref-community"
                 label="Community activity"
                 description="Forum and blog: replies on your threads or posts, replies to your messages, and @mentions (use @ plus a user profile ID)."
                 checked={notifPrefs.community}
                 onChange={(v) => setNotifPrefs((p) => ({ ...p, community: v }))}
-              />
-              <ToggleRow
-                id="pref-email"
-                label="Product & tips by email"
-                description="Occasional updates from MamtaAI (separate from account security email)."
-                checked={notifPrefs.emailProductUpdates}
-                onChange={(v) => setNotifPrefs((p) => ({ ...p, emailProductUpdates: v }))}
               />
               <ToggleRow
                 id="pref-sound"

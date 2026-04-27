@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ReactNode } from 'react';
 import Image from 'next/image';
 import { FaBell, FaCog, FaBars } from 'react-icons/fa';
 import Link from 'next/link';
@@ -11,6 +11,8 @@ interface DashboardHeaderProps {
   subtitle?: string;
   showNotifications?: boolean;
   onNotificationClick?: () => void;
+  /** Rendered under the bell, inside sticky header so it stays with the bar while scrolling. */
+  notificationDropdown?: ReactNode;
   onSettingsClick?: () => void;
   onMenuToggle?: () => void;
   onSignOut?: () => void;
@@ -26,6 +28,7 @@ export default function DashboardHeader({
   subtitle = 'Welcome to your MamtaAI dashboard. Let\'s help you understand your baby better.',
   showNotifications = true,
   onNotificationClick,
+  notificationDropdown,
   onSettingsClick,
   onMenuToggle,
   onSignOut,
@@ -72,29 +75,33 @@ export default function DashboardHeader({
           
           <div className="flex items-center space-x-2 sm:space-x-4" ref={menuRef}>
             {showNotifications && (
-              <button
-                type="button"
-                aria-label={
-                  unreadNotificationCount > 0
-                    ? `Notifications, ${unreadNotificationCount} unread`
-                    : 'Notifications'
-                }
-                className={`p-2 relative rounded-full transition-colors ${
-                  notificationBlink
-                    ? 'text-pink-600 bg-pink-50 ring-2 ring-pink-400 ring-offset-2 ring-offset-white animate-bell-alert'
-                    : unreadNotificationCount > 0
-                      ? 'text-pink-600 bg-pink-50/90'
-                      : 'text-gray-400 hover:text-gray-600'
-                }`}
-                onClick={onNotificationClick}
-              >
-                <FaBell className="text-lg" />
-                {unreadNotificationCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center font-semibold shadow-sm">
-                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
-                  </span>
-                )}
-              </button>
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  aria-label={
+                    unreadNotificationCount > 0
+                      ? `Notifications, ${unreadNotificationCount} unread`
+                      : 'Notifications'
+                  }
+                  aria-expanded={Boolean(notificationDropdown)}
+                  className={`p-2 relative rounded-full transition-colors ${
+                    notificationBlink
+                      ? 'text-pink-600 bg-pink-50 ring-2 ring-pink-400 ring-offset-2 ring-offset-white animate-bell-alert'
+                      : unreadNotificationCount > 0
+                        ? 'text-pink-600 bg-pink-50/90'
+                        : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                  onClick={onNotificationClick}
+                >
+                  <FaBell className="text-lg" />
+                  {unreadNotificationCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center font-semibold shadow-sm">
+                      {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                    </span>
+                  )}
+                </button>
+                {notificationDropdown}
+              </div>
             )}
             <button 
               className="p-2 text-gray-400 hover:text-gray-600 hidden md:block"

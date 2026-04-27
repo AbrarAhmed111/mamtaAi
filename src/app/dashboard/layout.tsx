@@ -333,6 +333,44 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           unreadNotificationCount={unreadCount}
           notificationBlink={notificationBlink}
           onNotificationClick={handleNotificationClick}
+          notificationDropdown={
+            notificationsOpen ? (
+              <div className="absolute right-0 top-full z-[65] mt-2 w-[min(92vw,24rem)] rounded-xl border border-pink-100 bg-white shadow-xl">
+                <div className="flex items-center justify-between border-b border-pink-100 p-3">
+                  <p className="text-sm font-semibold text-gray-900">Notifications</p>
+                  <button
+                    type="button"
+                    onClick={() => setNotificationsOpen(false)}
+                    className="rounded border border-gray-200 px-2 py-1 text-xs hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="max-h-[min(24rem,calc(100vh-7rem))] overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <p className="p-4 text-sm text-gray-500">No notifications yet.</p>
+                  ) : (
+                    notifications.map(n => {
+                      const isInvite = Boolean(n?.actionData?.inviteToken)
+                      const isLink = isInvite || Boolean(n.actionUrl)
+                      return (
+                        <button
+                          key={n.id}
+                          type="button"
+                          onClick={() => void handleNotificationListItemClick(n)}
+                          className={`w-full border-b border-pink-50 p-3 text-left hover:bg-pink-50/40 ${n.isRead ? 'bg-white' : 'bg-pink-50/50'} ${isLink ? 'cursor-pointer' : ''}`}
+                        >
+                          <p className="text-sm font-medium text-gray-900">{n.title}</p>
+                          <p className="mt-1 text-xs text-gray-600">{n.body}</p>
+                          <p className="mt-1 text-[11px] text-gray-500">{new Date(n.createdAt).toLocaleString()}</p>
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+            ) : null
+          }
           onSettingsClick={() => {
             window.location.href = '/dashboard/settings'
           }}
@@ -344,42 +382,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }
           }}
         />
-
-        {notificationsOpen && (
-          <div className="absolute right-4 sm:right-6 top-20 z-[65] w-[92vw] max-w-sm rounded-xl border border-pink-100 bg-white shadow-xl">
-            <div className="p-3 border-b border-pink-100 flex items-center justify-between">
-              <p className="text-sm font-semibold text-gray-900">Notifications</p>
-              <button
-                onClick={() => setNotificationsOpen(false)}
-                className="text-xs px-2 py-1 rounded border border-gray-200 hover:bg-gray-50"
-              >
-                Close
-              </button>
-            </div>
-            <div className="max-h-96 overflow-y-auto">
-              {notifications.length === 0 ? (
-                <p className="p-4 text-sm text-gray-500">No notifications yet.</p>
-              ) : (
-                notifications.map(n => {
-                  const isInvite = Boolean(n?.actionData?.inviteToken)
-                  const isLink = isInvite || Boolean(n.actionUrl)
-                  return (
-                    <button
-                      key={n.id}
-                      type="button"
-                      onClick={() => void handleNotificationListItemClick(n)}
-                      className={`w-full text-left p-3 border-b border-pink-50 hover:bg-pink-50/40 ${n.isRead ? 'bg-white' : 'bg-pink-50/50'} ${isLink ? 'cursor-pointer' : ''}`}
-                    >
-                      <p className="text-sm font-medium text-gray-900">{n.title}</p>
-                      <p className="text-xs text-gray-600 mt-1">{n.body}</p>
-                      <p className="text-[11px] text-gray-500 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
-                    </button>
-                  )
-                })
-              )}
-            </div>
-          </div>
-        )}
 
         <div className="flex-1 p-4 sm:p-6 w-full">{children}</div>
       </div>
