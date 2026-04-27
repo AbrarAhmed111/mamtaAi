@@ -91,6 +91,8 @@ export default function Dashboard({
 
   const [babies, setBabies] = useState<Baby[]>([]);
   const [babiesLoading, setBabiesLoading] = useState(false);
+  /** After first /api/babies resolution for parents — avoids flashing “add baby” while list is still empty */
+  const [babiesListResolved, setBabiesListResolved] = useState(false);
   const [showSelectBaby, setShowSelectBaby] = useState(false);
   const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
   const [shouldStartRecording, setShouldStartRecording] = useState(false);
@@ -137,7 +139,11 @@ export default function Dashboard({
   const isOnboardingIncomplete = onboardingCompleted === false;
 
   const loadBabies = useCallback(async () => {
-    if (!isParent) return;
+    if (!isParent) {
+      setBabiesListResolved(true);
+      return;
+    }
+    setBabiesListResolved(false);
     try {
       setBabiesLoading(true);
       const res = await fetch('/api/babies', { cache: 'no-store' });
@@ -165,6 +171,7 @@ export default function Dashboard({
       setBabies(mapped);
     } finally {
       setBabiesLoading(false);
+      setBabiesListResolved(true);
     }
   }, [isParent]);
 
@@ -425,7 +432,22 @@ export default function Dashboard({
   return (
     <>
      
-        {(isRoleUnset || isOnboardingIncomplete || (isParent && babies.length === 0)) && (
+        {isParent && !babiesListResolved && (
+          <div className="mt-4 mb-4 rounded-xl border border-pink-100 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-64 max-w-full" />
+                <Skeleton className="h-3 w-full max-w-xl" />
+              </div>
+              <Skeleton className="h-10 w-32 shrink-0 rounded-xl" />
+            </div>
+          </div>
+        )}
+
+        {(isRoleUnset ||
+          isOnboardingIncomplete ||
+          (isParent && babiesListResolved && babies.length === 0)) &&
+          !(isParent && !babiesListResolved) && (
           <div className=" mt-4 mb-4">
             <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
