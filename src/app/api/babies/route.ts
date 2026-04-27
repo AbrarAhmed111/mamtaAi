@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     // Step 1: get baby ids for current user
     const { data: membership, error: memError } = await supabase
       .from('baby_parents')
-      .select('baby_id')
+      .select('baby_id, is_primary, access_level')
       .eq('parent_id', user.id)
 
     if (memError) {
@@ -27,6 +27,10 @@ export async function GET(request: NextRequest) {
     }
 
     const babyIds = Array.from(new Set(membership.map((r: any) => r.baby_id).filter(Boolean)))
+    const membershipByBaby = new Map<string, { is_primary?: boolean; access_level?: string | null }>()
+    for (const row of membership as any[]) {
+      if (row?.baby_id) membershipByBaby.set(row.baby_id, { is_primary: row.is_primary, access_level: row.access_level })
+    }
 
     // Step 2: fetch babies with nested relations
     const { data: babiesData, error: babiesError } = await supabase
@@ -54,25 +58,30 @@ export async function GET(request: NextRequest) {
     }
 
     // Shape: include relations as array of { name, relationship }
-    const babies = (babiesData || []).map((b: any) => ({
-      id: b.id,
-      name: b.name,
-      gender: b.gender,
-      birth_date: b.birth_date,
-      birth_weight_kg: b.birth_weight_kg,
-      birth_height_cm: b.birth_height_cm,
-      blood_type: b.blood_type,
-      avatar_url: b.avatar_url,
-      medical_notes: b.medical_notes,
-      relations: Array.isArray(b.baby_parents)
-        ? b.baby_parents
-            .map((r: any) => ({
-              name: r?.parent_profile?.full_name || 'Unknown',
-              relationship: r?.relationship || 'other',
-            }))
-            .filter(Boolean)
-        : [],
-    }))
+    const babies = (babiesData || []).map((b: any) => {
+      const mine = membershipByBaby.get(b.id)
+      return {
+        id: b.id,
+        name: b.name,
+        gender: b.gender,
+        birth_date: b.birth_date,
+        birth_weight_kg: b.birth_weight_kg,
+        birth_height_cm: b.birth_height_cm,
+        blood_type: b.blood_type,
+        avatar_url: b.avatar_url,
+        medical_notes: b.medical_notes,
+        iAmPrimary: Boolean(mine?.is_primary),
+        myAccessLevel: mine?.access_level || null,
+        relations: Array.isArray(b.baby_parents)
+          ? b.baby_parents
+              .map((r: any) => ({
+                name: r?.parent_profile?.full_name || 'Unknown',
+                relationship: r?.relationship || 'other',
+              }))
+              .filter(Boolean)
+          : [],
+      }
+    })
 
     return NextResponse.json({ babies })
   } catch (e: any) {

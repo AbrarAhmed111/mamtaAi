@@ -22,6 +22,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing audio file or baby_id' }, { status: 400 })
     }
 
+    const { data: babyMembership } = await supabase
+      .from('baby_parents')
+      .select('can_record_audio')
+      .eq('baby_id', babyId)
+      .eq('parent_id', user.id)
+      .single()
+    if (!babyMembership || babyMembership.can_record_audio === false) {
+      return NextResponse.json({ error: 'You do not have permission to record for this baby' }, { status: 403 })
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!supabaseUrl || !serviceKey) {

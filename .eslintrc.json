@@ -1,5 +1,5 @@
 {
   "extends": ["next/core-web-vitals"],
   "rules": {},
-  "ignorePatterns": ["src/types/supabase.ts"]
+  "ignorePatterns": ["src/types/supabase.ts", "commitlint.config.js"]
 }

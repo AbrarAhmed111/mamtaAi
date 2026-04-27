@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -22,6 +22,46 @@ interface Recording {
   babyGender?: string | null;
 }
 
+function formatAge(birthDateISO: string): string {
+  try {
+    if (!birthDateISO) return '';
+    const bd = new Date(birthDateISO);
+    const now = new Date();
+    const months = (now.getFullYear() - bd.getFullYear()) * 12 + (now.getMonth() - bd.getMonth());
+    if (months <= 0) return 'Newborn';
+    if (months < 12) return `${months} month${months === 1 ? '' : 's'}`;
+    const years = Math.floor(months / 12);
+    const remMonths = months % 12;
+    return remMonths ? `${years}y ${remMonths}m` : `${years}y`;
+  } catch {
+    return '';
+  }
+}
+
+function formatDateLabel(dateString: string) {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+    });
+  } catch {
+    return dateString;
+  }
+}
+
 export default function RecordingsPage() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,16 +80,7 @@ export default function RecordingsPage() {
   const [showRecordingModal, setShowRecordingModal] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    loadRecordings();
-    loadBabies();
-  }, []);
-
-  useEffect(() => {
-    filterRecordings();
-  }, [recordings, searchQuery, selectedBabyFilter]);
-
-  const loadRecordings = async () => {
+  const loadRecordings = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch('/api/recordings', { cache: 'no-store' });
@@ -61,14 +92,14 @@ export default function RecordingsPage() {
       const items = (json.items || []) as Recording[];
       setRecordings(items);
       setFilteredRecordings(items);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load recordings');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const loadBabies = async () => {
+  const loadBabies = useCallback(async () => {
     try {
       const res = await fetch('/api/babies', { cache: 'no-store' });
       const json = await res.json().catch(() => ({}));
@@ -77,8 +108,7 @@ export default function RecordingsPage() {
         name: b.name,
       }));
       setBabies(babyList);
-      
-      // Format babies for modal (with age and avatar)
+
       const babiesForModalList = (json.babies || []).map((b: any) => ({
         id: b.id,
         name: b.name,
@@ -87,47 +117,38 @@ export default function RecordingsPage() {
         gender: b.gender || null,
       }));
       setBabiesForModal(babiesForModalList);
-    } catch (error) {
+    } catch {
       // Silently fail - babies filter is optional
     }
-  };
+  }, []);
 
-  const formatAge = (birthDateISO: string): string => {
-    try {
-      if (!birthDateISO) return '';
-      const bd = new Date(birthDateISO);
-      const now = new Date();
-      const months = (now.getFullYear() - bd.getFullYear()) * 12 + (now.getMonth() - bd.getMonth());
-      if (months <= 0) return 'Newborn';
-      if (months < 12) return `${months} month${months === 1 ? '' : 's'}`;
-      const years = Math.floor(months / 12);
-      const remMonths = months % 12;
-      return remMonths ? `${years}y ${remMonths}m` : `${years}y`;
-    } catch {
-      return '';
-    }
-  };
-
-  const filterRecordings = () => {
+  const filterRecordings = useCallback(() => {
     let filtered = [...recordings];
 
-    // Filter by baby
     if (selectedBabyFilter !== 'all') {
       filtered = filtered.filter(r => r.babyId === selectedBabyFilter);
     }
 
-    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         r =>
           r.babyName.toLowerCase().includes(query) ||
-          formatDate(r.recordedAt).toLowerCase().includes(query)
+          formatDateLabel(r.recordedAt).toLowerCase().includes(query)
       );
     }
 
     setFilteredRecordings(filtered);
-  };
+  }, [recordings, searchQuery, selectedBabyFilter]);
+
+  useEffect(() => {
+    void loadRecordings();
+    void loadBabies();
+  }, [loadRecordings, loadBabies]);
+
+  useEffect(() => {
+    filterRecordings();
+  }, [filterRecordings]);
 
   const handlePlay = (recording: Recording) => {
     // Stop any currently playing audio
@@ -209,30 +230,6 @@ export default function RecordingsPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      const now = new Date();
-      const diffMs = now.getTime() - date.getTime();
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMs / 3600000);
-      const diffDays = Math.floor(diffMs / 86400000);
-
-      if (diffMins < 1) return 'Just now';
-      if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
-      if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
-      if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
-      
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
   const formatFullDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -248,10 +245,12 @@ export default function RecordingsPage() {
     }
   };
 
-  // Cleanup audio on unmount
+  // Cleanup: tear down all HTMLAudioElements we created (must read .current at unmount, not mount)
   useEffect(() => {
     return () => {
-      Object.values(audioRefs.current).forEach(audio => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: latest audio map on unmount only
+      const audios = audioRefs.current;
+      Object.values(audios).forEach(audio => {
         if (audio) {
           audio.pause();
           audio.src = '';
@@ -408,7 +407,7 @@ export default function RecordingsPage() {
                         <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-600">
                           <div className="flex items-center gap-1.5">
                             <FaCalendarAlt className="text-pink-500" />
-                            <span>{formatDate(recording.recordedAt)}</span>
+                            <span>{formatDateLabel(recording.recordedAt)}</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <FaClock className="text-pink-500" />

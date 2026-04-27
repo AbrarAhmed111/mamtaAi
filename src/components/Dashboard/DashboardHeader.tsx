@@ -16,6 +16,8 @@ interface DashboardHeaderProps {
   onSignOut?: () => void;
   userAvatarUrl?: string;
   isLoading?: boolean;
+  unreadNotificationCount?: number;
+  notificationBlink?: boolean;
 }
 
 export default function DashboardHeader({
@@ -28,7 +30,9 @@ export default function DashboardHeader({
   onMenuToggle,
   onSignOut,
   userAvatarUrl,
-  isLoading = false
+  isLoading = false,
+  unreadNotificationCount = 0,
+  notificationBlink = false,
 }: DashboardHeaderProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -69,11 +73,15 @@ export default function DashboardHeader({
           <div className="flex items-center space-x-2 sm:space-x-4" ref={menuRef}>
             {showNotifications && (
               <button 
-                className="p-2 text-gray-400 hover:text-gray-600 relative hidden md:block"
+                className={`p-2 text-gray-400 hover:text-gray-600 relative hidden md:block ${notificationBlink ? 'animate-pulse' : ''}`}
                 onClick={onNotificationClick}
               >
                 <FaBell className="text-lg" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+                {unreadNotificationCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center font-semibold">
+                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                  </span>
+                )}
               </button>
             )}
             <button 

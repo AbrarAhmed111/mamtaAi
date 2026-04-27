@@ -49,6 +49,7 @@ function SignUpContent() {
   const [expYearsError, setExpYearsError] = useState('')
   const [expDocsError, setExpDocsError] = useState('')
   const returnUrl = useReturnUrl()
+  const isInviteFlow = Boolean(returnUrl && /\/invite\//.test(returnUrl))
 
   const passwordInputRef = useRef<HTMLInputElement>(null)
   const firstNameInputRef = useRef<HTMLInputElement>(null)
@@ -213,6 +214,12 @@ function SignUpContent() {
     }
   }, [router, returnUrl])
 
+  useEffect(() => {
+    if (isInviteFlow) {
+      setRole('parent')
+    }
+  }, [isInviteFlow])
+
   if (!isMounted) return null
 
   return (
@@ -368,27 +375,35 @@ function SignUpContent() {
 
                     {/* Role selection */}
                     <div className="mt-4">
-                      <p className="text-sm text-gray-700 mb-2">I am a:</p>
-                      <div className="flex items-center gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="role"
-                            checked={role === 'parent'}
-                            onChange={() => setRole('parent')}
-                          />
-                          <span>Parent</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="role"
-                            checked={role === 'expert'}
-                            onChange={() => setRole('expert')}
-                          />
-                          <span>Expert</span>
-                        </label>
-                      </div>
+                      {isInviteFlow ? (
+                        <div className="rounded-lg border border-pink-100 bg-pink-50 px-3 py-2 text-sm text-pink-800">
+                          You are joining via family invite. Your account will be created as <span className="font-semibold">Parent/Relative</span>.
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm text-gray-700 mb-2">I am a:</p>
+                          <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="role"
+                                checked={role === 'parent'}
+                                onChange={() => setRole('parent')}
+                              />
+                              <span>Parent</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="role"
+                                checked={role === 'expert'}
+                                onChange={() => setRole('expert')}
+                              />
+                              <span>Expert</span>
+                            </label>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 

@@ -40,6 +40,7 @@ export default function RecordingSection({
   onProcessingStart
 }: RecordingSectionProps) {
   const [recorder, setRecorder] = useState<MediaRecorder | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const startRef = useRef<number>(0);
   const [internalRecording, setInternalRecording] = useState(false);
@@ -83,19 +84,23 @@ export default function RecordingSection({
   };
 
   useEffect(() => {
+    recorderRef.current = recorder;
+  }, [recorder]);
+
+  useEffect(() => {
     return () => {
-      // Only cleanup on unmount, not on recorder change
       if (timerRef.current) clearInterval(timerRef.current);
-      if (recorder && recorder.state !== 'inactive') {
+      const r = recorderRef.current;
+      if (r && r.state !== 'inactive') {
         try {
-          recorder.stop();
-        } catch (e) {
+          r.stop();
+        } catch {
           // Ignore errors during cleanup
         }
       }
       void cleanupAudio();
     };
-  }, []); // Empty deps - only run on unmount
+  }, []);
 
   // Start recording when shouldStartRecording becomes true
   useEffect(() => {

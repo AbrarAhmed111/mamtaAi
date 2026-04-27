@@ -125,6 +125,7 @@ export default function Dashboard({
   const [showProcessingProgress, setShowProcessingProgress] = useState(false);
   const [processingAudio, setProcessingAudio] = useState<{ blob: Blob; durationSeconds: number } | null>(null);
   const [processingResult, setProcessingResult] = useState<any>(null);
+  const [dailyStats, setDailyStats] = useState<{ recordingsToday: number; minutesToday: number; avgConfidenceToday: number; urgentToday: number } | null>(null);
 
   useEffect(() => {
     // Points and badges removed
@@ -186,6 +187,22 @@ export default function Dashboard({
       }
     };
     loadStats();
+  }, []);
+
+  useEffect(() => {
+    const loadDailyStats = async () => {
+      try {
+        const res = await fetch('/api/insights', { cache: 'no-store' });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return;
+        if (json?.overview) {
+          setDailyStats(json.overview);
+        }
+      } catch {
+        // ignore optional card failure
+      }
+    };
+    void loadDailyStats();
   }, []);
 
   // Apply stats to checklist items
@@ -391,10 +408,12 @@ export default function Dashboard({
     setPlayingRecordingId(null);
   };
 
-  // Cleanup audio on unmount
+  // Cleanup: tear down all HTMLAudioElements we created (must read .current at unmount, not mount)
   useEffect(() => {
     return () => {
-      Object.values(audioRefs.current).forEach(audio => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: latest audio map on unmount only
+      const audios = audioRefs.current;
+      Object.values(audios).forEach(audio => {
         if (audio) {
           audio.pause();
           audio.src = '';
@@ -437,6 +456,31 @@ export default function Dashboard({
             </div>
           </div>
         )}
+
+        {/* Daily overview card (top of overview page) */}
+        <section className="mb-4">
+          <div className="bg-white rounded-xl border border-pink-100 p-4 sm:p-5 shadow-sm bg-gradient-to-br from-white to-pink-50/20">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Today&apos;s Overview</h3>
+            <div className="mt-3 grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="rounded-lg bg-pink-50 px-3 py-2">
+                <div className="text-xs text-gray-500">Recordings</div>
+                <div className="text-lg font-bold text-gray-900">{dailyStats?.recordingsToday ?? 0}</div>
+              </div>
+              <div className="rounded-lg bg-pink-50 px-3 py-2">
+                <div className="text-xs text-gray-500">Cry Minutes</div>
+                <div className="text-lg font-bold text-gray-900">{dailyStats?.minutesToday ?? 0}m</div>
+              </div>
+              <div className="rounded-lg bg-pink-50 px-3 py-2">
+                <div className="text-xs text-gray-500">Avg Confidence</div>
+                <div className="text-lg font-bold text-gray-900">{dailyStats?.avgConfidenceToday ?? 0}%</div>
+              </div>
+              <div className="rounded-lg bg-red-50 px-3 py-2">
+                <div className="text-xs text-gray-500">Urgent Alerts</div>
+                <div className="text-lg font-bold text-red-600">{dailyStats?.urgentToday ?? 0}</div>
+              </div>
+            </div>
+          </div>
+        </section>
         
         <BabySelectionModal
           isOpen={showSelectBaby}

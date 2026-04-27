@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 async function requireMembership(supabase: Awaited<ReturnType<typeof createServerClient>>, babyId: string, userId: string) {
   const { data: membership } = await supabase
     .from('baby_parents')
-    .select('baby_id')
+    .select('baby_id, can_edit_profile, can_record_audio')
     .eq('baby_id', babyId)
     .eq('parent_id', userId)
     .single()
@@ -51,6 +51,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id: babyId } = await params
     const membership = await requireMembership(supabase, babyId, user.id)
     if (!membership) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (membership.can_record_audio === false) {
+      return NextResponse.json({ error: 'You do not have permission to add activities for this baby' }, { status: 403 })
+    }
 
     const body = await request.json().catch(() => ({}))
     const activityType = body.activity_type
@@ -145,6 +148,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const { id: babyId } = await params
     const membership = await requireMembership(supabase, babyId, user.id)
     if (!membership) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (!membership.can_edit_profile) {
+      return NextResponse.json({ error: 'You do not have permission to delete activity records' }, { status: 403 })
+    }
 
     const { searchParams } = new URL(request.url)
     const activityId = searchParams.get('activity_id')

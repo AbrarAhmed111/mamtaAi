@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Spinner from '@/components/ui/spinner'
 import { toast } from '@/components/ui/sonner'
-import { FaTrash, FaExclamationTriangle, FaUser } from 'react-icons/fa'
+import { FaTrash, FaExclamationTriangle, FaUser, FaUserMinus } from 'react-icons/fa'
+import { accessBadgeLabel } from '@/lib/baby-permissions'
 
 export default function BabyDetailPage() {
   const params = useParams<{ id: string }>()
@@ -16,6 +17,12 @@ export default function BabyDetailPage() {
   const [baby, setBaby] = useState<any>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [currentUserRelationship, setCurrentUserRelationship] = useState<string>('')
+  const [canEditBaby, setCanEditBaby] = useState(true)
+  const [currentAccessBadge, setCurrentAccessBadge] = useState('')
+  const [canLeaveMembership, setCanLeaveMembership] = useState(false)
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
+  const [leavingMembership, setLeavingMembership] = useState(false)
 
   const [name, setName] = useState('')
   const [birthDate, setBirthDate] = useState('')
@@ -79,6 +86,10 @@ export default function BabyDetailPage() {
         setHeightCm(data.baby.birth_height_cm != null ? String(data.baby.birth_height_cm) : '')
         setBloodType(data.baby.blood_type || '')
         setNotes(data.baby.medical_notes || '')
+        setCurrentUserRelationship(String(data.currentUserRelationship || ''))
+        setCanEditBaby(data.canEditBaby !== false)
+        setCurrentAccessBadge(String(data.currentAccessBadge || ''))
+        setCanLeaveMembership(data.canLeaveMembership === true)
       } finally {
         setLoading(false)
       }
@@ -86,7 +97,7 @@ export default function BabyDetailPage() {
     load()
   }, [babyId])
 
-  const loadActivityRecords = async () => {
+  const loadActivityRecords = useCallback(async () => {
     if (!babyId) return
     try {
       setRecordsLoading(true)
@@ -120,11 +131,11 @@ export default function BabyDetailPage() {
     } finally {
       setRecordsLoading(false)
     }
-  }
+  }, [babyId])
 
   useEffect(() => {
     void loadActivityRecords()
-  }, [babyId])
+  }, [loadActivityRecords])
 
   const save = async () => {
     try {
@@ -153,6 +164,24 @@ export default function BabyDetailPage() {
     }
   }
 
+
+  const handleLeaveMembership = async () => {
+    if (!babyId) return
+    try {
+      setLeavingMembership(true)
+      const res = await fetch(`/api/babies/${babyId}/membership`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error || 'Could not leave this profile')
+        return
+      }
+      toast.success(`You are no longer linked to ${name || 'this child'}`)
+      router.push('/dashboard/babies')
+    } finally {
+      setLeavingMembership(false)
+      setShowLeaveConfirm(false)
+    }
+  }
 
   const handleDelete = async () => {
     if (!showDeleteConfirm) {
@@ -370,6 +399,54 @@ export default function BabyDetailPage() {
         </div>
       )}
 
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl border border-gray-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                <FaUserMinus className="text-gray-700 text-xl" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">Leave this profile?</h3>
+            </div>
+            <div className="mb-6">
+              <p className="text-gray-700 mb-2">
+                You will remove yourself as <span className="font-semibold capitalize">{currentUserRelationship || 'caregiver'}</span> for{' '}
+                <span className="font-semibold text-pink-600">{name}</span>. You can be invited again later if the family adds you back.
+              </p>
+              <p className="text-sm text-gray-500">This only affects your access — the child&apos;s profile stays for the primary parent and other caregivers.</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowLeaveConfirm(false)}
+                disabled={leavingMembership}
+                className="flex-1 px-4 py-2.5 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleLeaveMembership()}
+                disabled={leavingMembership}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {leavingMembership ? (
+                  <>
+                    <Spinner size={16} />
+                    <span>Leaving…</span>
+                  </>
+                ) : (
+                  <>
+                    <FaUserMinus className="text-sm" />
+                    <span>Leave profile</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero */}
       <section className="w-full overflow-hidden rounded-2xl border border-pink-100 bg-gradient-to-br from-white to-pink-50/30 shadow-sm">
         <div className="flex flex-col md:flex-row">
@@ -398,19 +475,33 @@ export default function BabyDetailPage() {
                 <p className="mt-2 text-gray-600">
                   {age || '—'} {gender ? `• ${capitalize(gender)}` : ''} {bloodType ? `• ${bloodType}` : ''}
                 </p>
-              </div>
-              <button
-                onClick={handleDelete}
-                disabled={deleting || showDeleteConfirm}
-                className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-red-200 hover:border-red-300 disabled:opacity-50"
-                title="Delete baby profile"
-              >
-                {deleting ? (
-                  <Spinner size={20} />
-                ) : (
-                  <FaTrash className="text-lg" />
+                {currentUserRelationship && (
+                  <p className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-pink-100 text-pink-700 capitalize">
+                      You are {currentUserRelationship}
+                    </span>
+                    {currentAccessBadge ? (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-rose-50 text-rose-800 border border-rose-100">
+                        {currentAccessBadge}
+                      </span>
+                    ) : null}
+                  </p>
                 )}
-              </button>
+              </div>
+              {canEditBaby ? (
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting || showDeleteConfirm}
+                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-red-200 hover:border-red-300 disabled:opacity-50"
+                  title="Delete baby profile"
+                >
+                  {deleting ? (
+                    <Spinner size={20} />
+                  ) : (
+                    <FaTrash className="text-lg" />
+                  )}
+                </button>
+              ) : null}
             </div>
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
               <Stat label="Weight" value={weightKg ? `${weightKg} kg` : '—'} />
@@ -432,6 +523,13 @@ export default function BabyDetailPage() {
       {/* Quick Edit */}
       <section className="bg-white rounded-2xl border border-pink-100 p-5 shadow-sm bg-gradient-to-br from-white to-pink-50/20">
         <h2 className="text-lg font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent mb-4">Quick Edit</h2>
+        {!canEditBaby ? (
+          <p className="text-sm text-gray-600">
+            You have read-only access for this child. You can log feeding and sleep below and view their information; profile edits and deletions are limited to full-access caregivers.
+          </p>
+        ) : null}
+        {canEditBaby ? (
+        <>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-gray-700 mb-1 font-medium">Name</label>
@@ -478,6 +576,8 @@ export default function BabyDetailPage() {
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
+        </>
+        ) : null}
       </section>
 
       {/* Relations */}
@@ -485,17 +585,54 @@ export default function BabyDetailPage() {
         <h2 className="text-lg font-semibold text-gray-900 mb-3">Relations</h2>
         {Array.isArray(baby?.baby_parents) && baby.baby_parents.length > 0 ? (
           <ul className="space-y-2">
-            {baby.baby_parents.map((r: any, idx: number) => (
-              <li key={idx} className="flex items-center justify-between text-sm">
-                <span className="text-gray-800">{r?.parent_profile?.full_name || 'Unknown'}</span>
-                <span className="text-gray-500">{capitalize(r?.relationship || 'other')}</span>
-              </li>
-            ))}
+            {baby.baby_parents.map((r: any, idx: number) => {
+              const accessLabel = accessBadgeLabel({
+                baby_id: baby.id,
+                parent_id: r.parent_id,
+                relationship: r.relationship,
+                access_level: r.access_level,
+                can_edit_profile: r.can_edit_profile,
+                can_record_audio: null,
+                can_view_history: null,
+                is_primary: r.is_primary,
+              })
+              return (
+                <li key={r.parent_id || idx} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span className="text-gray-800">{r?.parent_profile?.full_name || 'Unknown'}</span>
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-gray-500 capitalize">{r?.relationship || 'other'}</span>
+                    {accessLabel ? (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-pink-50 text-pink-800 border border-pink-100">
+                        {accessLabel}
+                      </span>
+                    ) : null}
+                  </span>
+                </li>
+              )
+            })}
           </ul>
         ) : (
           <p className="text-sm text-gray-600">No relations connected yet.</p>
         )}
       </section>
+
+      {canLeaveMembership && (
+        <section className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Your link to this child</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            You were added as a family caregiver. If you no longer want access to {name}&apos;s profile, you can remove yourself.
+            The family&apos;s data stays intact for everyone else.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowLeaveConfirm(true)}
+            className="inline-flex items-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 transition-colors"
+          >
+            <FaUserMinus className="text-gray-600" />
+            Leave this child&apos;s profile
+          </button>
+        </section>
+      )}
 
       {/* Feeding & Sleep Records */}
       <section className="bg-white rounded-2xl border border-pink-100 p-5 shadow-sm bg-gradient-to-br from-white to-pink-50/20">
@@ -586,13 +723,15 @@ export default function BabyDetailPage() {
                       )}
                       {record.notes && <div className="text-gray-600">{record.notes}</div>}
                     </div>
-                    <button
-                      onClick={() => deleteFeedingRecord(record.id)}
-                      className="text-red-500 hover:text-red-600"
-                      title="Delete"
-                    >
-                      <FaTrash />
-                    </button>
+                    {canEditBaby ? (
+                      <button
+                        onClick={() => deleteFeedingRecord(record.id)}
+                        className="text-red-500 hover:text-red-600"
+                        title="Delete"
+                      >
+                        <FaTrash />
+                      </button>
+                    ) : null}
                   </div>
                 ))
               )}
@@ -665,13 +804,15 @@ export default function BabyDetailPage() {
                       </div>
                       {record.notes && <div className="text-gray-600">{record.notes}</div>}
                     </div>
-                    <button
-                      onClick={() => deleteSleepRecord(record.id)}
-                      className="text-red-500 hover:text-red-600"
-                      title="Delete"
-                    >
-                      <FaTrash />
-                    </button>
+                    {canEditBaby ? (
+                      <button
+                        onClick={() => deleteSleepRecord(record.id)}
+                        className="text-red-500 hover:text-red-600"
+                        title="Delete"
+                      >
+                        <FaTrash />
+                      </button>
+                    ) : null}
                   </div>
                 ))
               )}

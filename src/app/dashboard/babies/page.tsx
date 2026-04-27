@@ -8,7 +8,7 @@ import Spinner from '@/components/ui/spinner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip } from '@/components/ui/tooltip'
 import { toast } from '@/components/ui/sonner'
-import { FaTrash, FaPlus, FaBaby, FaArrowRight, FaEye, FaUser } from 'react-icons/fa'
+import { FaTrash, FaPlus, FaBaby, FaArrowRight, FaEye, FaUser, FaUserPlus, FaTimes } from 'react-icons/fa'
 
 interface Baby {
   id: string
@@ -19,12 +19,27 @@ interface Baby {
   totalCries: number
 }
 
+interface BabyInvite {
+  id: string
+  invited_email: string
+  relationship: string
+  status: 'waiting' | 'approved' | 'withdrawn'
+  invited_at: string
+}
+
 export default function BabiesPage() {
   const router = useRouter()
   const [babies, setBabies] = useState<(Baby & { relations: { name: string; relationship: string }[]; gender?: string | null; bloodType?: string | null; weightKg?: number | null; heightCm?: number | null })[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [inviteModalBaby, setInviteModalBaby] = useState<Baby | null>(null)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRelationship, setInviteRelationship] = useState('guardian')
+  const [inviteSending, setInviteSending] = useState(false)
+  const [invitesLoading, setInvitesLoading] = useState(false)
+  const [invites, setInvites] = useState<BabyInvite[]>([])
+  const [withdrawingInviteId, setWithdrawingInviteId] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -82,8 +97,158 @@ export default function BabiesPage() {
     }
   }
 
+  const openInviteModal = async (baby: Baby) => {
+    setInviteModalBaby(baby)
+    setInviteEmail('')
+    setInvites([])
+    setInvitesLoading(true)
+    try {
+      const res = await fetch(`/api/babies/${baby.id}/invites`, { cache: 'no-store' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error || 'Failed to load invites')
+        return
+      }
+      setInvites(Array.isArray(data?.invites) ? data.invites : [])
+    } finally {
+      setInvitesLoading(false)
+    }
+  }
+
+  const sendInvite = async () => {
+    if (!inviteModalBaby) return
+    if (!inviteEmail || !/^\S+@\S+\.\S+$/.test(inviteEmail)) {
+      toast.error('Please enter a valid email')
+      return
+    }
+    try {
+      setInviteSending(true)
+      const res = await fetch(`/api/babies/${inviteModalBaby.id}/invites`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: inviteEmail, relationship: inviteRelationship }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error || 'Failed to create invite')
+        return
+      }
+      if (data?.warning) {
+        toast.warning(data.warning)
+      } else {
+        toast.success('Invitation sent')
+      }
+      setInviteEmail('')
+      if (inviteModalBaby) await openInviteModal(inviteModalBaby)
+    } finally {
+      setInviteSending(false)
+    }
+  }
+
+  const withdrawInvite = async (inviteId: string) => {
+    if (!inviteModalBaby) return
+    try {
+      setWithdrawingInviteId(inviteId)
+      const res = await fetch(`/api/babies/${inviteModalBaby.id}/invites?inviteId=${encodeURIComponent(inviteId)}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error || 'Failed to withdraw invite')
+        return
+      }
+      toast.success('Invite withdrawn')
+      if (inviteModalBaby) await openInviteModal(inviteModalBaby)
+    } finally {
+      setWithdrawingInviteId(null)
+    }
+  }
+
   return (
     <div className="w-full space-y-6">
+      {inviteModalBaby && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-pink-100 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b border-pink-100">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Invite relatives</h3>
+                <p className="text-sm text-gray-600">{inviteModalBaby.name} - baby specific access</p>
+              </div>
+              <button onClick={() => setInviteModalBaby(null)} className="p-2 rounded-lg hover:bg-gray-100">
+                <FaTimes />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <input
+                  value={inviteEmail}
+                  onChange={e => setInviteEmail(e.target.value)}
+                  placeholder="relative@email.com"
+                  className="sm:col-span-2 rounded-xl border border-pink-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                />
+                <select
+                  value={inviteRelationship}
+                  onChange={e => setInviteRelationship(e.target.value)}
+                  className="rounded-xl border border-pink-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                >
+                  <option value="mother">Mother</option>
+                  <option value="father">Father</option>
+                  <option value="guardian">Guardian</option>
+                  <option value="caregiver">Caregiver</option>
+                  <option value="grandparent">Grandparent</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <button
+                onClick={sendInvite}
+                disabled={inviteSending}
+                className="px-4 py-2 rounded-xl bg-pink-600 text-white hover:bg-pink-700 disabled:opacity-50"
+              >
+                {inviteSending ? 'Sending...' : 'Send invite'}
+              </button>
+              <div className="pt-3 border-t border-pink-100">
+                <h4 className="font-medium text-gray-900 mb-2">Invite status</h4>
+                {invitesLoading ? (
+                  <p className="text-sm text-gray-500">Loading invites...</p>
+                ) : invites.length === 0 ? (
+                  <p className="text-sm text-gray-500">No invites yet</p>
+                ) : (
+                  <div className="space-y-2">
+                    {invites.map(invite => (
+                      <div key={invite.id} className="rounded-xl border border-gray-100 px-3 py-2 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{invite.invited_email}</p>
+                          <p className="text-xs text-gray-500 capitalize">{invite.relationship}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            invite.status === 'approved'
+                              ? 'bg-green-100 text-green-700'
+                              : invite.status === 'withdrawn'
+                              ? 'bg-gray-100 text-gray-600'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            {invite.status === 'waiting' ? 'Waiting' : invite.status === 'approved' ? 'Approved' : 'Withdrawn'}
+                          </span>
+                          {invite.status === 'waiting' && (
+                            <button
+                              onClick={() => withdrawInvite(invite.id)}
+                              disabled={withdrawingInviteId === invite.id}
+                              className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-60"
+                            >
+                              {withdrawingInviteId === invite.id ? '...' : 'Withdraw'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Page hero */}
       <section className="bg-gradient-to-r from-pink-50 via-rose-50 to-purple-50 rounded-2xl border border-pink-100 p-6 sm:p-8 shadow-sm">
         <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
@@ -187,6 +352,18 @@ export default function BabiesPage() {
                         </div>
                       </div>
                     </Link>
+                    <div className="absolute top-4 right-4 flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        openInviteModal(b)
+                      }}
+                      className="p-2 rounded-lg bg-pink-50 text-pink-600 hover:bg-pink-100 transition-all duration-200"
+                      title="Invite relatives"
+                    >
+                      <FaUserPlus className="text-sm" />
+                    </button>
                     <button
                       onClick={(e) => {
                         e.preventDefault()
@@ -194,7 +371,7 @@ export default function BabiesPage() {
                         handleDelete(b.id, b.name)
                       }}
                       disabled={deletingId === b.id}
-                      className={`absolute top-4 right-4 p-2 rounded-lg transition-all duration-200 ${
+                      className={`p-2 rounded-lg transition-all duration-200 ${
                         isConfirming
                           ? 'bg-red-500 text-white hover:bg-red-600'
                           : 'bg-red-50 text-red-600 hover:bg-red-100'
@@ -207,6 +384,7 @@ export default function BabiesPage() {
                         <FaTrash className="text-sm" />
                       )}
                     </button>
+                    </div>
                     {isConfirming && (
                       <div className="mt-3 pt-3 border-t border-pink-200">
                         <p className="text-xs text-red-600 font-medium mb-2">Are you sure? This cannot be undone.</p>
@@ -344,6 +522,17 @@ export default function BabiesPage() {
                                 )}
                               </button>
                             )}
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                openInviteModal(b)
+                              }}
+                              className="p-2 text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
+                              title="Invite relatives"
+                            >
+                              <FaUserPlus className="text-sm" />
+                            </button>
                           </div>
                         </td>
                       </tr>

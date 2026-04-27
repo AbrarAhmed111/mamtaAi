@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { accessBadgeLabel, type BabyMembershipPermissions } from '@/lib/baby-permissions'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Ensure the user is a member of the baby
     const { data: membership } = await supabase
       .from('baby_parents')
-      .select('baby_id')
+      .select('baby_id, relationship, access_level, can_edit_profile, can_record_audio, can_view_history, is_primary')
       .eq('baby_id', id)
       .eq('parent_id', user.id)
       .single()
@@ -24,14 +25,29 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       .from('babies')
       .select(`
         id,name,gender,birth_date,birth_weight_kg,birth_height_cm,blood_type,avatar_url,medical_notes,is_active,
-        baby_parents ( relationship, parent_profile:profiles!baby_parents_parent_id_fkey ( full_name, id ) )
+        baby_parents ( parent_id, relationship, access_level, is_primary, can_edit_profile, parent_profile:profiles!baby_parents_parent_id_fkey ( full_name, id ) )
       `)
       .eq('id', id)
       .single()
 
     if (error || !baby) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    return NextResponse.json({ baby })
+    const relationRow = Array.isArray((baby as any).baby_parents)
+      ? (baby as any).baby_parents.find((r: any) => r?.parent_id === user.id)
+      : null
+    const currentUserRelationship = relationRow?.relationship || null
+    const currentUserMembership = membership as unknown as BabyMembershipPermissions
+    const currentAccessBadge = accessBadgeLabel(currentUserMembership)
+
+    return NextResponse.json({
+      baby,
+      currentUserRelationship,
+      currentUserMembership,
+      currentAccessBadge,
+      canEditBaby: Boolean(membership.can_edit_profile),
+      /** Non-primary members (e.g. invited relatives) may leave this baby’s profile */
+      canLeaveMembership: membership.is_primary !== true,
+    })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }
@@ -47,14 +63,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const { id } = await params
 
-    // Ensure membership
+    // Ensure membership + edit permission
     const { data: membership } = await supabase
       .from('baby_parents')
-      .select('baby_id')
+      .select('baby_id, can_edit_profile')
       .eq('baby_id', id)
       .eq('parent_id', user.id)
       .single()
     if (!membership) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (!membership.can_edit_profile) {
+      return NextResponse.json({ error: 'You do not have permission to edit this baby profile' }, { status: 403 })
+    }
 
     const body = await request.json().catch(() => ({}))
 
@@ -119,6 +138,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       .eq('parent_id', user.id)
       .single()
     if (!membership) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (!membership.can_edit_profile) {
+      return NextResponse.json({ error: 'You do not have permission to delete this baby' }, { status: 403 })
+    }
 
     // Delete baby_parents relationship first (cascade should handle this, but explicit is safer)
     const { error: relationError } = await supabase

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { FaUser, FaPhone, FaImage, FaSave, FaArrowLeft, FaBaby, FaComments, FaBook, FaFile } from 'react-icons/fa'
+import { FaUser, FaPhone, FaImage, FaSave, FaArrowLeft, FaBaby, FaComments, FaBook, FaFile, FaUsers } from 'react-icons/fa'
 import Image from 'next/image'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -23,6 +23,19 @@ interface Stats {
   resources: number
 }
 
+interface FamilyBaby {
+  id: string
+  name: string
+}
+
+interface FamilyMemberRow {
+  parentId: string
+  fullName: string
+  relationship: string
+  accessLevel: string
+  isPrimary: boolean
+}
+
 export default function SettingsPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -41,6 +54,10 @@ export default function SettingsPage() {
   })
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string>('')
+  const [familyBabies, setFamilyBabies] = useState<FamilyBaby[]>([])
+  const [membersByBaby, setMembersByBaby] = useState<Record<string, FamilyMemberRow[]>>({})
+  const [familyLoading, setFamilyLoading] = useState(false)
+  const [updatingMemberKey, setUpdatingMemberKey] = useState<string | null>(null)
 
   useEffect(() => {
     loadProfile()
@@ -77,9 +94,9 @@ export default function SettingsPage() {
 
   const loadStats = async () => {
     if (!profile) return
-    
+
     try {
-      // Load user stats
+      setFamilyLoading(true)
       const [babiesRes, blogRes, forumRes, resourcesRes] = await Promise.all([
         fetch('/api/babies'),
         fetch('/api/community/blog'),
@@ -92,14 +109,64 @@ export default function SettingsPage() {
       const forumData = await forumRes.json()
       const resourcesData = await resourcesRes.json()
 
+      const allBabies = babiesData.babies || []
       setStats({
-        babies: babiesData.babies?.length || 0,
+        babies: allBabies.length || 0,
         blogPosts: blogData.posts?.filter((p: any) => p.author?.id === profile.id).length || 0,
         forumThreads: forumData.threads?.filter((t: any) => t.author?.id === profile.id).length || 0,
         resources: resourcesData.resources?.filter((r: any) => r.uploader?.id === profile.id).length || 0,
       })
+
+      const primaryList: FamilyBaby[] = allBabies
+        .filter((b: any) => b.iAmPrimary)
+        .map((b: any) => ({ id: b.id, name: b.name || 'Baby' }))
+      setFamilyBabies(primaryList)
+
+      if (primaryList.length === 0) {
+        setMembersByBaby({})
+      } else {
+        const map: Record<string, FamilyMemberRow[]> = {}
+        await Promise.all(
+          primaryList.map(async (b) => {
+            const mRes = await fetch(`/api/babies/${b.id}/members`)
+            const mJson = await mRes.json().catch(() => ({}))
+            map[b.id] = mRes.ok && Array.isArray(mJson.members) ? mJson.members : []
+          }),
+        )
+        setMembersByBaby(map)
+      }
     } catch (error) {
       console.error('Failed to load stats')
+    } finally {
+      setFamilyLoading(false)
+    }
+  }
+
+  const updateMemberAccess = async (babyId: string, parentId: string, access: 'full' | 'read_only') => {
+    const key = `${babyId}:${parentId}`
+    setUpdatingMemberKey(key)
+    try {
+      const res = await fetch(`/api/babies/${babyId}/members`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId, access }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error || 'Failed to update access')
+        return
+      }
+      toast.success('Access updated')
+      setMembersByBaby((prev) => ({
+        ...prev,
+        [babyId]: (prev[babyId] || []).map((m) =>
+          m.parentId === parentId ? { ...m, accessLevel: access } : m,
+        ),
+      }))
+    } catch {
+      toast.error('Failed to update access')
+    } finally {
+      setUpdatingMemberKey(null)
     }
   }
 
@@ -324,6 +391,80 @@ export default function SettingsPage() {
               </div>
             </form>
           </div>
+
+          {/* Family access — guardians & relatives */}
+          {familyBabies.length > 0 && (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <FaUsers className="text-pink-600" />
+                Family access
+              </h2>
+              <p className="text-sm text-gray-600 mb-6">
+                For each child where you are the primary parent, set whether another caregiver has full access (edit profile,
+                delete records, same as you) or read-only access (log feeding and sleep, view the child — no edits or
+                deletions).
+              </p>
+              {familyLoading ? (
+                <div className="flex items-center gap-2 text-sm text-gray-500 py-4">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-pink-600" />
+                  Loading caregivers…
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {familyBabies.map((baby) => {
+                    const members = (membersByBaby[baby.id] || []).filter((m) => !m.isPrimary)
+                    return (
+                      <div key={baby.id} className="border border-pink-100 rounded-lg p-4 bg-gradient-to-br from-white to-pink-50/30">
+                        <h3 className="font-semibold text-gray-900 mb-3">{baby.name}</h3>
+                        {members.length === 0 ? (
+                          <p className="text-sm text-gray-600">
+                            No other caregivers linked yet. Invite a guardian or relative from this child&apos;s page.
+                          </p>
+                        ) : (
+                          <ul className="space-y-3">
+                            {members.map((m) => {
+                              const rowKey = `${baby.id}:${m.parentId}`
+                              const value = m.accessLevel === 'full' ? 'full' : 'read_only'
+                              return (
+                                <li
+                                  key={m.parentId}
+                                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2 border-b border-pink-50 last:border-0"
+                                >
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-900">{m.fullName}</p>
+                                    <p className="text-xs text-gray-500 capitalize">{m.relationship}</p>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <label htmlFor={`access-${rowKey}`} className="sr-only">
+                                      Access for {m.fullName}
+                                    </label>
+                                    <select
+                                      id={`access-${rowKey}`}
+                                      value={value}
+                                      disabled={updatingMemberKey === rowKey}
+                                      onChange={(e) => {
+                                        const next = e.target.value as 'full' | 'read_only'
+                                        if (next === value) return
+                                        void updateMemberAccess(baby.id, m.parentId, next)
+                                      }}
+                                      className="text-sm border border-pink-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:opacity-50"
+                                    >
+                                      <option value="read_only">Read only</option>
+                                      <option value="full">Full access</option>
+                                    </select>
+                                  </div>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Account Information */}
           <div className="bg-white rounded-xl shadow-lg p-6">
