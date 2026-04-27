@@ -19,6 +19,8 @@ interface Baby {
   avatar?: string | null
   lastCry: Date
   totalCries: number
+  /** Only the primary parent may send family invites for this baby (API enforces the same). */
+  iAmPrimary?: boolean
 }
 
 interface BabyInvite {
@@ -36,6 +38,7 @@ type BabyListRow = Baby & {
   weightKg?: number | null
   heightCm?: number | null
   birthDate: string | null
+  iAmPrimary: boolean
 }
 
 type HealthPopoverLayout = { top: number; left: number; width: number; maxHeight: number }
@@ -184,6 +187,7 @@ export default function BabiesPage() {
           weightKg: (b.birth_weight_kg as number) ?? null,
           heightCm: (b.birth_height_cm as number) ?? null,
           birthDate: typeof b.birth_date === 'string' ? b.birth_date : null,
+          iAmPrimary: Boolean(b.iAmPrimary),
         }))
         setBabies(mapped)
       } finally {
@@ -223,6 +227,7 @@ export default function BabiesPage() {
   }
 
   const openInviteModal = async (baby: Baby) => {
+    if (baby.iAmPrimary !== true) return
     setInviteModalBaby(baby)
     setInviteEmail('')
     setInvites([])
@@ -483,17 +488,19 @@ export default function BabiesPage() {
                       isOpen={healthPop?.babyId === b.id}
                       onPress={e => toggleHealthPop(e, b)}
                     />
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        openInviteModal(b)
-                      }}
-                      className="p-2 rounded-lg bg-pink-50 text-pink-600 hover:bg-pink-100 transition-all duration-200"
-                      title="Invite relatives"
-                    >
-                      <FaUserPlus className="text-sm" />
-                    </button>
+                    {b.iAmPrimary && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          openInviteModal(b)
+                        }}
+                        className="p-2 rounded-lg bg-pink-50 text-pink-600 hover:bg-pink-100 transition-all duration-200"
+                        title="Invite relatives"
+                      >
+                        <FaUserPlus className="text-sm" />
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.preventDefault()
@@ -664,17 +671,19 @@ export default function BabiesPage() {
                                 )}
                               </button>
                             )}
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                openInviteModal(b)
-                              }}
-                              className="p-2 text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
-                              title="Invite relatives"
-                            >
-                              <FaUserPlus className="text-sm" />
-                            </button>
+                            {b.iAmPrimary && (
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  openInviteModal(b)
+                                }}
+                                className="p-2 text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
+                                title="Invite relatives"
+                              >
+                                <FaUserPlus className="text-sm" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

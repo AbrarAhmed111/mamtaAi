@@ -14,6 +14,7 @@ import {
   FaFile,
   FaUsers,
   FaBell,
+  FaUserTimes,
 } from 'react-icons/fa'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -127,6 +128,7 @@ export default function SettingsPage() {
   const [membersByBaby, setMembersByBaby] = useState<Record<string, FamilyMemberRow[]>>({})
   const [familyLoading, setFamilyLoading] = useState(false)
   const [updatingMemberKey, setUpdatingMemberKey] = useState<string | null>(null)
+  const [removingMemberKey, setRemovingMemberKey] = useState<string | null>(null)
   const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences>(() => ({ ...DEFAULT_NOTIFICATION_PREFERENCES }))
   const [notifPrefsSaving, setNotifPrefsSaving] = useState(false)
 
@@ -239,6 +241,36 @@ export default function SettingsPage() {
       toast.error('Failed to update access')
     } finally {
       setUpdatingMemberKey(null)
+    }
+  }
+
+  const removeMemberFromFamily = async (babyId: string, babyName: string, m: FamilyMemberRow) => {
+    const key = `${babyId}:${m.parentId}`
+    const ok = window.confirm(
+      `Remove ${m.fullName} from ${babyName}'s care circle? They will lose access to this child.`,
+    )
+    if (!ok) return
+
+    setRemovingMemberKey(key)
+    try {
+      const res = await fetch(
+        `/api/babies/${encodeURIComponent(babyId)}/members?parentId=${encodeURIComponent(m.parentId)}`,
+        { method: 'DELETE' },
+      )
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error || 'Failed to remove access')
+        return
+      }
+      toast.success(`${m.fullName} no longer has access to ${babyName}`)
+      setMembersByBaby((prev) => ({
+        ...prev,
+        [babyId]: (prev[babyId] || []).filter((row) => row.parentId !== m.parentId),
+      }))
+    } catch {
+      toast.error('Failed to remove access')
+    } finally {
+      setRemovingMemberKey(null)
     }
   }
 
@@ -594,7 +626,8 @@ export default function SettingsPage() {
               <p className="text-sm text-gray-600 mb-6">
                 For each child where you are the primary parent, set whether another caregiver has full access (edit profile,
                 delete records, same as you) or read-only access (log feeding and sleep, view the child — no edits or
-                deletions).
+                deletions). You can remove a caregiver entirely with <span className="font-medium">Remove access</span> — they
+                will no longer see this child in their account.
               </p>
               {familyLoading ? (
                 <div className="flex items-center gap-2 text-sm text-gray-500 py-4">
@@ -626,14 +659,14 @@ export default function SettingsPage() {
                                     <p className="text-sm font-medium text-gray-900">{m.fullName}</p>
                                     <p className="text-xs text-gray-500 capitalize">{m.relationship}</p>
                                   </div>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <label htmlFor={`access-${rowKey}`} className="sr-only">
                                       Access for {m.fullName}
                                     </label>
                                     <select
                                       id={`access-${rowKey}`}
                                       value={value}
-                                      disabled={updatingMemberKey === rowKey}
+                                      disabled={updatingMemberKey === rowKey || removingMemberKey === rowKey}
                                       onChange={(e) => {
                                         const next = e.target.value as 'full' | 'read_only'
                                         if (next === value) return
@@ -644,6 +677,16 @@ export default function SettingsPage() {
                                       <option value="read_only">Read only</option>
                                       <option value="full">Full access</option>
                                     </select>
+                                    <button
+                                      type="button"
+                                      disabled={updatingMemberKey === rowKey || removingMemberKey === rowKey}
+                                      onClick={() => void removeMemberFromFamily(baby.id, baby.name, m)}
+                                      className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                      title={`Remove ${m.fullName} from this child`}
+                                    >
+                                      <FaUserTimes className="text-xs" aria-hidden />
+                                      {removingMemberKey === rowKey ? 'Removing…' : 'Remove access'}
+                                    </button>
                                   </div>
                                 </li>
                               )
