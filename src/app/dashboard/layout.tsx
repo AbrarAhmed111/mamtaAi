@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Sidebar from '@/components/Dashboard/Sidebar'
 import DashboardHeader from '@/components/Dashboard/DashboardHeader'
 import { useAuth } from '@/lib/supabase/context'
@@ -25,10 +25,14 @@ type AppNotification = {
   body: string
   isRead: boolean
   createdAt: string
+  actionUrl?: string | null
   actionData?: {
     inviteToken?: string
     babyName?: string
     relationship?: string
+    threadId?: string
+    postId?: string
+    kind?: string
   } | null
 }
 
@@ -39,12 +43,14 @@ function mapDbRowToAppNotification(row: Record<string, unknown>): AppNotificatio
     body: String(row.body ?? ''),
     isRead: !!row.is_read,
     createdAt: String(row.created_at ?? new Date().toISOString()),
+    actionUrl: row.action_url != null ? String(row.action_url) : null,
     actionData: (row.action_data as AppNotification['actionData']) ?? null,
   }
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
   const { user, signOut, loading } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([])
@@ -252,6 +258,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }
 
+  const handleNotificationListItemClick = async (n: AppNotification) => {
+    if (n?.actionData?.inviteToken) {
+      await openInviteFromNotification(n)
+      return
+    }
+    if (n.actionUrl) {
+      try {
+        await fetch('/api/notifications', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notificationId: n.id }),
+        })
+      } catch {
+        // ignore
+      }
+      if (!n.isRead) {
+        setUnreadCount(c => Math.max(0, c - 1))
+        unreadSnapshotRef.current = Math.max(0, unreadSnapshotRef.current - 1)
+      }
+      setNotifications(prev => prev.map(x => (x.id === n.id ? { ...x, isRead: true } : x)))
+      setNotificationsOpen(false)
+      const path = n.actionUrl.startsWith('/') ? n.actionUrl : `/${n.actionUrl}`
+      router.push(path)
+      return
+    }
+    setNotificationsOpen(false)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50 flex">
       {activeInvite && (
@@ -327,12 +361,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <p className="p-4 text-sm text-gray-500">No notifications yet.</p>
               ) : (
                 notifications.map(n => {
-                  const isInvite = n?.actionData?.inviteToken
+                  const isInvite = Boolean(n?.actionData?.inviteToken)
+                  const isLink = isInvite || Boolean(n.actionUrl)
                   return (
                     <button
                       key={n.id}
-                      onClick={() => (isInvite ? openInviteFromNotification(n) : setNotificationsOpen(false))}
-                      className={`w-full text-left p-3 border-b border-pink-50 hover:bg-pink-50/40 ${n.isRead ? 'bg-white' : 'bg-pink-50/50'}`}
+                      type="button"
+                      onClick={() => void handleNotificationListItemClick(n)}
+                      className={`w-full text-left p-3 border-b border-pink-50 hover:bg-pink-50/40 ${n.isRead ? 'bg-white' : 'bg-pink-50/50'} ${isLink ? 'cursor-pointer' : ''}`}
                     >
                       <p className="text-sm font-medium text-gray-900">{n.title}</p>
                       <p className="text-xs text-gray-600 mt-1">{n.body}</p>

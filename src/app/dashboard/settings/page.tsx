@@ -520,7 +520,7 @@ export default function SettingsPage() {
               <ToggleRow
                 id="pref-community"
                 label="Community activity"
-                description="Replies, mentions, and community updates."
+                description="Forum and blog: replies on your threads or posts, replies to your messages, and @mentions (use @ plus a user profile ID)."
                 checked={notifPrefs.community}
                 onChange={(v) => setNotifPrefs((p) => ({ ...p, community: v }))}
               />

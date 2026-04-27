@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { notifyForumReplyCommunityNotifications } from '@/lib/notifications/community-notifications'
 
 export async function GET(
   request: NextRequest,
@@ -102,6 +103,41 @@ export async function POST(
         .from('forum_threads')
         .update({ reply_count: (currentThread.reply_count || 0) + 1 })
         .eq('id', id)
+    }
+
+    const { data: threadMeta } = await supabase
+      .from('forum_threads')
+      .select('author_id, title')
+      .eq('id', id)
+      .maybeSingle()
+
+    let parentAuthorId: string | null = null
+    if (parent_reply_id) {
+      const { data: parentRow } = await supabase
+        .from('forum_replies')
+        .select('author_id')
+        .eq('id', parent_reply_id)
+        .maybeSingle()
+      parentAuthorId = (parentRow as { author_id?: string } | null)?.author_id ?? null
+    }
+
+    const replierName =
+      typeof (data as { author?: { full_name?: string } })?.author?.full_name === 'string'
+        ? String((data as { author?: { full_name?: string } }).author?.full_name).trim() || 'Someone'
+        : 'Someone'
+
+    if (threadMeta?.author_id) {
+      notifyForumReplyCommunityNotifications({
+        threadId: id,
+        threadTitle: String((threadMeta as { title?: string }).title || 'Discussion'),
+        threadAuthorId: String((threadMeta as { author_id: string }).author_id),
+        replierId: user.id,
+        replierName,
+        replyId: String((data as { id: string }).id),
+        content: String(content),
+        parentReplyId: parent_reply_id ? String(parent_reply_id) : null,
+        parentAuthorId,
+      })
     }
 
     return NextResponse.json({ reply: data }, { status: 201 })

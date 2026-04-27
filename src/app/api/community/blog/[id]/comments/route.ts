@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { notifyBlogCommentCommunityNotifications } from '@/lib/notifications/community-notifications'
 
 export async function GET(
   request: NextRequest,
@@ -91,6 +92,41 @@ export async function POST(
         .from('blog_posts')
         .update({ comment_count: (currentPost.comment_count || 0) + 1 })
         .eq('id', id)
+    }
+
+    const { data: postMeta } = await supabase
+      .from('blog_posts')
+      .select('author_id, title')
+      .eq('id', id)
+      .maybeSingle()
+
+    let parentAuthorId: string | null = null
+    if (parent_comment_id) {
+      const { data: parentRow } = await supabase
+        .from('blog_comments')
+        .select('author_id')
+        .eq('id', parent_comment_id)
+        .maybeSingle()
+      parentAuthorId = (parentRow as { author_id?: string } | null)?.author_id ?? null
+    }
+
+    const commenterName =
+      typeof (data as { author?: { full_name?: string } })?.author?.full_name === 'string'
+        ? String((data as { author?: { full_name?: string } }).author?.full_name).trim() || 'Someone'
+        : 'Someone'
+
+    if (postMeta?.author_id) {
+      notifyBlogCommentCommunityNotifications({
+        postId: id,
+        postTitle: String((postMeta as { title?: string }).title || 'Blog post'),
+        postAuthorId: String((postMeta as { author_id: string }).author_id),
+        commenterId: user.id,
+        commenterName,
+        commentId: String((data as { id: string }).id),
+        content: String(content),
+        parentCommentId: parent_comment_id ? String(parent_comment_id) : null,
+        parentAuthorId,
+      })
     }
 
     return NextResponse.json({ comment: data }, { status: 201 })
