@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -38,86 +38,63 @@ type BabyListRow = Baby & {
   birthDate: string | null
 }
 
-function HealthSuggestionsPopupTrigger({
+type HealthPopoverLayout = { top: number; left: number; width: number; maxHeight: number }
+
+function computeHealthPopoverPosition(anchor: DOMRect): HealthPopoverLayout {
+  const margin = 12
+  const width = Math.min(320, Math.max(260, window.innerWidth - 2 * margin))
+  let left = anchor.left + anchor.width / 2 - width / 2
+  left = Math.max(margin, Math.min(left, window.innerWidth - width - margin))
+
+  const spaceBelow = window.innerHeight - anchor.bottom - margin
+  const spaceAbove = anchor.top - margin
+  const minUseful = 160
+
+  if (spaceBelow >= minUseful || spaceBelow >= spaceAbove) {
+    const maxHeight = Math.min(400, Math.max(180, spaceBelow))
+    return { top: anchor.bottom + margin, left, width, maxHeight }
+  }
+
+  let maxHeight = Math.min(400, Math.max(180, spaceAbove))
+  let top = anchor.top - margin - maxHeight
+  if (top < margin) {
+    maxHeight = Math.max(160, Math.min(maxHeight, anchor.top - 2 * margin))
+    top = margin
+  }
+  return { top, left, width, maxHeight }
+}
+
+/** Mobile + desktop each render a trigger with the same `data-health-trigger`; only one is visible. */
+function getVisibleHealthTriggerRect(babyId: string): DOMRect | null {
+  const nodes = document.querySelectorAll<HTMLElement>(`[data-health-trigger="${CSS.escape(babyId)}"]`)
+  for (const el of nodes) {
+    const r = el.getBoundingClientRect()
+    if (r.width > 0 && r.height > 0) return r
+  }
+  return null
+}
+
+function HealthSuggestionsHeartButton({
   baby,
-  open,
-  onToggle,
+  isOpen,
+  onPress,
 }: {
   baby: BabyListRow
-  open: boolean
-  onToggle: (e: React.MouseEvent) => void
+  isOpen: boolean
+  onPress: (e: React.MouseEvent<HTMLButtonElement>) => void
 }) {
-  const btnRef = useRef<HTMLButtonElement>(null)
-  const [popoverStyle, setPopoverStyle] = useState<{ top: number; left: number; width: number } | null>(null)
-
-  const suggestions = useMemo(
-    () =>
-      buildBabyHealthSuggestions({
-        name: baby.name,
-        birthDate: baby.birthDate,
-        gender: baby.gender ?? null,
-        bloodType: baby.bloodType ?? null,
-        weightKg: baby.weightKg ?? null,
-        heightCm: baby.heightCm ?? null,
-      }),
-    [baby.name, baby.birthDate, baby.gender, baby.bloodType, baby.weightKg, baby.heightCm],
-  )
-
-  useLayoutEffect(() => {
-    if (!open || !btnRef.current) {
-      setPopoverStyle(null)
-      return
-    }
-    const r = btnRef.current.getBoundingClientRect()
-    const width = Math.min(288, Math.max(220, window.innerWidth - 16))
-    let left = r.left + r.width / 2 - width / 2
-    left = Math.max(8, Math.min(left, window.innerWidth - width - 8))
-    const gap = 8
-    let top = r.bottom + gap
-    const maxH = Math.min(320, window.innerHeight - top - 16)
-    if (maxH < 120) {
-      top = Math.max(8, r.top - gap - 200)
-    }
-    setPopoverStyle({ top, left, width })
-  }, [open])
-
-  const popover =
-    open && popoverStyle ? (
-      <div
-        data-health-popover
-        className="fixed z-[100] max-h-[min(320px,70vh)] overflow-y-auto rounded-xl border border-emerald-100 bg-white shadow-xl p-3 text-left"
-        style={{ top: popoverStyle.top, left: popoverStyle.left, width: popoverStyle.width }}
-        onClick={e => e.stopPropagation()}
-        role="dialog"
-        aria-label={`Health suggestions for ${baby.name}`}
-      >
-        <p className="text-xs font-semibold text-emerald-900 border-b border-emerald-100 pb-2 mb-2">
-          Health suggestions — {baby.name}
-        </p>
-        <ul className="text-xs text-gray-700 space-y-2 list-disc list-inside leading-relaxed">
-          {suggestions.map((line, i) => (
-            <li key={i}>{line}</li>
-          ))}
-        </ul>
-      </div>
-    ) : null
-
   return (
-    <div className="relative inline-flex">
-      <button
-        ref={btnRef}
-        type="button"
-        data-health-trigger={baby.id}
-        onClick={onToggle}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all duration-200"
-        title="Show health suggestions for this baby"
-      >
-        <FaHeartbeat className="text-sm" />
-      </button>
-      {typeof document !== 'undefined' && popover ? createPortal(popover, document.body) : null}
-    </div>
+    <button
+      type="button"
+      data-health-trigger={baby.id}
+      onClick={onPress}
+      aria-expanded={isOpen}
+      aria-haspopup="dialog"
+      className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all duration-200"
+      title="Show health suggestions for this baby"
+    >
+      <FaHeartbeat className="text-sm" />
+    </button>
   )
 }
 
@@ -134,24 +111,54 @@ export default function BabiesPage() {
   const [invitesLoading, setInvitesLoading] = useState(false)
   const [invites, setInvites] = useState<BabyInvite[]>([])
   const [withdrawingInviteId, setWithdrawingInviteId] = useState<string | null>(null)
-  const [healthPopupBabyId, setHealthPopupBabyId] = useState<string | null>(null)
+  /** Single popover: mobile + desktop each render a heart button for the same baby; only one portal may exist. */
+  const [healthPop, setHealthPop] = useState<{ babyId: string; anchor: DOMRect } | null>(null)
+  const [healthPopoverLayout, setHealthPopoverLayout] = useState<HealthPopoverLayout | null>(null)
+
+  useLayoutEffect(() => {
+    if (!healthPop) {
+      setHealthPopoverLayout(null)
+      return
+    }
+    setHealthPopoverLayout(computeHealthPopoverPosition(healthPop.anchor))
+  }, [healthPop])
 
   useEffect(() => {
-    if (!healthPopupBabyId) return
+    if (!healthPop) return
+    const onResize = () => {
+      const r = getVisibleHealthTriggerRect(healthPop.babyId) ?? healthPop.anchor
+      setHealthPopoverLayout(computeHealthPopoverPosition(r))
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [healthPop])
+
+  useEffect(() => {
+    if (!healthPop) return
+    const id = healthPop.babyId
     const onCap = (e: MouseEvent) => {
       const t = e.target as HTMLElement
       if (t.closest('[data-health-popover]')) return
-      if (t.closest(`[data-health-trigger="${healthPopupBabyId}"]`)) return
-      setHealthPopupBabyId(null)
+      if (t.closest(`[data-health-trigger="${id}"]`)) return
+      setHealthPop(null)
     }
-    const onScroll = () => setHealthPopupBabyId(null)
+    const onScroll = () => setHealthPop(null)
     document.addEventListener('click', onCap, true)
     window.addEventListener('scroll', onScroll, true)
     return () => {
       document.removeEventListener('click', onCap, true)
       window.removeEventListener('scroll', onScroll, true)
     }
-  }, [healthPopupBabyId])
+  }, [healthPop])
+
+  const toggleHealthPop = useCallback((e: React.MouseEvent<HTMLButtonElement>, b: BabyListRow) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setHealthPop(prev => {
+      if (prev?.babyId === b.id) return null
+      return { babyId: b.id, anchor: e.currentTarget.getBoundingClientRect() }
+    })
+  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -203,6 +210,7 @@ export default function BabiesPage() {
       toast.success(`${babyName} has been removed`)
       setBabies(prev => prev.filter(b => b.id !== babyId))
       setConfirmDeleteId(null)
+      setHealthPop(h => (h?.babyId === babyId ? null : h))
     } catch (error) {
       toast.error('Failed to delete baby')
     } finally {
@@ -466,14 +474,10 @@ export default function BabiesPage() {
                       </div>
                     </Link>
                     <div className="absolute top-4 right-4 flex items-center gap-2">
-                    <HealthSuggestionsPopupTrigger
+                    <HealthSuggestionsHeartButton
                       baby={b}
-                      open={healthPopupBabyId === b.id}
-                      onToggle={e => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        setHealthPopupBabyId(prev => (prev === b.id ? null : b.id))
-                      }}
+                      isOpen={healthPop?.babyId === b.id}
+                      onPress={e => toggleHealthPop(e, b)}
                     />
                     <button
                       onClick={(e) => {
@@ -600,14 +604,10 @@ export default function BabiesPage() {
                         </td>
                         <td className="py-4 pr-4 text-center align-middle" onClick={(e) => e.stopPropagation()}>
                           <div className="inline-flex justify-center">
-                            <HealthSuggestionsPopupTrigger
+                            <HealthSuggestionsHeartButton
                               baby={b}
-                              open={healthPopupBabyId === b.id}
-                              onToggle={e => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                setHealthPopupBabyId(prev => (prev === b.id ? null : b.id))
-                              }}
+                              isOpen={healthPop?.babyId === b.id}
+                              onPress={e => toggleHealthPop(e, b)}
                             />
                           </div>
                         </td>
@@ -699,6 +699,38 @@ export default function BabiesPage() {
           </div>
         )
         }
+      {healthPop &&
+        healthPopoverLayout &&
+        (() => {
+          const baby = babies.find(x => x.id === healthPop.babyId)
+          if (!baby) return null
+          const items = buildBabyHealthSuggestions({
+            name: baby.name,
+            birthDate: baby.birthDate,
+            gender: baby.gender ?? null,
+            bloodType: baby.bloodType ?? null,
+            weightKg: baby.weightKg ?? null,
+            heightCm: baby.heightCm ?? null,
+          })
+          const { top, left, width, maxHeight } = healthPopoverLayout
+          return createPortal(
+            <div
+              data-health-popover
+              role="dialog"
+              aria-label={`Health suggestions for ${baby.name}`}
+              className="fixed z-[100] rounded-xl border border-emerald-200 bg-white p-4 text-sm text-gray-700 shadow-xl overflow-y-auto"
+              style={{ top, left, width, maxHeight }}
+            >
+              <h3 className="mb-2 font-semibold text-gray-900">Health suggestions — {baby.name}</h3>
+              <ul className="list-disc space-y-1.5 pl-4">
+                {items.map((text, i) => (
+                  <li key={i}>{text}</li>
+                ))}
+              </ul>
+            </div>,
+            document.body
+          )
+        })()}
       </div>
   )
 }
