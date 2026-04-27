@@ -12,7 +12,7 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions): Promis
   const host = process.env.SMTP_HOST?.trim()
   const port = Number((process.env.SMTP_PORT || '587').trim())
   const user = process.env.SMTP_USER?.trim()
-  const pass = process.env.SMTP_PASS
+  const pass = process.env.SMTP_PASS?.trim()
   const fromEmail = process.env.SMTP_FROM_EMAIL?.trim()
   const secure = (process.env.SMTP_SECURE || '').trim().toLowerCase() === 'true'
 
