@@ -72,13 +72,25 @@ export default function DashboardHeader({
           
           <div className="flex items-center space-x-2 sm:space-x-4" ref={menuRef}>
             {showNotifications && (
-              <button 
-                className={`p-2 text-gray-400 hover:text-gray-600 relative hidden md:block ${notificationBlink ? 'animate-pulse' : ''}`}
+              <button
+                type="button"
+                aria-label={
+                  unreadNotificationCount > 0
+                    ? `Notifications, ${unreadNotificationCount} unread`
+                    : 'Notifications'
+                }
+                className={`p-2 relative rounded-full transition-colors ${
+                  notificationBlink
+                    ? 'text-pink-600 bg-pink-50 ring-2 ring-pink-400 ring-offset-2 ring-offset-white animate-bell-alert'
+                    : unreadNotificationCount > 0
+                      ? 'text-pink-600 bg-pink-50/90'
+                      : 'text-gray-400 hover:text-gray-600'
+                }`}
                 onClick={onNotificationClick}
               >
                 <FaBell className="text-lg" />
                 {unreadNotificationCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center font-semibold">
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center font-semibold shadow-sm">
                     {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
                   </span>
                 )}

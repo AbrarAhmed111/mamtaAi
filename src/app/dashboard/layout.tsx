@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Sidebar from '@/components/Dashboard/Sidebar'
 import DashboardHeader from '@/components/Dashboard/DashboardHeader'
 import { useAuth } from '@/lib/supabase/context'
 import { supabase } from '@/lib/supabase/client'
+import { playNotificationBeep } from '@/lib/notification-feedback'
 
 type PendingInvite = {
   id: string
@@ -27,6 +28,17 @@ type AppNotification = {
   } | null
 }
 
+function mapDbRowToAppNotification(row: Record<string, unknown>): AppNotification {
+  return {
+    id: String(row.id ?? ''),
+    title: String(row.title ?? ''),
+    body: String(row.body ?? ''),
+    isRead: !!row.is_read,
+    createdAt: String(row.created_at ?? new Date().toISOString()),
+    actionData: (row.action_data as AppNotification['actionData']) ?? null,
+  }
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { user, signOut, loading } = useAuth()
@@ -37,8 +49,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notificationBlink, setNotificationBlink] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const unreadSnapshotRef = useRef(0)
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev)
+
+  const applyNotificationPayload = useCallback((data: { items?: unknown[]; unreadCount?: number }) => {
+    const items = Array.isArray(data?.items) ? data.items : []
+    const u = Number(data?.unreadCount ?? 0)
+    setNotifications(items as AppNotification[])
+    setUnreadCount(u)
+    unreadSnapshotRef.current = u
+  }, [])
+
+  const fetchNotifications = useCallback(async (): Promise<number | null> => {
+    const res = await fetch('/api/notifications', { cache: 'no-store' })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) return null
+    applyNotificationPayload(data)
+    return Number(data?.unreadCount ?? 0)
+  }, [applyNotificationPayload])
 
   const displayUser = {
     name: user?.profile?.full_name || 'User',
@@ -70,50 +99,84 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [user?.id, loading])
 
   useEffect(() => {
-    const loadNotifications = async () => {
-      if (!user?.id || loading) return
+    if (!user?.id || loading) return
+    void (async () => {
+      try {
+        const u = await fetchNotifications()
+        if (u != null && u > 0) setNotificationBlink(true)
+      } catch {
+        // ignore
+      }
+    })()
+  }, [user?.id, loading, fetchNotifications])
+
+  useEffect(() => {
+    unreadSnapshotRef.current = unreadCount
+  }, [unreadCount])
+
+  /** Polling fallback when Realtime is misconfigured or connection drops. */
+  useEffect(() => {
+    if (!user?.id || loading) return
+    const tick = async () => {
+      if (typeof document !== 'undefined' && document.hidden) return
+      const before = unreadSnapshotRef.current
       try {
         const res = await fetch('/api/notifications', { cache: 'no-store' })
         const data = await res.json().catch(() => ({}))
         if (!res.ok) return
-        setNotifications(Array.isArray(data?.items) ? data.items : [])
-        setUnreadCount(Number(data?.unreadCount || 0))
-        if (Number(data?.unreadCount || 0) > 0) {
+        const newUnread = Number(data?.unreadCount ?? 0)
+        if (newUnread > before) {
+          playNotificationBeep()
           setNotificationBlink(true)
         }
+        applyNotificationPayload(data)
       } catch {
         // ignore
       }
     }
-    void loadNotifications()
-  }, [user?.id, loading])
+    const interval = window.setInterval(() => void tick(), 30_000)
+    return () => window.clearInterval(interval)
+  }, [user?.id, loading, applyNotificationPayload])
 
   useEffect(() => {
-    if (!user?.id) return
+    if (!user?.id || loading) return
+
     const channel = supabase
       .channel(`notifications-${user.id}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        async () => {
-          try {
-            const res = await fetch('/api/notifications', { cache: 'no-store' })
-            const data = await res.json().catch(() => ({}))
-            if (!res.ok) return
-            setNotifications(Array.isArray(data?.items) ? data.items : [])
-            setUnreadCount(Number(data?.unreadCount || 0))
-            setNotificationBlink(true)
-          } catch {
-            // ignore
+        payload => {
+          const row = payload.new as Record<string, unknown> | null
+          if (!row || String(row.user_id) !== user.id) return
+
+          const incoming = mapDbRowToAppNotification(row)
+          setNotifications(prev => {
+            if (prev.some(n => n.id === incoming.id)) return prev
+            return [incoming, ...prev].slice(0, 30)
+          })
+          if (!incoming.isRead) {
+            setUnreadCount(c => {
+              const next = c + 1
+              unreadSnapshotRef.current = next
+              return next
+            })
           }
+          setNotificationBlink(true)
+          playNotificationBeep()
+          void fetchNotifications()
         },
       )
-      .subscribe()
+      .subscribe(status => {
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('[notifications] Realtime channel error; using poll fallback until connection recovers')
+        }
+      })
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [user?.id])
+  }, [user?.id, loading, fetchNotifications])
 
   const handleInviteAction = async (token: string, action: 'accept' | 'withdraw') => {
     try {

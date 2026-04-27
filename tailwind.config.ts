@@ -7,6 +7,21 @@ module.exports = {
   ],
   theme: {
     extend: {
+      keyframes: {
+        'bell-alert': {
+          '0%, 100%': {
+            transform: 'rotate(0deg) scale(1)',
+            filter: 'drop-shadow(0 0 6px rgba(236, 72, 153, 0.85))',
+          },
+          '20%': { transform: 'rotate(-14deg) scale(1.08)' },
+          '40%': { transform: 'rotate(14deg) scale(1.08)' },
+          '60%': { transform: 'rotate(-10deg) scale(1.05)' },
+          '80%': { transform: 'rotate(10deg) scale(1.05)' },
+        },
+      },
+      animation: {
+        'bell-alert': 'bell-alert 0.9s ease-in-out infinite',
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
