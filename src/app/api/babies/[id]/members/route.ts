@@ -112,3 +112,55 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }
 }
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const supabase: any = await createServerClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { id: babyId } = await params
+    const targetParentId = String(request.nextUrl.searchParams.get('parentId') || '').trim()
+    if (!targetParentId) {
+      return NextResponse.json({ error: 'parentId query parameter is required' }, { status: 400 })
+    }
+    if (targetParentId === user.id) {
+      return NextResponse.json(
+        { error: 'Use Leave this child profile (below) to remove yourself instead.' },
+        { status: 400 },
+      )
+    }
+
+    const { data: myRow } = await supabase
+      .from('baby_parents')
+      .select('is_primary')
+      .eq('baby_id', babyId)
+      .eq('parent_id', user.id)
+      .single()
+
+    if (!myRow?.is_primary) {
+      return NextResponse.json({ error: 'Only the primary parent can remove a relation' }, { status: 403 })
+    }
+
+    const { data: target } = await supabase
+      .from('baby_parents')
+      .select('id, is_primary, parent_id')
+      .eq('baby_id', babyId)
+      .eq('parent_id', targetParentId)
+      .single()
+
+    if (!target) return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+    if (target.is_primary) {
+      return NextResponse.json({ error: 'Cannot remove the primary parent' }, { status: 400 })
+    }
+
+    const { error } = await (supabaseAdmin as any).from('baby_parents').delete().eq('id', target.id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+    return NextResponse.json({ ok: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
+  }
+}

@@ -4,6 +4,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { createInviteEmailTemplate } from '@/lib/email/templates'
 import { sendEmail } from '@/lib/email/send-email'
+import { getInviteEmailLogoMailParts } from '@/lib/email/invite-email-logo'
 
 function getBaseURL(request: NextRequest): string {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const siteBase = getBaseURL(request).replace(/\/$/, '')
     const inviteLink = `${siteBase}/invite/${token}`
-    const logoUrl = `${siteBase}/mamta-email-logo.png`
+    const { logoUrl, attachments: logoAttachments } = getInviteEmailLogoMailParts(siteBase)
 
     let inviteeDisplayName: string | null = null
     try {
@@ -187,6 +188,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       to: email,
       subject: `You are invited to ${baby.name}'s dashboard`,
       html,
+      attachments: logoAttachments.length > 0 ? logoAttachments : undefined,
     })
 
     return NextResponse.json({

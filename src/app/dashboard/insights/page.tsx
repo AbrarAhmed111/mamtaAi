@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useId, useState } from 'react'
+import { Suspense, useEffect, useId, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Spinner from '@/components/ui/spinner'
 import { FaChartLine, FaClock, FaExclamationTriangle, FaHistory, FaMicrophone, FaBaby } from 'react-icons/fa'
 
@@ -211,7 +212,10 @@ function SimpleBars({
   )
 }
 
-export default function InsightsPage() {
+function InsightsPageContent() {
+  const searchParams = useSearchParams()
+  const focusBabyId = (searchParams.get('babyId') || '').trim()
+
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<InsightResponse | null>(null)
   const [error, setError] = useState('')
@@ -234,6 +238,14 @@ export default function InsightsPage() {
     run()
   }, [])
 
+  useEffect(() => {
+    if (!focusBabyId || loading || !data) return
+    const t = window.setTimeout(() => {
+      document.getElementById(`insight-baby-${focusBabyId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 100)
+    return () => window.clearTimeout(t)
+  }, [focusBabyId, loading, data])
+
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-gray-600 gap-2">
@@ -249,6 +261,12 @@ export default function InsightsPage() {
 
   const overview = data?.overview
   const totals = data?.totals
+  const focusBabyInBreakdown =
+    focusBabyId && data?.babyBreakdown?.some(b => b.babyId === focusBabyId) === true
+  const focusBabyName =
+    focusBabyId && data?.babyBreakdown?.length
+      ? data.babyBreakdown.find(b => b.babyId === focusBabyId)?.babyName || null
+      : null
 
   return (
     <div className="space-y-6">
@@ -257,6 +275,18 @@ export default function InsightsPage() {
           Insights & Analytics
         </h1>
         <p className="text-sm text-gray-600 mt-2">Daily stats, cry history, and graphical trends for your babies.</p>
+        {focusBabyId ? (
+          <p className="mt-3 text-sm rounded-xl border border-emerald-200 bg-emerald-50/80 text-emerald-900 px-4 py-2 max-w-2xl">
+            <span className="font-semibold">Health context</span>{' '}
+            <span className="text-emerald-800">
+              {focusBabyInBreakdown
+                ? focusBabyName
+                  ? `Breakdown for ${focusBabyName} is highlighted below.`
+                  : 'Scroll to the highlighted row in Baby-wise breakdown.'
+                : 'This baby has no cry analytics yet. Add recordings from their profile to see trends here.'}
+            </span>
+          </p>
+        ) : null}
       </section>
 
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -321,15 +351,26 @@ export default function InsightsPage() {
             {(data?.babyBreakdown || []).length === 0 ? (
               <p className="text-sm text-gray-500">No baby data available yet.</p>
             ) : (
-              (data?.babyBreakdown || []).map(item => (
-                <div key={item.babyId} className="rounded-lg border border-gray-100 p-3 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">{item.babyName}</p>
-                    <p className="text-xs text-gray-500">Avg Duration: {Math.round(item.avgDuration)} sec</p>
+              (data?.babyBreakdown || []).map(item => {
+                const isFocused = focusBabyId === item.babyId
+                return (
+                  <div
+                    key={item.babyId}
+                    id={`insight-baby-${item.babyId}`}
+                    className={`rounded-lg border p-3 flex items-center justify-between transition-shadow ${
+                      isFocused
+                        ? 'border-emerald-300 bg-emerald-50/60 ring-2 ring-emerald-200 shadow-sm'
+                        : 'border-gray-100'
+                    }`}
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900">{item.babyName}</p>
+                      <p className="text-xs text-gray-500">Avg Duration: {Math.round(item.avgDuration)} sec</p>
+                    </div>
+                    <span className="text-sm px-2 py-1 rounded-full bg-pink-100 text-pink-700">{item.recordings} recordings</span>
                   </div>
-                  <span className="text-sm px-2 py-1 rounded-full bg-pink-100 text-pink-700">{item.recordings} recordings</span>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>
@@ -397,3 +438,17 @@ export default function InsightsPage() {
   )
 }
 
+export default function InsightsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[60vh] flex items-center justify-center text-gray-600 gap-2">
+          <Spinner size={18} />
+          Loading insights...
+        </div>
+      }
+    >
+      <InsightsPageContent />
+    </Suspense>
+  )
+}

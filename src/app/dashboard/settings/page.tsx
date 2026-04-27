@@ -2,10 +2,29 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { FaUser, FaPhone, FaImage, FaSave, FaArrowLeft, FaBaby, FaComments, FaBook, FaFile, FaUsers } from 'react-icons/fa'
+import {
+  FaUser,
+  FaPhone,
+  FaImage,
+  FaSave,
+  FaArrowLeft,
+  FaBaby,
+  FaComments,
+  FaBook,
+  FaFile,
+  FaUsers,
+  FaBell,
+} from 'react-icons/fa'
 import Image from 'next/image'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import type { Json } from '@/types/supabase'
+import { useAuth } from '@/lib/supabase/context'
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  type NotificationPreferences,
+  parseNotificationPreferences,
+} from '@/lib/notification-preferences'
 
 interface Profile {
   id: string
@@ -14,6 +33,7 @@ interface Profile {
   avatar_url: string | null
   role: string | null
   created_at: string | null
+  metadata: Json | null
 }
 
 interface Stats {
@@ -36,8 +56,57 @@ interface FamilyMemberRow {
   isPrimary: boolean
 }
 
+function ToggleRow({
+  id,
+  label,
+  description,
+  checked,
+  onChange,
+  disabled,
+}: {
+  id: string
+  label: string
+  description: string
+  checked: boolean
+  onChange: (next: boolean) => void
+  disabled?: boolean
+}) {
+  return (
+    <div
+      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-4 border-b border-pink-50 last:border-0 ${
+        disabled ? 'opacity-60' : ''
+      }`}
+    >
+      <div>
+        <label htmlFor={id} className="text-sm font-medium text-gray-900 cursor-pointer">
+          {label}
+        </label>
+        <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+      </div>
+      <button
+        id={id}
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={() => !disabled && onChange(!checked)}
+        className={`relative shrink-0 inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 disabled:cursor-not-allowed ${
+          checked ? 'bg-pink-600' : 'bg-gray-200'
+        }`}
+      >
+        <span
+          className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${
+            checked ? 'translate-x-7' : 'translate-x-1'
+          }`}
+        />
+      </button>
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   const router = useRouter()
+  const { refreshUser } = useAuth()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -58,6 +127,8 @@ export default function SettingsPage() {
   const [membersByBaby, setMembersByBaby] = useState<Record<string, FamilyMemberRow[]>>({})
   const [familyLoading, setFamilyLoading] = useState(false)
   const [updatingMemberKey, setUpdatingMemberKey] = useState<string | null>(null)
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences>(() => ({ ...DEFAULT_NOTIFICATION_PREFERENCES }))
+  const [notifPrefsSaving, setNotifPrefsSaving] = useState(false)
 
   useEffect(() => {
     loadProfile()
@@ -84,6 +155,7 @@ export default function SettingsPage() {
         if (data.profile.avatar_url) {
           setAvatarPreview(data.profile.avatar_url)
         }
+        setNotifPrefs(parseNotificationPreferences(data.profile.metadata))
       }
     } catch (error) {
       toast.error('Failed to load profile')
@@ -209,6 +281,33 @@ export default function SettingsPage() {
     } catch (error) {
       toast.error('Failed to upload avatar')
       return null
+    }
+  }
+
+  const saveNotificationPreferences = async () => {
+    setNotifPrefsSaving(true)
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notification_preferences: notifPrefs }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error || 'Failed to save notification preferences')
+        return
+      }
+      if (data.profile) {
+        setProfile(data.profile)
+        setNotifPrefs(parseNotificationPreferences(data.profile.metadata))
+      }
+      await refreshUser()
+      toast.success('Notification preferences saved')
+      router.refresh()
+    } catch {
+      toast.error('Failed to save notification preferences')
+    } finally {
+      setNotifPrefsSaving(false)
     }
   }
 
@@ -390,6 +489,113 @@ export default function SettingsPage() {
                 </button>
               </div>
             </form>
+          </div>
+
+          {/* Notification preferences */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+              <FaBell className="text-pink-600" />
+              Notification preferences
+            </h2>
+            <p className="text-sm text-gray-600 mb-6">
+              Choose what we can notify you about. In-app sound and bell highlight apply on the dashboard when new items
+              arrive. Category toggles will also filter email and push as those channels go live.
+            </p>
+
+            <div className="rounded-lg border border-pink-100 bg-gradient-to-br from-white to-pink-50/20 px-4">
+              <ToggleRow
+                id="pref-family-invites"
+                label="Family invites"
+                description={"When someone invites you to a baby's care circle."}
+                checked={notifPrefs.familyInvites}
+                onChange={(v) => setNotifPrefs((p) => ({ ...p, familyInvites: v }))}
+              />
+              <ToggleRow
+                id="pref-insights"
+                label="Insights & tips"
+                description="Personalized summaries and guidance in the app."
+                checked={notifPrefs.insights}
+                onChange={(v) => setNotifPrefs((p) => ({ ...p, insights: v }))}
+              />
+              <ToggleRow
+                id="pref-community"
+                label="Community activity"
+                description="Replies, mentions, and community updates."
+                checked={notifPrefs.community}
+                onChange={(v) => setNotifPrefs((p) => ({ ...p, community: v }))}
+              />
+              <ToggleRow
+                id="pref-email"
+                label="Product & tips by email"
+                description="Occasional updates from MamtaAI (separate from account security email)."
+                checked={notifPrefs.emailProductUpdates}
+                onChange={(v) => setNotifPrefs((p) => ({ ...p, emailProductUpdates: v }))}
+              />
+              <ToggleRow
+                id="pref-sound"
+                label="In-app sound for new notifications"
+                description="Short beep when a new notification arrives (if your browser allows audio)."
+                checked={notifPrefs.inAppSound}
+                onChange={(v) => setNotifPrefs((p) => ({ ...p, inAppSound: v }))}
+              />
+              <ToggleRow
+                id="pref-highlight"
+                label="Highlight notification bell"
+                description="Pink ring and motion on the bell when there is something new."
+                checked={notifPrefs.highlightBell}
+                onChange={(v) => setNotifPrefs((p) => ({ ...p, highlightBell: v }))}
+              />
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-dashed border-gray-200">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <h3 className="text-sm font-bold text-gray-900">Oximeter readings</h3>
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                  Feature coming soon
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">
+                SpO₂ and pulse alerts from a connected oximeter will appear here. These options are not available yet.
+              </p>
+              <div className="rounded-lg border border-gray-100 bg-gray-50/80 px-4">
+                <ToggleRow
+                  id="pref-oxi-spo2"
+                  label="Low oxygen (SpO₂) alerts"
+                  description="Notify when oxygen saturation drops below your chosen threshold."
+                  checked={false}
+                  onChange={() => {}}
+                  disabled
+                />
+                <ToggleRow
+                  id="pref-oxi-pulse"
+                  label="Heart rate alerts"
+                  description="Notify when pulse is unusually high or low."
+                  checked={false}
+                  onChange={() => {}}
+                  disabled
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3 mt-6">
+              <button
+                type="button"
+                disabled={notifPrefsSaving}
+                onClick={() => void saveNotificationPreferences()}
+                className="px-6 py-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 disabled:opacity-50 transition-all flex items-center gap-2"
+              >
+                <FaSave />
+                {notifPrefsSaving ? 'Saving…' : 'Save notification preferences'}
+              </button>
+              <button
+                type="button"
+                disabled={notifPrefsSaving || !profile}
+                onClick={() => setNotifPrefs(parseNotificationPreferences(profile?.metadata))}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Reset
+              </button>
+            </div>
           </div>
 
           {/* Family access — guardians & relatives */}

@@ -15,7 +15,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Ensure the user is a member of the baby
     const { data: membership } = await supabase
       .from('baby_parents')
-      .select('baby_id, relationship, access_level, can_edit_profile, can_record_audio, can_view_history, is_primary')
+      .select(
+        'baby_id, relationship, access_level, can_edit_profile, can_record_audio, can_view_history, is_primary',
+      )
       .eq('baby_id', id)
       .eq('parent_id', user.id)
       .single()
@@ -45,6 +47,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       currentUserMembership,
       currentAccessBadge,
       canEditBaby: Boolean(membership.can_edit_profile),
+      /** Only the primary parent can remove other caregivers from the Relations list */
+      isPrimaryParent: Boolean(membership.is_primary),
       /** Non-primary members (e.g. invited relatives) may leave this baby’s profile */
       canLeaveMembership: membership.is_primary !== true,
     })

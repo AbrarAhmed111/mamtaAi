@@ -21,6 +21,9 @@ export default function BabyDetailPage() {
   const [canEditBaby, setCanEditBaby] = useState(true)
   const [currentAccessBadge, setCurrentAccessBadge] = useState('')
   const [canLeaveMembership, setCanLeaveMembership] = useState(false)
+  const [isPrimaryParent, setIsPrimaryParent] = useState(false)
+  const [removeRelationParentId, setRemoveRelationParentId] = useState<string | null>(null)
+  const [removingRelationParentId, setRemovingRelationParentId] = useState<string | null>(null)
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
   const [leavingMembership, setLeavingMembership] = useState(false)
 
@@ -67,35 +70,57 @@ export default function BabyDetailPage() {
   const age = useMemo(() => formatAge(birthDate), [birthDate])
   const avatar = baby?.avatar_url || ''
 
-  useEffect(() => {
-    const load = async () => {
-      if (!babyId) return
-      try {
-        setLoading(true)
-        const res = await fetch(`/api/babies/${babyId}`, { cache: 'no-store' })
-        const data = await res.json().catch(() => ({}))
-        if (!res.ok) {
-          toast.error(data?.error || 'Failed to load baby')
-          return
-        }
-        setBaby(data.baby)
-        setName(data.baby.name || '')
-        setBirthDate(data.baby.birth_date || '')
-        setGender((data.baby.gender || '') as any)
-        setWeightKg(data.baby.birth_weight_kg != null ? String(data.baby.birth_weight_kg) : '')
-        setHeightCm(data.baby.birth_height_cm != null ? String(data.baby.birth_height_cm) : '')
-        setBloodType(data.baby.blood_type || '')
-        setNotes(data.baby.medical_notes || '')
-        setCurrentUserRelationship(String(data.currentUserRelationship || ''))
-        setCanEditBaby(data.canEditBaby !== false)
-        setCurrentAccessBadge(String(data.currentAccessBadge || ''))
-        setCanLeaveMembership(data.canLeaveMembership === true)
-      } finally {
-        setLoading(false)
+  const loadBaby = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!babyId) return
+    try {
+      if (!opts?.silent) setLoading(true)
+      const res = await fetch(`/api/babies/${babyId}`, { cache: 'no-store' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error || 'Failed to load baby')
+        return
       }
+      setBaby(data.baby)
+      setName(data.baby.name || '')
+      setBirthDate(data.baby.birth_date || '')
+      setGender((data.baby.gender || '') as any)
+      setWeightKg(data.baby.birth_weight_kg != null ? String(data.baby.birth_weight_kg) : '')
+      setHeightCm(data.baby.birth_height_cm != null ? String(data.baby.birth_height_cm) : '')
+      setBloodType(data.baby.blood_type || '')
+      setNotes(data.baby.medical_notes || '')
+      setCurrentUserRelationship(String(data.currentUserRelationship || ''))
+      setCanEditBaby(data.canEditBaby !== false)
+      setCurrentAccessBadge(String(data.currentAccessBadge || ''))
+      setCanLeaveMembership(data.canLeaveMembership === true)
+      setIsPrimaryParent(data.isPrimaryParent === true)
+    } finally {
+      if (!opts?.silent) setLoading(false)
     }
-    load()
   }, [babyId])
+
+  useEffect(() => {
+    void loadBaby()
+  }, [loadBaby])
+
+  const handleRemoveRelation = async (parentId: string) => {
+    if (!babyId) return
+    try {
+      setRemovingRelationParentId(parentId)
+      const res = await fetch(`/api/babies/${babyId}/members?parentId=${encodeURIComponent(parentId)}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error || 'Could not remove this relation')
+        return
+      }
+      toast.success('Relation removed')
+      setRemoveRelationParentId(null)
+      await loadBaby({ silent: true })
+    } finally {
+      setRemovingRelationParentId(null)
+    }
+  }
 
   const loadActivityRecords = useCallback(async () => {
     if (!babyId) return
@@ -583,6 +608,12 @@ export default function BabyDetailPage() {
       {/* Relations */}
       <section className="bg-white rounded-2xl border border-pink-100 p-5 shadow-sm bg-gradient-to-br from-white to-pink-50/20">
         <h2 className="text-lg font-semibold text-gray-900 mb-3">Relations</h2>
+        {isPrimaryParent ? (
+          <p className="text-xs text-gray-500 mb-3">
+            As the primary parent, you can remove another caregiver&apos;s link to this child. They will lose access to this
+            profile.
+          </p>
+        ) : null}
         {Array.isArray(baby?.baby_parents) && baby.baby_parents.length > 0 ? (
           <ul className="space-y-2">
             {baby.baby_parents.map((r: any, idx: number) => {
@@ -596,17 +627,57 @@ export default function BabyDetailPage() {
                 can_view_history: null,
                 is_primary: r.is_primary,
               })
+              const pid = String(r.parent_id || '')
+              const canRemove = isPrimaryParent && !r.is_primary && pid
+              const confirming = removeRelationParentId === pid
               return (
-                <li key={r.parent_id || idx} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <span className="text-gray-800">{r?.parent_profile?.full_name || 'Unknown'}</span>
-                  <span className="flex flex-wrap items-center gap-2">
+                <li
+                  key={r.parent_id || idx}
+                  className="flex flex-col gap-2 rounded-xl border border-pink-50 bg-white/60 px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+                >
+                  <div className="flex flex-wrap items-center gap-2 text-sm min-w-0">
+                    <span className="font-medium text-gray-800 truncate">{r?.parent_profile?.full_name || 'Unknown'}</span>
                     <span className="text-gray-500 capitalize">{r?.relationship || 'other'}</span>
                     {accessLabel ? (
                       <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-pink-50 text-pink-800 border border-pink-100">
                         {accessLabel}
                       </span>
                     ) : null}
-                  </span>
+                  </div>
+                  {canRemove ? (
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      {confirming ? (
+                        <>
+                          <span className="text-xs text-gray-600">Remove this person?</span>
+                          <button
+                            type="button"
+                            disabled={removingRelationParentId === pid}
+                            onClick={() => void handleRemoveRelation(pid)}
+                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                          >
+                            {removingRelationParentId === pid ? 'Removing…' : 'Confirm remove'}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={removingRelationParentId === pid}
+                            onClick={() => setRemoveRelationParentId(null)}
+                            className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setRemoveRelationParentId(pid)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 transition-colors"
+                        >
+                          <FaUserMinus className="text-red-600" />
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
                 </li>
               )
             })}

@@ -1,14 +1,22 @@
 import nodemailer from 'nodemailer'
+import type { Attachment } from 'nodemailer/lib/mailer'
 
 interface SendEmailOptions {
   to: string
   subject: string
   html: string
+  /** Inline images (e.g. logo with matching `cid:` in HTML). */
+  attachments?: Attachment[]
 }
 
 let smtpVerification: { verified: boolean; error?: string } | null = null
 
-export async function sendEmail({ to, subject, html }: SendEmailOptions): Promise<{ ok: boolean; error?: string }> {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  attachments,
+}: SendEmailOptions): Promise<{ ok: boolean; error?: string }> {
   const host = process.env.SMTP_HOST?.trim()
   const port = Number((process.env.SMTP_PORT || '587').trim())
   const fromEmail = process.env.SMTP_FROM_EMAIL?.trim()
@@ -49,6 +57,7 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions): Promis
       to,
       subject,
       html,
+      ...(attachments && attachments.length > 0 ? { attachments } : {}),
     })
 
     return { ok: true }

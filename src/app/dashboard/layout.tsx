@@ -1,12 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Sidebar from '@/components/Dashboard/Sidebar'
 import DashboardHeader from '@/components/Dashboard/DashboardHeader'
 import { useAuth } from '@/lib/supabase/context'
 import { supabase } from '@/lib/supabase/client'
 import { playNotificationBeep } from '@/lib/notification-feedback'
+import {
+  getInAppAlertFlagsForNotificationRow,
+  parseNotificationPreferences,
+} from '@/lib/notification-preferences'
 
 type PendingInvite = {
   id: string
@@ -50,6 +54,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [notificationBlink, setNotificationBlink] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const unreadSnapshotRef = useRef(0)
+
+  const notificationPrefs = useMemo(
+    () => parseNotificationPreferences(user?.profile?.metadata),
+    [user?.profile?.metadata],
+  )
+  const notificationPrefsRef = useRef(notificationPrefs)
+  notificationPrefsRef.current = notificationPrefs
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev)
 
@@ -103,7 +114,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     void (async () => {
       try {
         const u = await fetchNotifications()
-        if (u != null && u > 0) setNotificationBlink(true)
+        if (u != null && u > 0 && notificationPrefsRef.current.highlightBell) {
+          setNotificationBlink(true)
+        }
       } catch {
         // ignore
       }
@@ -126,8 +139,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (!res.ok) return
         const newUnread = Number(data?.unreadCount ?? 0)
         if (newUnread > before) {
-          playNotificationBeep()
-          setNotificationBlink(true)
+          const p = notificationPrefsRef.current
+          if (p.inAppSound) playNotificationBeep()
+          if (p.highlightBell) setNotificationBlink(true)
         }
         applyNotificationPayload(data)
       } catch {
@@ -162,8 +176,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               return next
             })
           }
-          setNotificationBlink(true)
-          playNotificationBeep()
+          const flags = getInAppAlertFlagsForNotificationRow(row, notificationPrefsRef.current)
+          if (flags.highlight) setNotificationBlink(true)
+          if (flags.sound) playNotificationBeep()
           void fetchNotifications()
         },
       )

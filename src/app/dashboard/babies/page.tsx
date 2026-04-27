@@ -8,7 +8,7 @@ import Spinner from '@/components/ui/spinner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip } from '@/components/ui/tooltip'
 import { toast } from '@/components/ui/sonner'
-import { FaTrash, FaPlus, FaBaby, FaArrowRight, FaEye, FaUser, FaUserPlus, FaTimes } from 'react-icons/fa'
+import { FaTrash, FaPlus, FaBaby, FaArrowRight, FaEye, FaUser, FaUserPlus, FaTimes, FaHeartbeat } from 'react-icons/fa'
 
 interface Baby {
   id: string
@@ -353,6 +353,16 @@ export default function BabiesPage() {
                       </div>
                     </Link>
                     <div className="absolute top-4 right-4 flex items-center gap-2">
+                    <Tooltip content="Health suggestions & insights">
+                      <Link
+                        href={`/dashboard/insights?babyId=${encodeURIComponent(b.id)}`}
+                        onClick={e => e.stopPropagation()}
+                        className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all duration-200"
+                        aria-label={`Health suggestions for ${b.name}`}
+                      >
+                        <FaHeartbeat className="text-sm" />
+                      </Link>
+                    </Tooltip>
                     <button
                       onClick={(e) => {
                         e.preventDefault()
@@ -408,6 +418,9 @@ export default function BabiesPage() {
                     <th className="py-4 pr-4 font-semibold">Weight (kg)</th>
                     <th className="py-4 pr-4 font-semibold">Height (cm)</th>
                     <th className="py-4 pr-4 font-semibold">Relations</th>
+                    <th className="py-4 pr-4 font-semibold text-center" title="Health suggestions & insights">
+                      Health
+                    </th>
                     <th className="py-4 pr-4 font-semibold">View</th>
                     <th className="py-4 pr-4 font-semibold">Actions</th>
                   </tr>
@@ -471,6 +484,17 @@ export default function BabiesPage() {
                             <span className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-pink-100 to-rose-100 text-pink-700 text-xs font-medium border border-pink-200">
                               {b.relations.length} {b.relations.length === 1 ? 'relation' : 'relations'}
                             </span>
+                          </Tooltip>
+                        </td>
+                        <td className="py-4 pr-4 text-center" onClick={(e) => e.stopPropagation()}>
+                          <Tooltip content="Health suggestions & insights">
+                            <Link
+                              href={`/dashboard/insights?babyId=${encodeURIComponent(b.id)}`}
+                              className="inline-flex p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
+                              aria-label={`Health suggestions for ${b.name}`}
+                            >
+                              <FaHeartbeat className="text-sm" />
+                            </Link>
                           </Tooltip>
                         </td>
                         <td className="py-4 pr-4">
