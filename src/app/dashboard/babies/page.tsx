@@ -154,9 +154,13 @@ export default function BabiesPage() {
   const toggleHealthPop = useCallback((e: React.MouseEvent<HTMLButtonElement>, b: BabyListRow) => {
     e.preventDefault()
     e.stopPropagation()
+    // Read geometry here: functional setState may run later, when `e.currentTarget` is already null.
+    const el = e.currentTarget
+    if (!el) return
+    const anchor = el.getBoundingClientRect()
     setHealthPop(prev => {
       if (prev?.babyId === b.id) return null
-      return { babyId: b.id, anchor: e.currentTarget.getBoundingClientRect() }
+      return { babyId: b.id, anchor }
     })
   }, [])
 
