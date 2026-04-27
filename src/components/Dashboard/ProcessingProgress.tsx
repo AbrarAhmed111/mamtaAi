@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef } from 'react';
 import Spinner from '@/components/ui/spinner';
 import { FaCheck, FaTimes } from 'react-icons/fa';
+import { deriveUrgencyFromCryAndConfidence } from '@/lib/cry-urgency';
+import { formatCryTypeLabel, getCryTypeGuidance } from '@/lib/cry-type-guidance';
 
 interface ProgressStep {
   step: string;
@@ -20,26 +22,104 @@ interface ProcessingProgressProps {
   babyName?: string;
 }
 
-/** Matches saved `cry_predictions.model_confidence_threshold` unless backend sends another value */
-const DEFAULT_CONFIDENCE_THRESHOLD = (() => {
-  const raw = process.env.NEXT_PUBLIC_CRY_CONFIDENCE_THRESHOLD
-  if (raw === undefined || String(raw).trim() === '') return 0.5
-  const n = Number(raw)
-  return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 0.5
-})()
+function UrgencyMeter({ level, meterPercent }: { level: string; meterPercent: number }) {
+  const label =
+    level === 'critical' ? 'Critical' : level === 'high' ? 'High' : level === 'medium' ? 'Moderate' : 'Low'
+  const caption =
+    level === 'critical' || level === 'high'
+      ? 'If you are worried or symptoms seem off, contact your pediatrician or urgent care.'
+      : level === 'medium'
+      ? 'Keep observing and run through feeding, sleep, and comfort over the next little while.'
+      : 'Usually fits normal soothing and routine checks at home.'
 
-function confidenceThresholdFromPayload(data: any): number {
-  const candidates = [
-    data?.model_confidence_threshold,
-    data?.prediction?.model_confidence_threshold,
-    data?.confidence_threshold,
-    data?.prediction?.confidence_threshold,
-  ]
-  for (const c of candidates) {
-    const n = Number(c)
-    if (Number.isFinite(n) && n >= 0 && n <= 1) return n
+  return (
+    <div className="mt-6 rounded-xl border border-rose-100 bg-gradient-to-br from-rose-50/90 to-white p-4">
+      <h5 className="text-sm font-semibold text-gray-900 mb-1">Urgency meter</h5>
+      <p className="text-xs text-gray-500 mb-3">How pressing this reading is — not a medical diagnosis.</p>
+      <div
+        className="relative h-10 rounded-full overflow-hidden border border-gray-200 shadow-inner bg-gradient-to-r from-emerald-300 via-amber-300 via-orange-400 to-red-500"
+        role="meter"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(meterPercent)}
+        aria-label={`Urgency ${label}`}
+      >
+        <div
+          className="absolute top-1/2 z-10 h-9 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-900 shadow-md ring-2 ring-white transition-all duration-500"
+          style={{ left: `${Math.min(100, Math.max(0, meterPercent))}%` }}
+          aria-hidden
+        />
+      </div>
+      <div className="mt-2 flex justify-between px-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+        <span>Calm</span>
+        <span>Watch</span>
+        <span>Urgent</span>
+      </div>
+      <div className="mt-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <span
+          className={`text-sm font-bold capitalize ${
+            level === 'critical' || level === 'high'
+              ? 'text-red-700'
+              : level === 'medium'
+              ? 'text-amber-800'
+              : 'text-emerald-800'
+          }`}
+        >
+          {label}
+        </span>
+        <span className="text-xs text-gray-600 sm:max-w-[65%] sm:text-right">{caption}</span>
+      </div>
+    </div>
+  )
+}
+
+function resolveUrgencyForDisplay(result: Record<string, any>, cryRaw: string, confidence: number) {
+  const fromApi = String(
+    result?.prediction?.urgency_level || result?.urgency_level || '',
+  ).toLowerCase()
+  if (['low', 'medium', 'high', 'critical'].includes(fromApi)) {
+    const meterPercent =
+      fromApi === 'critical' ? 92 : fromApi === 'high' ? 76 : fromApi === 'medium' ? 48 : 18
+    return { level: fromApi, meterPercent }
   }
-  return DEFAULT_CONFIDENCE_THRESHOLD
+  return deriveUrgencyFromCryAndConfidence(cryRaw, confidence)
+}
+
+function TranslationOutput({ result }: { result: Record<string, any> }) {
+  const cryRaw = String(result?.predicted_cry_type || result?.prediction?.predicted_cry_type || 'unknown')
+  const label = formatCryTypeLabel(cryRaw)
+  const guidance = getCryTypeGuidance(cryRaw)
+  const confidence = Number(result?.confidence_score ?? result?.prediction?.confidence_score ?? 0)
+  const { level, meterPercent } = resolveUrgencyForDisplay(result, cryRaw, confidence)
+
+  return (
+    <div className="mt-6 space-y-4">
+      <div className="rounded-xl border-2 border-pink-100 bg-gradient-to-br from-white to-pink-50/40 p-6 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-pink-600">Cry type</p>
+        <p className="mt-1 text-2xl font-bold capitalize text-gray-900 sm:text-3xl">{label}</p>
+
+        <div className="mt-5 border-t border-pink-100 pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Suggestions</p>
+          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-gray-700">
+            {guidance.suggestions.map((s, i) => (
+              <li key={`s-${i}`}>{s}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mt-4 border-t border-pink-100 pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Solution tips</p>
+          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-gray-700">
+            {guidance.tips.map((t, i) => (
+              <li key={`t-${i}`}>{t}</li>
+            ))}
+          </ul>
+        </div>
+
+        <UrgencyMeter level={level} meterPercent={meterPercent} />
+      </div>
+    </div>
+  )
 }
 
 const STEP_CONFIG: Record<string, { label: string; icon?: string }> = {
@@ -296,7 +376,6 @@ export default function ProcessingProgress({
                           confidence_score: data.confidence_score,
                           confidence_scores: data.confidence_scores,
                           model_info: data.model_info,
-                          model_confidence_threshold: confidenceThresholdFromPayload(data),
                         })
                       });
                     } catch (predictionError) {
@@ -494,96 +573,18 @@ export default function ProcessingProgress({
                 );
               })}
 
-              {/* Results */}
+              {/* Translation output — cry type, guidance, urgency only (no scores / threshold UI) */}
               {isCompleted && result && (
-                <div className="mt-6 space-y-4">
-                  {(() => {
-                    const threshold = confidenceThresholdFromPayload(result)
-                    const mainConfidence =
-                      Number(result.confidence_score ?? result.prediction?.confidence_score ?? 0) || 0
-                    const meetsThreshold = mainConfidence >= threshold
-                    return (
-                  <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
-                    <h4 className="text-lg font-bold text-gray-900 mb-4">Classification Results</h4>
+                <>
                   {result.prediction || result.predicted_cry_type ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-700 font-medium">Predicted Cry Type:</span>
-                        <span className="text-xl font-bold text-pink-600 capitalize">
-                          {result.predicted_cry_type || result.prediction?.predicted_cry_type || 'Unknown'}
-                        </span>
-                      </div>
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                        <span className="text-gray-700 font-medium">Confidence score</span>
-                        <div className="text-right sm:text-right">
-                          <span className={`text-xl font-bold ${meetsThreshold ? 'text-green-600' : 'text-amber-600'}`}>
-                            {Math.round(mainConfidence * 100)}%
-                          </span>
-                          <span className="text-gray-500 font-normal text-base ml-2">
-                            / threshold {Math.round(threshold * 100)}%
-                          </span>
-                        </div>
-                      </div>
-                      <p className={`text-sm rounded-lg px-3 py-2 ${meetsThreshold ? 'bg-green-100/80 text-green-900' : 'bg-amber-50 text-amber-900'}`}>
-                        {meetsThreshold
-                          ? `This reading is at or above the ${Math.round(threshold * 100)}% confidence threshold we use for a clear match.`
-                          : `This reading is below the ${Math.round(threshold * 100)}% threshold — treat it as a hint and check context (feeding, sleep, diaper).`}
-                      </p>
-                      {(result.confidence_scores || result.prediction?.confidence_scores) && (
-                        <div className="mt-4 pt-4 border-t border-green-200">
-                          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
-                            <span className="text-sm font-medium text-gray-700">All predictions</span>
-                            <span className="text-xs text-gray-500">
-                              Threshold line: {Math.round(threshold * 100)}% (per class)
-                            </span>
-                          </div>
-                          <div className="space-y-2">
-                            {Object.entries(result.confidence_scores || result.prediction?.confidence_scores || {})
-                              .sort(([, a], [, b]) => (b as number) - (a as number))
-                              .map(([cryType, confidence]) => {
-                                const c = confidence as number
-                                const pct = Math.round(c * 100)
-                                const thrPct = Math.round(threshold * 100)
-                                const above = c >= threshold
-                                return (
-                                  <div key={cryType} className="flex items-center justify-between text-sm gap-2">
-                                    <span className="text-gray-600 capitalize shrink-0">{cryType}</span>
-                                    <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
-                                      <div className="relative w-24 max-w-[40%] bg-gray-200 rounded-full h-2 shrink">
-                                        <div
-                                          className={`h-2 rounded-full ${above ? 'bg-pink-500' : 'bg-gray-400'}`}
-                                          style={{ width: `${pct}%` }}
-                                        />
-                                        <div
-                                          className="absolute top-0 bottom-0 w-0.5 bg-gray-800/70 pointer-events-none"
-                                          style={{ left: `${Math.min(thrPct, 100)}%` }}
-                                          title={`${thrPct}% threshold`}
-                                        />
-                                      </div>
-                                      <span className={`font-medium w-[4.5rem] text-right shrink-0 ${above ? 'text-gray-900' : 'text-gray-500'}`}>
-                                        {pct}%
-                                        <span className="block text-[10px] font-normal text-gray-500 leading-tight">
-                                          vs {thrPct}%
-                                        </span>
-                                      </span>
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    <TranslationOutput result={result} />
                   ) : (
-                    <div className="text-gray-600">
-                      <p>Features extracted successfully, but classification model is not available.</p>
-                      <p className="text-sm mt-2">Please train a model first to get predictions.</p>
+                    <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-6 text-gray-700">
+                      <p className="font-medium">No cry type from the model</p>
+                      <p className="mt-2 text-sm">Features were saved; train or connect the classifier to get a translation.</p>
                     </div>
                   )}
-                  </div>
-                    );
-                  })()}
-                </div>
+                </>
               )}
             </div>
           )}

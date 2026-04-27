@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { deriveUrgencyFromCryAndConfidence, serverModelConfidenceThreshold } from '@/lib/cry-urgency'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,8 +9,6 @@ type PredictionPayload = {
   predicted_cry_type?: string
   confidence_score?: number
   confidence_scores?: Record<string, number>
-  /** If omitted, defaults to 0.5 — should match UI `NEXT_PUBLIC_CRY_CONFIDENCE_THRESHOLD` when set */
-  model_confidence_threshold?: number
   model_info?: {
     model_path?: string | null
     model_type?: string | null
@@ -54,19 +53,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const modelName = body.model_info?.model_type || 'baby_cry_classifier'
     const modelVersion = body.model_info?.version || '1.0.0'
-    const urgencyLevel = deriveUrgencyLevel(confidenceScore)
+    const { level: urgencyLevel } = deriveUrgencyFromCryAndConfidence(predictedCryType, confidenceScore)
     const urgencyScore = confidenceScore ?? 0
-    const requiresImmediateAttention = urgencyLevel === 'high'
+    const requiresImmediateAttention = urgencyLevel === 'high' || urgencyLevel === 'critical'
     const secondaryPredictions = buildSecondaryPredictions(predictedCryType, confidenceScores)
-
-    const thresholdRaw = toNumber(
-      body.model_confidence_threshold ??
-        prediction.model_confidence_threshold ??
-        prediction.confidence_threshold ??
-        null,
-    )
-    const modelConfidenceThreshold =
-      thresholdRaw !== null && thresholdRaw >= 0 && thresholdRaw <= 1 ? thresholdRaw : 0.5
+    const modelConfidenceThreshold = serverModelConfidenceThreshold()
 
     const [timeSince, babyAgeMonths] = await Promise.all([
       getTimeSinceActivities(supabase, recording.baby_id, recording.recorded_at),
@@ -112,13 +103,6 @@ function toNumber(value: any): number | null {
   if (value === null || value === undefined || value === '') return null
   const n = Number(value)
   return Number.isNaN(n) ? null : n
-}
-
-function deriveUrgencyLevel(confidenceScore: number | null) {
-  if (confidenceScore === null || confidenceScore === undefined) return 'low'
-  if (confidenceScore >= 0.8) return 'high'
-  if (confidenceScore >= 0.5) return 'medium'
-  return 'low'
 }
 
 function normalizeConfidenceScores(value: any): Record<string, number> | null {
