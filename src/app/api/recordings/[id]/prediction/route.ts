@@ -8,6 +8,8 @@ type PredictionPayload = {
   predicted_cry_type?: string
   confidence_score?: number
   confidence_scores?: Record<string, number>
+  /** If omitted, defaults to 0.5 — should match UI `NEXT_PUBLIC_CRY_CONFIDENCE_THRESHOLD` when set */
+  model_confidence_threshold?: number
   model_info?: {
     model_path?: string | null
     model_type?: string | null
@@ -57,6 +59,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const requiresImmediateAttention = urgencyLevel === 'high'
     const secondaryPredictions = buildSecondaryPredictions(predictedCryType, confidenceScores)
 
+    const thresholdRaw = toNumber(
+      body.model_confidence_threshold ??
+        prediction.model_confidence_threshold ??
+        prediction.confidence_threshold ??
+        null,
+    )
+    const modelConfidenceThreshold =
+      thresholdRaw !== null && thresholdRaw >= 0 && thresholdRaw <= 1 ? thresholdRaw : 0.5
+
     const [timeSince, babyAgeMonths] = await Promise.all([
       getTimeSinceActivities(supabase, recording.baby_id, recording.recorded_at),
       getBabyAgeMonths(supabase, recording.baby_id, recording.recorded_at),
@@ -78,7 +89,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       time_since_last_sleep_minutes: timeSince.sleepMinutes,
       inference_time_ms: body.inference_time_ms ?? null,
       total_processing_time_ms: body.total_processing_time_ms ?? null,
-      model_confidence_threshold: 0.5,
+      model_confidence_threshold: modelConfidenceThreshold,
       medical_red_flags: [],
       suggested_actions: [],
       metadata: {

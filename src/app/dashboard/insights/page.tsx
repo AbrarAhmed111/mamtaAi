@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import Spinner from '@/components/ui/spinner'
 import { FaChartLine, FaClock, FaExclamationTriangle, FaHistory, FaMicrophone, FaBaby } from 'react-icons/fa'
 
@@ -30,6 +30,150 @@ type InsightResponse = {
     confidence: number
     urgency: string
   }>
+}
+
+function formatTrendTickDate(iso: string) {
+  try {
+    const d = new Date(`${iso}T12:00:00`)
+    if (Number.isNaN(d.getTime())) return iso
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  } catch {
+    return iso
+  }
+}
+
+function DailyTrendChart({ trend }: { trend: Array<{ date: string; count: number }> }) {
+  const uid = useId().replace(/:/g, '')
+  const fillGradId = `dailyTrendFill-${uid}`
+  const lineGradId = `dailyTrendLine-${uid}`
+
+  const w = 560
+  const h = 200
+  const padL = 44
+  const padR = 16
+  const padT = 20
+  const padB = 36
+  const innerW = w - padL - padR
+  const innerH = h - padT - padB
+  const maxY = Math.max(1, ...trend.map(t => t.count))
+  const yTicks = maxY <= 1 ? [0, 1] : [0, Math.ceil(maxY / 2), maxY]
+  const n = trend.length
+
+  const pts = trend.map((t, i) => {
+    const x = padL + (n <= 1 ? innerW / 2 : (i / (n - 1)) * innerW)
+    const y = padT + innerH - (t.count / maxY) * innerH
+    return { x, y, ...t }
+  })
+
+  const linePath =
+    pts.length > 0
+      ? pts
+          .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+          .join(' ')
+      : ''
+
+  const baseY = padT + innerH
+  const areaPath =
+    pts.length > 0
+      ? `M ${pts[0].x.toFixed(1)} ${baseY} ` +
+        pts.map(p => `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ') +
+        ` L ${pts[pts.length - 1].x.toFixed(1)} ${baseY} Z`
+      : ''
+
+  const xTickIndices =
+    n <= 1 ? [0] : n <= 4 ? [...Array(n).keys()] : [0, Math.floor((n - 1) / 2), n - 1]
+
+  return (
+    <div className="mt-4">
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="w-full h-[200px] sm:h-[220px] max-h-[260px]"
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label="Recordings per day over the last two weeks"
+      >
+        <defs>
+          <linearGradient id={fillGradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ec4899" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#fce7f3" stopOpacity="0.15" />
+          </linearGradient>
+          <linearGradient id={lineGradId} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#db2777" />
+            <stop offset="100%" stopColor="#f43f5e" />
+          </linearGradient>
+        </defs>
+
+        {/* Y grid + labels */}
+        {yTicks.map((tick, i) => {
+          const yy = padT + innerH - (tick / maxY) * innerH
+          return (
+            <g key={`y-${i}`}>
+              <line
+                x1={padL}
+                y1={yy}
+                x2={padL + innerW}
+                y2={yy}
+                stroke="#f3f4f6"
+                strokeWidth={tick === 0 ? 1.5 : 1}
+              />
+              <text x={padL - 8} y={yy + 4} textAnchor="end" className="fill-gray-400 text-[11px] font-medium">
+                {tick}
+              </text>
+            </g>
+          )
+        })}
+
+        <text x={padL} y={14} className="fill-gray-500 text-[11px] font-medium">
+          Recordings
+        </text>
+
+        {areaPath ? <path d={areaPath} fill={`url(#${fillGradId})`} /> : null}
+        {linePath ? (
+          <path
+            d={linePath}
+            fill="none"
+            stroke={`url(#${lineGradId})`}
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ) : null}
+
+        {pts.map(p => (
+          <g key={p.date}>
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r={5}
+              fill="#fff"
+              stroke="#db2777"
+              strokeWidth={2}
+              className="drop-shadow-sm"
+            >
+              <title>{`${formatTrendTickDate(p.date)}: ${p.count} recording${p.count === 1 ? '' : 's'}`}</title>
+            </circle>
+          </g>
+        ))}
+
+        {xTickIndices.map(i => {
+          const p = pts[i]
+          if (!p) return null
+          return (
+            <text
+              key={`x-${p.date}`}
+              x={p.x}
+              y={h - 8}
+              textAnchor="middle"
+              className="fill-gray-500 text-[10px] sm:text-[11px] font-medium"
+            >
+              {formatTrendTickDate(p.date)}
+            </text>
+          )
+        })}
+      </svg>
+      <p className="text-xs text-gray-500 mt-1 text-center">Hover points for exact counts · last {n} day{n === 1 ? '' : 's'} with activity</p>
+    </div>
+  )
 }
 
 function SimpleBars({
@@ -90,21 +234,6 @@ export default function InsightsPage() {
     run()
   }, [])
 
-  const linePoints = useMemo(() => {
-    const trend = data?.dailyTrend || []
-    if (!trend.length) return ''
-    const max = Math.max(1, ...trend.map(t => t.count))
-    const w = 480
-    const h = 120
-    return trend
-      .map((t, i) => {
-        const x = (i / Math.max(1, trend.length - 1)) * w
-        const y = h - (t.count / max) * h
-        return `${x},${y}`
-      })
-      .join(' ')
-  }, [data?.dailyTrend])
-
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-gray-600 gap-2">
@@ -153,15 +282,7 @@ export default function InsightsPage() {
         <div className="bg-white rounded-xl border border-pink-100 p-5">
           <h2 className="font-semibold text-gray-900 flex items-center gap-2"><FaChartLine className="text-pink-500" /> Daily Trend (14 days)</h2>
           {(data?.dailyTrend?.length || 0) > 0 ? (
-            <div className="mt-4">
-              <svg viewBox="0 0 480 120" className="w-full h-32">
-                <polyline fill="none" stroke="#ec4899" strokeWidth="3" points={linePoints} />
-              </svg>
-              <div className="mt-2 text-xs text-gray-500 flex justify-between">
-                <span>{data?.dailyTrend?.[0]?.date || ''}</span>
-                <span>{data?.dailyTrend?.[data.dailyTrend.length - 1]?.date || ''}</span>
-              </div>
-            </div>
+            <DailyTrendChart trend={data?.dailyTrend ?? []} />
           ) : (
             <p className="text-sm text-gray-500 mt-3">No trend data yet.</p>
           )}

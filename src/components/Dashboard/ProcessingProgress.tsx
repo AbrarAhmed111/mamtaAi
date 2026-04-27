@@ -20,6 +20,28 @@ interface ProcessingProgressProps {
   babyName?: string;
 }
 
+/** Matches saved `cry_predictions.model_confidence_threshold` unless backend sends another value */
+const DEFAULT_CONFIDENCE_THRESHOLD = (() => {
+  const raw = process.env.NEXT_PUBLIC_CRY_CONFIDENCE_THRESHOLD
+  if (raw === undefined || String(raw).trim() === '') return 0.5
+  const n = Number(raw)
+  return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 0.5
+})()
+
+function confidenceThresholdFromPayload(data: any): number {
+  const candidates = [
+    data?.model_confidence_threshold,
+    data?.prediction?.model_confidence_threshold,
+    data?.confidence_threshold,
+    data?.prediction?.confidence_threshold,
+  ]
+  for (const c of candidates) {
+    const n = Number(c)
+    if (Number.isFinite(n) && n >= 0 && n <= 1) return n
+  }
+  return DEFAULT_CONFIDENCE_THRESHOLD
+}
+
 const STEP_CONFIG: Record<string, { label: string; icon?: string }> = {
   receiving: { label: 'Receiving audio file...', icon: '📥' },
   preprocessing: { label: 'Getting audio clean format...', icon: '🔧' },
@@ -273,7 +295,8 @@ export default function ProcessingProgress({
                           predicted_cry_type: data.predicted_cry_type,
                           confidence_score: data.confidence_score,
                           confidence_scores: data.confidence_scores,
-                          model_info: data.model_info
+                          model_info: data.model_info,
+                          model_confidence_threshold: confidenceThresholdFromPayload(data),
                         })
                       });
                     } catch (predictionError) {
@@ -474,7 +497,12 @@ export default function ProcessingProgress({
               {/* Results */}
               {isCompleted && result && (
                 <div className="mt-6 space-y-4">
-                  
+                  {(() => {
+                    const threshold = confidenceThresholdFromPayload(result)
+                    const mainConfidence =
+                      Number(result.confidence_score ?? result.prediction?.confidence_score ?? 0) || 0
+                    const meetsThreshold = mainConfidence >= threshold
+                    return (
                   <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
                     <h4 className="text-lg font-bold text-gray-900 mb-4">Classification Results</h4>
                   {result.prediction || result.predicted_cry_type ? (
@@ -485,34 +513,63 @@ export default function ProcessingProgress({
                           {result.predicted_cry_type || result.prediction?.predicted_cry_type || 'Unknown'}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-700 font-medium">Confidence Score:</span>
-                        <span className="text-xl font-bold text-green-600">
-                          {Math.round((result.confidence_score || result.prediction?.confidence_score || 0) * 100)}%
-                        </span>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                        <span className="text-gray-700 font-medium">Confidence score</span>
+                        <div className="text-right sm:text-right">
+                          <span className={`text-xl font-bold ${meetsThreshold ? 'text-green-600' : 'text-amber-600'}`}>
+                            {Math.round(mainConfidence * 100)}%
+                          </span>
+                          <span className="text-gray-500 font-normal text-base ml-2">
+                            / threshold {Math.round(threshold * 100)}%
+                          </span>
+                        </div>
                       </div>
+                      <p className={`text-sm rounded-lg px-3 py-2 ${meetsThreshold ? 'bg-green-100/80 text-green-900' : 'bg-amber-50 text-amber-900'}`}>
+                        {meetsThreshold
+                          ? `This reading is at or above the ${Math.round(threshold * 100)}% confidence threshold we use for a clear match.`
+                          : `This reading is below the ${Math.round(threshold * 100)}% threshold — treat it as a hint and check context (feeding, sleep, diaper).`}
+                      </p>
                       {(result.confidence_scores || result.prediction?.confidence_scores) && (
                         <div className="mt-4 pt-4 border-t border-green-200">
-                          <div className="text-sm font-medium text-gray-700 mb-2">All Predictions:</div>
+                          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+                            <span className="text-sm font-medium text-gray-700">All predictions</span>
+                            <span className="text-xs text-gray-500">
+                              Threshold line: {Math.round(threshold * 100)}% (per class)
+                            </span>
+                          </div>
                           <div className="space-y-2">
                             {Object.entries(result.confidence_scores || result.prediction?.confidence_scores || {})
                               .sort(([, a], [, b]) => (b as number) - (a as number))
-                              .map(([cryType, confidence]) => (
-                                <div key={cryType} className="flex items-center justify-between text-sm">
-                                  <span className="text-gray-600 capitalize">{cryType}</span>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-24 bg-gray-200 rounded-full h-2">
-                                      <div
-                                        className="bg-pink-500 h-2 rounded-full"
-                                        style={{ width: `${(confidence as number) * 100}%` }}
-                                      />
+                              .map(([cryType, confidence]) => {
+                                const c = confidence as number
+                                const pct = Math.round(c * 100)
+                                const thrPct = Math.round(threshold * 100)
+                                const above = c >= threshold
+                                return (
+                                  <div key={cryType} className="flex items-center justify-between text-sm gap-2">
+                                    <span className="text-gray-600 capitalize shrink-0">{cryType}</span>
+                                    <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+                                      <div className="relative w-24 max-w-[40%] bg-gray-200 rounded-full h-2 shrink">
+                                        <div
+                                          className={`h-2 rounded-full ${above ? 'bg-pink-500' : 'bg-gray-400'}`}
+                                          style={{ width: `${pct}%` }}
+                                        />
+                                        <div
+                                          className="absolute top-0 bottom-0 w-0.5 bg-gray-800/70 pointer-events-none"
+                                          style={{ left: `${Math.min(thrPct, 100)}%` }}
+                                          title={`${thrPct}% threshold`}
+                                        />
+                                      </div>
+                                      <span className={`font-medium w-[4.5rem] text-right shrink-0 ${above ? 'text-gray-900' : 'text-gray-500'}`}>
+                                        {pct}%
+                                        <span className="block text-[10px] font-normal text-gray-500 leading-tight">
+                                          vs {thrPct}%
+                                        </span>
+                                      </span>
                                     </div>
-                                    <span className="text-gray-700 font-medium w-12 text-right">
-                                      {Math.round((confidence as number) * 100)}%
-                                    </span>
                                   </div>
-                                </div>
-                              ))}
+                                )
+                              })}
                           </div>
                         </div>
                       )}
@@ -524,6 +581,8 @@ export default function ProcessingProgress({
                     </div>
                   )}
                   </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

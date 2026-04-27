@@ -11,9 +11,11 @@ let smtpVerification: { verified: boolean; error?: string } | null = null
 export async function sendEmail({ to, subject, html }: SendEmailOptions): Promise<{ ok: boolean; error?: string }> {
   const host = process.env.SMTP_HOST?.trim()
   const port = Number((process.env.SMTP_PORT || '587').trim())
-  const user = process.env.SMTP_USER?.trim()
-  const pass = process.env.SMTP_PASS?.trim()
   const fromEmail = process.env.SMTP_FROM_EMAIL?.trim()
+  // Gmail app passwords are 16 chars — Google shows them with spaces; auth must use no spaces.
+  const pass = (process.env.SMTP_PASS || '').replace(/\s+/g, '').trim()
+  // Many hosts omit SMTP_USER; for a single mailbox, login user must match the account that owns the app password.
+  const user = (process.env.SMTP_USER?.trim() || fromEmail || '').trim()
   const secure = (process.env.SMTP_SECURE || '').trim().toLowerCase() === 'true'
 
   if (!host || !Number.isFinite(port) || !user || !pass || !fromEmail) {
