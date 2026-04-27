@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -8,6 +9,7 @@ import Spinner from '@/components/ui/spinner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip } from '@/components/ui/tooltip'
 import { toast } from '@/components/ui/sonner'
+import { buildBabyHealthSuggestions } from '@/lib/baby-health-suggestions'
 import { FaTrash, FaPlus, FaBaby, FaArrowRight, FaEye, FaUser, FaUserPlus, FaTimes, FaHeartbeat } from 'react-icons/fa'
 
 interface Baby {
@@ -27,9 +29,101 @@ interface BabyInvite {
   invited_at: string
 }
 
+type BabyListRow = Baby & {
+  relations: { name: string; relationship: string }[]
+  gender?: string | null
+  bloodType?: string | null
+  weightKg?: number | null
+  heightCm?: number | null
+  birthDate: string | null
+}
+
+function HealthSuggestionsPopupTrigger({
+  baby,
+  open,
+  onToggle,
+}: {
+  baby: BabyListRow
+  open: boolean
+  onToggle: (e: React.MouseEvent) => void
+}) {
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const [popoverStyle, setPopoverStyle] = useState<{ top: number; left: number; width: number } | null>(null)
+
+  const suggestions = useMemo(
+    () =>
+      buildBabyHealthSuggestions({
+        name: baby.name,
+        birthDate: baby.birthDate,
+        gender: baby.gender ?? null,
+        bloodType: baby.bloodType ?? null,
+        weightKg: baby.weightKg ?? null,
+        heightCm: baby.heightCm ?? null,
+      }),
+    [baby.name, baby.birthDate, baby.gender, baby.bloodType, baby.weightKg, baby.heightCm],
+  )
+
+  useLayoutEffect(() => {
+    if (!open || !btnRef.current) {
+      setPopoverStyle(null)
+      return
+    }
+    const r = btnRef.current.getBoundingClientRect()
+    const width = Math.min(288, Math.max(220, window.innerWidth - 16))
+    let left = r.left + r.width / 2 - width / 2
+    left = Math.max(8, Math.min(left, window.innerWidth - width - 8))
+    const gap = 8
+    let top = r.bottom + gap
+    const maxH = Math.min(320, window.innerHeight - top - 16)
+    if (maxH < 120) {
+      top = Math.max(8, r.top - gap - 200)
+    }
+    setPopoverStyle({ top, left, width })
+  }, [open])
+
+  const popover =
+    open && popoverStyle ? (
+      <div
+        data-health-popover
+        className="fixed z-[100] max-h-[min(320px,70vh)] overflow-y-auto rounded-xl border border-emerald-100 bg-white shadow-xl p-3 text-left"
+        style={{ top: popoverStyle.top, left: popoverStyle.left, width: popoverStyle.width }}
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-label={`Health suggestions for ${baby.name}`}
+      >
+        <p className="text-xs font-semibold text-emerald-900 border-b border-emerald-100 pb-2 mb-2">
+          Health suggestions — {baby.name}
+        </p>
+        <ul className="text-xs text-gray-700 space-y-2 list-disc list-inside leading-relaxed">
+          {suggestions.map((line, i) => (
+            <li key={i}>{line}</li>
+          ))}
+        </ul>
+      </div>
+    ) : null
+
+  return (
+    <div className="relative inline-flex">
+      <button
+        ref={btnRef}
+        type="button"
+        data-health-trigger={baby.id}
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all duration-200"
+        title="Show health suggestions for this baby"
+      >
+        <FaHeartbeat className="text-sm" />
+      </button>
+      {typeof document !== 'undefined' && popover ? createPortal(popover, document.body) : null}
+    </div>
+  )
+}
+
 export default function BabiesPage() {
   const router = useRouter()
-  const [babies, setBabies] = useState<(Baby & { relations: { name: string; relationship: string }[]; gender?: string | null; bloodType?: string | null; weightKg?: number | null; heightCm?: number | null })[]>([])
+  const [babies, setBabies] = useState<BabyListRow[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -40,6 +134,24 @@ export default function BabiesPage() {
   const [invitesLoading, setInvitesLoading] = useState(false)
   const [invites, setInvites] = useState<BabyInvite[]>([])
   const [withdrawingInviteId, setWithdrawingInviteId] = useState<string | null>(null)
+  const [healthPopupBabyId, setHealthPopupBabyId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!healthPopupBabyId) return
+    const onCap = (e: MouseEvent) => {
+      const t = e.target as HTMLElement
+      if (t.closest('[data-health-popover]')) return
+      if (t.closest(`[data-health-trigger="${healthPopupBabyId}"]`)) return
+      setHealthPopupBabyId(null)
+    }
+    const onScroll = () => setHealthPopupBabyId(null)
+    document.addEventListener('click', onCap, true)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      document.removeEventListener('click', onCap, true)
+      window.removeEventListener('scroll', onScroll, true)
+    }
+  }, [healthPopupBabyId])
 
   useEffect(() => {
     const load = async () => {
@@ -48,7 +160,7 @@ export default function BabiesPage() {
         const res = await fetch('/api/babies', { cache: 'no-store' })
         const json = await res.json().catch(() => ({}))
         const list = (json.babies || []) as Array<any>
-        const mapped = list.map(b => ({
+        const mapped: BabyListRow[] = list.map(b => ({
           id: b.id as string,
           name: b.name as string,
           age: formatAge(b.birth_date as string),
@@ -60,6 +172,7 @@ export default function BabiesPage() {
           bloodType: (b.blood_type as string) || null,
           weightKg: (b.birth_weight_kg as number) ?? null,
           heightCm: (b.birth_height_cm as number) ?? null,
+          birthDate: typeof b.birth_date === 'string' ? b.birth_date : null,
         }))
         setBabies(mapped)
       } finally {
@@ -353,16 +466,15 @@ export default function BabiesPage() {
                       </div>
                     </Link>
                     <div className="absolute top-4 right-4 flex items-center gap-2">
-                    <Tooltip content="Health suggestions & insights">
-                      <Link
-                        href={`/dashboard/insights?babyId=${encodeURIComponent(b.id)}`}
-                        onClick={e => e.stopPropagation()}
-                        className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all duration-200"
-                        aria-label={`Health suggestions for ${b.name}`}
-                      >
-                        <FaHeartbeat className="text-sm" />
-                      </Link>
-                    </Tooltip>
+                    <HealthSuggestionsPopupTrigger
+                      baby={b}
+                      open={healthPopupBabyId === b.id}
+                      onToggle={e => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setHealthPopupBabyId(prev => (prev === b.id ? null : b.id))
+                      }}
+                    />
                     <button
                       onClick={(e) => {
                         e.preventDefault()
@@ -418,7 +530,7 @@ export default function BabiesPage() {
                     <th className="py-4 pr-4 font-semibold">Weight (kg)</th>
                     <th className="py-4 pr-4 font-semibold">Height (cm)</th>
                     <th className="py-4 pr-4 font-semibold">Relations</th>
-                    <th className="py-4 pr-4 font-semibold text-center" title="Health suggestions & insights">
+                    <th className="py-4 pr-4 font-semibold text-center" title="Baby-specific health suggestions">
                       Health
                     </th>
                     <th className="py-4 pr-4 font-semibold">View</th>
@@ -486,16 +598,18 @@ export default function BabiesPage() {
                             </span>
                           </Tooltip>
                         </td>
-                        <td className="py-4 pr-4 text-center" onClick={(e) => e.stopPropagation()}>
-                          <Tooltip content="Health suggestions & insights">
-                            <Link
-                              href={`/dashboard/insights?babyId=${encodeURIComponent(b.id)}`}
-                              className="inline-flex p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
-                              aria-label={`Health suggestions for ${b.name}`}
-                            >
-                              <FaHeartbeat className="text-sm" />
-                            </Link>
-                          </Tooltip>
+                        <td className="py-4 pr-4 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                          <div className="inline-flex justify-center">
+                            <HealthSuggestionsPopupTrigger
+                              baby={b}
+                              open={healthPopupBabyId === b.id}
+                              onToggle={e => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setHealthPopupBabyId(prev => (prev === b.id ? null : b.id))
+                              }}
+                            />
+                          </div>
                         </td>
                         <td className="py-4 pr-4">
                           <div className="flex items-center gap-2 text-pink-600 group-hover:text-pink-700 font-medium">
