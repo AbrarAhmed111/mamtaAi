@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { FaBaby, FaMicrophone, FaChartLine, FaUsers, FaUserMd, FaBars, FaTimes, FaCog } from 'react-icons/fa';
+import { FaBaby, FaMicrophone, FaChartLine, FaUsers, FaUserMd, FaTimes, FaCog } from 'react-icons/fa';
 import Link from 'next/link';
 import logo from '@/assets/img/smallLogo.png';
 import Image from 'next/image';

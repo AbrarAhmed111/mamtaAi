@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Sidebar from '@/components/Dashboard/Sidebar'
 import DashboardHeader from '@/components/Dashboard/DashboardHeader'
+import { ChatBubble } from '@/components/Chat'
 import { useAuth } from '@/lib/supabase/context'
 import { supabase } from '@/lib/supabase/client'
 import { playNotificationBeep } from '@/lib/notification-feedback'
@@ -385,6 +386,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <div className="flex-1 p-4 sm:p-6 w-full">{children}</div>
       </div>
+
+      {/* Global floating MamtaBot launcher (visible on every dashboard page) */}
+      {user && (
+        <ChatBubble
+          userName={displayUser.name}
+          userAvatarUrl={displayUser.avatar}
+        />
+      )}
     </div>
   )
 }
