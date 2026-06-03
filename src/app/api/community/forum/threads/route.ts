@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import {
+  checkLimit,
+  getPlanLimits,
+  incrementUsage,
+  planLimitErrorResponse,
+} from '@/lib/subscription'
 
 export async function GET(request: NextRequest) {
   try {
@@ -73,6 +79,12 @@ export async function POST(request: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { data: profile } = await supabase.from('profiles').select('timezone').eq('id', user.id).maybeSingle()
+    const timezone = (profile as { timezone?: string } | null)?.timezone ?? null
+    const planCtx = await getPlanLimits(user.id, timezone)
+    const forumLimit = await checkLimit(user.id, 'create_forum_thread', { timezone })
+    if (!forumLimit.allowed) return planLimitErrorResponse(forumLimit, planCtx.slug)
 
     const body = await request.json()
     const { title, content, category_id, tags = [] } = body
@@ -169,6 +181,9 @@ export async function POST(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    await incrementUsage(user.id, 'forum_threads_count', 1, timezone)
+    await incrementUsage(user.id, 'forum_threads_week_count', 1, timezone)
 
     // Increment thread count in category
     const { data: currentCategory } = await supabase

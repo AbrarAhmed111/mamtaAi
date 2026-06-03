@@ -1,47 +1,28 @@
 # MamtaAI
 
-MamtaAI is an AI-powered baby care platform that combines a **Next.js** (TypeScript) web app, a **Supabase** backend (auth, database, storage), and a separate **Python / FastAPI** service for cry-audio ML processing.  
-It helps families track baby activities, manage caregiver access, receive real-time notifications, and analyze baby cries to support day-to-day parenting decisions.
-
-### Architecture at a glance
-
-| Layer | Role |
-|-------|------|
-| **Next.js 15** | UI, dashboard, marketing pages, and **Route Handlers** (`/api/*`) for product logic, Stripe, subscriptions, and community |
-| **Supabase** | Postgres data, Row Level Security, Auth (JWT), file storage (e.g. recordings, avatars) |
-| **Python + FastAPI** (separate service) | Audio streaming / ML pipeline — noise reduction, feature extraction, cry classification (via `NEXT_PUBLIC_BACKEND_URL`) |
-
-The browser talks to Next.js first. Next.js enforces auth and plan limits, reads/writes Supabase, and calls the **Python** API when a recording needs AI processing. That service is **not** in this repo (see `.gitignore` for `mamtaai_python_backend`); run it alongside the Next app in development.
+MamtaAI is an AI-powered baby care platform built with Next.js and Supabase.  
+It helps families track baby activities, manage caregiver access, receive real-time notifications, and use cry-audio workflows to support day-to-day parenting decisions.
 
 ## Highlights
 
 - Baby profiles with age, growth and relation management.
 - Family invites and role-based access (primary parent vs invited caregivers).
 - Recording and activity timeline features (feeding, sleep, and cry-related flows).
-- Cry analysis powered by a **Python (FastAPI)** ML backend (streaming audio processing), with results stored in Supabase.
 - Insights dashboard and health suggestion popovers.
 - Community space (blog, forum, resources, favorites).
 - In-app notifications with sound/highlight preferences.
+- **Subscription plans (Free, Plus, Pro)** with usage limits enforced in the API and UI.
+- **Stripe Checkout & Customer Portal** (test/sandbox mode supported) for upgrades and billing management.
 - Secure auth and profile management using Supabase.
 
 ## Tech Stack
 
-<<<<<<< Updated upstream
 - Next.js 15 (App Router), React 19, TypeScript
 - Supabase Auth, Database, Storage
+- Stripe (Checkout, Customer Portal, webhooks)
 - Tailwind CSS
 - Jest + Testing Library
 - ESLint, Prettier, Husky, Commitlint
-=======
-| Area | Technologies |
-|------|----------------|
-| Frontend & app API | Next.js 15 (App Router), React 19, TypeScript |
-| Data & auth | Supabase (Postgres, Auth, Storage, RLS) |
-| Audio / ML | **Python**, **FastAPI** (external service; ML inference & audio streaming) |
-| Payments | Stripe (Checkout, Customer Portal, webhooks) |
-| UI | Tailwind CSS, Framer Motion |
-| Tooling | Jest, ESLint, Prettier, Husky, Commitlint |
->>>>>>> Stashed changes
 
 ## Quick Start
 
@@ -71,40 +52,29 @@ The browser talks to Next.js first. Next.js enforces auth and plan limits, reads
    - `SMTP_USER`
    - `SMTP_PASS`
    - `MODEL_CONFIDENCE_THRESHOLD` (optional)
+   - **Stripe (sandbox / test mode):**
+     - `STRIPE_SECRET_KEY` — `sk_test_…`
+     - `STRIPE_WEBHOOK_SECRET` — from Stripe CLI locally, or Dashboard webhook on Vercel
+     - `STRIPE_PRICE_PLUS_MONTHLY` — test Price ID for Plus
+     - `STRIPE_PRICE_PRO_MONTHLY` — test Price ID for Pro
+     - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` — optional (`pk_test_…`)
 
-<<<<<<< Updated upstream
-4. Run the app
-=======
 4. Seed subscription plans in Supabase (first-time setup)  
    Run in the Supabase SQL Editor:
    - `supabase/subscription_setup.sql` — Free / Plus / Pro plans and RLS
    - `supabase/stripe_link_prices.sql` — link Stripe test Price IDs to Plus and Pro
 
-5. Start the **Python / FastAPI** audio/ML service (separate repo, e.g. `mamtaai_python_backend`)  
-   ```bash
-   # In your Python backend project (uvicorn or your project's run command)
-   # Typical default: http://localhost:8000
-   ```
-   The dashboard expects endpoints such as `/health`, `/api/streaming/health`, and `/api/streaming/process-audio`. Set `NEXT_PUBLIC_BACKEND_URL` if your Python service runs elsewhere.
-
-6. Run the Next.js app
->>>>>>> Stashed changes
+5. Run the app
    ```bash
    npm run dev
    ```
 
-<<<<<<< Updated upstream
-5. Open
+6. Open
    - App: `http://localhost:3000`
+   - Pricing: `http://localhost:3000/pricing`
    - Optional audio backend (if used): `http://localhost:8000`
 
-=======
-7. Open
-   - Web app: `http://localhost:3000`
-   - Pricing: `http://localhost:3000/pricing`
-   - Python API (health check): `http://localhost:8000/health`
-
-8. Stripe webhooks (local development)
+7. Stripe webhooks (local development)
    ```bash
    stripe listen --forward-to localhost:3000/api/webhooks/stripe
    ```
@@ -163,7 +133,6 @@ src/hooks/useBilling.ts        # Checkout / portal helpers
 - Create a **test mode** webhook in the Stripe Dashboard pointing to `https://your-app.vercel.app/api/webhooks/stripe` and set `STRIPE_WEBHOOK_SECRET` in Vercel (not the local CLI secret).
 - Add your Vercel URL to Supabase **Authentication → Redirect URLs**.
 
->>>>>>> Stashed changes
 ## Scripts
 
 - `npm run dev` - Start local development server.
@@ -180,51 +149,53 @@ src/hooks/useBilling.ts        # Checkout / portal helpers
 src/
   app/
     (auth)/                    # Sign in, sign up, password flows
-    api/                       # Route handlers (babies, invites, recordings, notifications, community)
-    dashboard/                 # Main product UI
+    api/
+      billing/                 # Stripe checkout, portal, confirm
+      webhooks/stripe/         # Stripe webhook endpoint
+      subscription/            # Plan + usage API
+    billing/success/           # Post-checkout success UI
+    pricing/                   # Public pricing page
+    dashboard/                 # Main product UI (settings billing section)
   components/
     Dashboard/                 # Dashboard widgets/layout components
+    pricing/                   # Pricing page components
+    subscription/              # Plan usage banner
+    marketing/                 # Shared landing nav
     auth/                      # Auth UI components
     ui/                        # Shared UI primitives
   lib/
+    subscription/              # Plan definitions, limits, usage
+    stripe/                    # Stripe client, checkout, sync
     supabase/                  # Supabase clients/context/actions
     notifications/             # Notification logic
     email/                     # Email templates and sending utilities
+  hooks/
+    useSubscription.tsx        # Subscription context hook
+    useBilling.ts              # Checkout / portal hook
   assets/                      # Global CSS + images
+supabase/
+  subscription_setup.sql       # Seed Free / Plus / Pro
+  stripe_link_prices.sql       # Attach Stripe Price IDs to plans
 ```
 
 ## Core Modules
 
-### Next.js (`src/app/api/*`)
-
-- `src/app/api/babies` — baby CRUD, invites, members, membership leave.
-- `src/app/api/recordings` — recording storage and metadata APIs.
-- `src/app/api/audio/process` — saves recordings to Supabase; accepts cleaned audio from the Python service; enforces subscription limits.
-- `src/components/Dashboard/ProcessingProgress.tsx` — streams audio to the Python/FastAPI backend for live cry processing.
+- `src/app/api/babies` - baby CRUD, invites, members, membership leave.
+- `src/app/api/recordings` - recording storage and metadata APIs.
+- `src/app/api/audio/process` - proxy upload/processing endpoint for audio workflow.
 - `src/app/api/notifications` - notification fetch/read operations.
+- `src/app/api/subscription` - current plan, usage meters, billing flags.
+- `src/app/api/billing` - Stripe Checkout, portal, and session confirm.
+- `src/app/api/webhooks/stripe` - subscription and invoice sync from Stripe.
 - `src/app/dashboard/community` - forum, blog, and resources interfaces.
-
-## Cry audio flow (Next.js + Python/FastAPI + Supabase)
-
-1. User records audio in the dashboard (`ProcessingProgress` → Python streaming endpoint).
-2. The **FastAPI** service returns processed audio / features; the client posts to `POST /api/audio/process`.
-3. Next.js uploads the file to **Supabase Storage** and creates a `recordings` row.
-4. Prediction data is saved via `POST /api/recordings/[id]/prediction`; insights APIs read from Supabase.
-
-Without the **Python backend** running, cry analysis and streaming flows will fail or show connection errors in the UI.
 
 ## Notes
 
 - Primary parent permissions are enforced on family-management and invite APIs.
 - Keep secrets out of source control (`.env.local` should be git-ignored).
-<<<<<<< Updated upstream
 - Some audio processing paths depend on an external backend configured via `NEXT_PUBLIC_BACKEND_URL`.
-=======
-- **`NEXT_PUBLIC_BACKEND_URL`** must point at your running **Python (FastAPI)** service (default `http://localhost:8000`).
-- Subscription limits are enforced in **Next.js API routes**; the UI mirrors them for messaging only.
+- Subscription limits apply on the API; the UI mirrors them for messaging only.
 - Stripe is configured for **test mode** by default; switch to live keys and live webhooks only when you go to production billing.
-- Broader architecture and roadmap: [docs/PROJECT_PLANNING_DOCUMENT.md](docs/PROJECT_PLANNING_DOCUMENT.md).
->>>>>>> Stashed changes
 
 ## Contributing
 

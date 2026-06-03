@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { filterRecordingsByPlanHistory, getPlanLimits } from '@/lib/subscription'
 
 type PredictionLite = {
   recording_id: string
@@ -72,7 +73,21 @@ export async function GET(_req: NextRequest) {
 
     if (recError) return NextResponse.json({ error: recError.message }, { status: 400 })
 
-    const recordingIds = (recordings || []).map((r: any) => r.id).filter(Boolean)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('timezone')
+      .eq('id', user.id)
+      .maybeSingle()
+    const timezone = (profile as { timezone?: string } | null)?.timezone ?? null
+    const planCtx = await getPlanLimits(user.id, timezone)
+    const historyDays = planCtx.limitations.insights_history_days
+
+    const recsFiltered = filterRecordingsByPlanHistory(
+      (recordings || []) as { recorded_at: string }[],
+      historyDays,
+    )
+
+    const recordingIds = recsFiltered.map((r: any) => r.id).filter(Boolean)
 
     let predictionByRecording = new Map<string, PredictionLite>()
     if (recordingIds.length) {
@@ -102,7 +117,7 @@ export async function GET(_req: NextRequest) {
     const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
-    const recs = (recordings || []) as any[]
+    const recs = recsFiltered as any[]
     const todayRecs = recs.filter(r => new Date(r.recorded_at) >= startOfToday)
     const recsLast7Days = recs.filter(r => new Date(r.recorded_at) >= sevenDaysAgo)
     const recsLast14Days = recs.filter(r => new Date(r.recorded_at) >= fourteenDaysAgo)
@@ -181,6 +196,10 @@ export async function GET(_req: NextRequest) {
       }
     })
 
+    const dailyTrendOut = planCtx.limitations.insights_full_charts
+      ? dailyTrend
+      : dailyTrend.slice(-7)
+
     return NextResponse.json({
       overview: {
         recordingsToday: todayRecs.length,
@@ -194,11 +213,17 @@ export async function GET(_req: NextRequest) {
         predictions: predictionByRecording.size,
         recordingsLast7Days: recsLast7Days.length,
       },
-      cryTypeDistribution,
-      dailyTrend,
-      hourlyTrend,
-      babyBreakdown,
+      cryTypeDistribution: planCtx.limitations.insights_full_charts ? cryTypeDistribution : cryTypeDistribution.slice(0, 5),
+      dailyTrend: dailyTrendOut,
+      hourlyTrend: planCtx.limitations.insights_full_charts ? hourlyTrend : [],
+      babyBreakdown: planCtx.limitations.insights_full_charts ? babyBreakdown : babyBreakdown.slice(0, 3),
       recentHistory,
+      subscription: {
+        slug: planCtx.slug,
+        insightsHistoryDays: historyDays,
+        allowExport: planCtx.limitations.allow_insights_export,
+        fullCharts: planCtx.limitations.insights_full_charts,
+      },
     })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unexpected error' }, { status: 500 })

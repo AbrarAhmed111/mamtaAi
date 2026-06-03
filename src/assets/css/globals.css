@@ -57,5 +57,17 @@ body{
 }
 
 .animate-fade-in {
-    animation: fade-in 0.8s ease-out;
+    animation: fade-in 0.8s ease-out both;
+}
+
+.animate-fade-in-delay-150 {
+    animation: fade-in 0.8s ease-out 0.15s both;
+}
+
+.animate-fade-in-delay-300 {
+    animation: fade-in 0.8s ease-out 0.3s both;
+}
+
+.animate-fade-in-delay-450 {
+    animation: fade-in 0.8s ease-out 0.45s both;
 }

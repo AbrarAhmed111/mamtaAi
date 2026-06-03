@@ -4,10 +4,14 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from '@/components/ui/sonner'
 import Spinner from '@/components/ui/spinner'
+import { useSubscription } from '@/hooks/useSubscription'
+import Link from 'next/link'
 
 export default function AddBabyPage() {
   const router = useRouter()
+  const { slug, limitations } = useSubscription()
   const [adding, setAdding] = useState(false)
+  const babyCap = limitations.max_babies_soft_cap ?? limitations.max_babies
 
   const [name, setName] = useState('')
   const [birthDate, setBirthDate] = useState('')
@@ -237,7 +241,11 @@ export default function AddBabyPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setFormError(data?.error || 'Failed to add baby')
+        if (data?.error === 'PLAN_LIMIT_REACHED') {
+          setFormError(data.message || 'Plan limit reached')
+          return
+        }
+        setFormError(data?.error || data?.message || 'Failed to add baby')
         return
       }
       toast.success('Baby added successfully')
@@ -255,6 +263,14 @@ export default function AddBabyPage() {
       <section className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
         <h1 className="text-2xl font-bold text-gray-900">Add Baby</h1>
         <p className="text-gray-600 mt-1">Provide your baby&apos;s details in the sections below.</p>
+        {babyCap != null && (
+          <p className="text-sm text-gray-600 mt-2">
+            Your {slug} plan allows up to {babyCap} baby{babyCap === 1 ? '' : ' profiles'}.{' '}
+            <Link href="/pricing" className="text-pink-600 hover:underline font-medium">
+              Upgrade
+            </Link>
+          </p>
+        )}
         {formError && <p className="text-sm text-red-600 mt-2">{formError}</p>}
       </section>
 

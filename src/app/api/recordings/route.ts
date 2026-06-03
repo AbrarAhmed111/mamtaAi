@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
+import {
+  checkLimit,
+  getPlanLimits,
+  incrementUsage,
+  planLimitErrorResponse,
+} from '@/lib/subscription'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,10 +23,22 @@ export async function POST(request: NextRequest) {
     const file = form.get('file') as File | null
     const babyId = String(form.get('baby_id') || '')
     const duration = Number(form.get('duration_seconds') || 0)
+    const sourceRaw = String(form.get('source') || 'live').toLowerCase()
+    const recordingSource = sourceRaw === 'uploaded' ? 'uploaded' : 'live'
 
     if (!file || !babyId) {
       return NextResponse.json({ error: 'Missing audio file or baby_id' }, { status: 400 })
     }
+
+    const { data: profile } = await supabase.from('profiles').select('timezone').eq('id', user.id).maybeSingle()
+    const timezone = (profile as { timezone?: string } | null)?.timezone ?? null
+    const planCtx = await getPlanLimits(user.id, timezone)
+    const recordingLimit = await checkLimit(user.id, 'create_recording', {
+      timezone,
+      durationSeconds: duration,
+      recordingSource,
+    })
+    if (!recordingLimit.allowed) return planLimitErrorResponse(recordingLimit, planCtx.slug)
 
     const { data: babyMembership } = await supabase
       .from('baby_parents')
@@ -58,11 +76,13 @@ export async function POST(request: NextRequest) {
       file_url: fileUrl,
       duration_seconds: duration || null,
       recorded_at: recordedAt,
-      source: 'live',
+      source: recordingSource,
       created_at: new Date().toISOString(),
     } as any
     const { error: dbErr } = await supabase.from('recordings').insert(insert)
     if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 400 })
+
+    await incrementUsage(user.id, 'recordings_count', 1, timezone)
 
     return NextResponse.json({ ok: true, file_url: fileUrl })
   } catch (e: any) {
