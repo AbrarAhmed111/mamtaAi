@@ -591,7 +591,7 @@ function SignUpContent() {
 
 export default function SignUpPage() {
   return (
-    <Suspense fallback={<div className="px-[24px] py-[10px] md:px-0 md:py-0">Loading...</div>}>
+    <Suspense fallback={null}>
       <SignUpContent />
     </Suspense>
   )

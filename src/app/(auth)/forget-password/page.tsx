@@ -201,7 +201,7 @@ function ForgetPasswordContent() {
 
 export default function ForgetPasswordPage() {
   return (
-    <Suspense fallback={<div className="px-[24px] py-[10px] md:px-0 md:py-0">Loading...</div>}>
+    <Suspense fallback={null}>
       <ForgetPasswordContent />
     </Suspense>
   )

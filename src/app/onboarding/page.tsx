@@ -71,7 +71,7 @@ function OnboardingContent() {
 
 export default function OnboardingPage() {
   return (
-    <Suspense fallback={<div className="px-4 py-6">Loading...</div>}>
+    <Suspense fallback={null}>
       <OnboardingContent />
     </Suspense>
   )

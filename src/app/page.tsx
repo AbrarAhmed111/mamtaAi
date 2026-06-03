@@ -690,7 +690,7 @@ function HomeContent() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div className="px-4 py-6">Loading...</div>}>
+    <Suspense fallback={null}>
       <HomeContent />
     </Suspense>
   )
