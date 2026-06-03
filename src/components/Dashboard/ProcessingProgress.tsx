@@ -1,5 +1,7 @@
 'use client';
 
+import { toast } from '@/components/ui/sonner';
+
 import { useEffect, useState, useRef } from 'react';
 import Spinner from '@/components/ui/spinner';
 import { FaCheck, FaTimes } from 'react-icons/fa';
@@ -305,7 +307,14 @@ export default function ProcessingProgress({
                       if (!saveResponse.ok) {
                         const errorData = await saveResponse.json().catch(() => ({}));
                         console.error('Failed to save cleaned audio:', errorData);
-                        setError(errorData.error || 'Failed to save cleaned audio');
+                        const msg =
+                          errorData.error === 'PLAN_LIMIT_REACHED'
+                            ? errorData.message
+                            : errorData.error || errorData.message || 'Failed to save cleaned audio';
+                        setError(msg);
+                        if (errorData.error === 'PLAN_LIMIT_REACHED' && typeof window !== 'undefined') {
+                          toast.error(msg);
+                        }
                       } else {
                         // Verify save was successful
                         const saveResult = await saveResponse.json();

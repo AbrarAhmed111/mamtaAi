@@ -24,7 +24,7 @@ export default function QuickActions({ onActionClick }: QuickActionsProps) {
       bgGradient: 'from-purple-50 to-pink-50'
     },
     {
-      href: '/settings',
+      href: '/dashboard/settings',
       label: 'Settings',
       icon: FaCog,
       iconColor: 'text-gray-600',

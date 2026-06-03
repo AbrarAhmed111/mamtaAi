@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { checkLimit, getPlanLimits, planLimitErrorResponse } from '@/lib/subscription'
 
 export async function GET(request: NextRequest) {
   try {
@@ -76,6 +77,12 @@ export async function POST(request: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { data: profile } = await supabase.from('profiles').select('timezone').eq('id', user.id).maybeSingle()
+    const timezone = (profile as { timezone?: string } | null)?.timezone ?? null
+    const planCtx = await getPlanLimits(user.id, timezone)
+    const resourceLimit = await checkLimit(user.id, 'create_resource', { timezone })
+    if (!resourceLimit.allowed) return planLimitErrorResponse(resourceLimit, planCtx.slug)
 
     const body = await request.json()
     const {

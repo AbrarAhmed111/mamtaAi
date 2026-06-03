@@ -26,6 +26,8 @@ import {
   type NotificationPreferences,
   parseNotificationPreferences,
 } from '@/lib/notification-preferences'
+import { useSubscription } from '@/hooks/useSubscription'
+import { useBilling } from '@/hooks/useBilling'
 
 interface Profile {
   id: string
@@ -108,8 +110,53 @@ function ToggleRow({
 export default function SettingsPage() {
   const router = useRouter()
   const { refreshUser } = useAuth()
+  const { slug, planName, meters, limitations, refresh: refreshSubscription } = useSubscription()
+  const { loadingPlan, portalLoading, startCheckout, openPortal } = useBilling()
+  const [billingMeta, setBillingMeta] = useState<{
+    canManageBilling: boolean
+    cancelAtPeriodEnd: boolean
+    currentPeriodEnd: string | null
+  }>({ canManageBilling: false, cancelAtPeriodEnd: false, currentPeriodEnd: null })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    void (async () => {
+      const res = await fetch('/api/subscription', { cache: 'no-store' })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.billing) {
+        setBillingMeta({
+          canManageBilling: Boolean(data.billing.canManageBilling),
+          cancelAtPeriodEnd: Boolean(data.billing.cancelAtPeriodEnd),
+          currentPeriodEnd: data.billing.currentPeriodEnd ?? null,
+        })
+      }
+    })()
+  }, [slug])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const legacyCheckout = params.get('session_id')
+    if (legacyCheckout?.startsWith('cs_')) {
+      router.replace(
+        `/billing/success?checkout_session=${encodeURIComponent(legacyCheckout)}`,
+      )
+      return
+    }
+    const billing = params.get('billing')
+    if (billing === 'success') {
+      toast.success('Your subscription was updated successfully.')
+      void refreshSubscription()
+      window.history.replaceState({}, '', '/dashboard/settings#billing')
+    } else if (billing === 'cancelled') {
+      toast.error('Checkout was cancelled.')
+      window.history.replaceState({}, '', '/dashboard/settings#billing')
+    } else if (billing === 'portal') {
+      void refreshSubscription()
+      window.history.replaceState({}, '', '/dashboard/settings#billing')
+    }
+  }, [refreshSubscription, router])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [stats, setStats] = useState<Stats>({
     babies: 0,
@@ -415,6 +462,110 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Billing & plan */}
+          <div className="bg-white rounded-xl shadow-lg p-6" id="billing">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Billing & plan</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              You&apos;re on <span className="font-semibold capitalize text-pink-700">{planName}</span> ({slug}).
+            </p>
+            {meters.recordings && meters.recordings.max != null && (
+              <p className="text-sm text-gray-700 mb-2">
+                {meters.recordings.label}: {meters.recordings.used} / {meters.recordings.max} this month
+              </p>
+            )}
+            {meters.activities && meters.activities.max != null && (
+              <p className="text-sm text-gray-700 mb-2">
+                {meters.activities.label}: {meters.activities.used} / {meters.activities.max} this month
+              </p>
+            )}
+            <ul className="text-xs text-gray-500 space-y-1 mb-4">
+              <li>Max recording length: {limitations.max_recording_duration_seconds}s</li>
+              <li>Family invites: {limitations.allow_family_invites ? 'Yes' : 'Not on Free'}</li>
+              <li>Insights export: {limitations.allow_insights_export ? 'Yes' : 'Upgrade to Plus'}</li>
+            </ul>
+            {billingMeta.cancelAtPeriodEnd && billingMeta.currentPeriodEnd && (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-4">
+                Your paid plan ends on{' '}
+                {new Date(billingMeta.currentPeriodEnd).toLocaleDateString()}. You will move to Free
+                after that.
+              </p>
+            )}
+            <div className="flex flex-wrap gap-3">
+              {slug === 'free' && (
+                <>
+                  <button
+                    type="button"
+                    disabled={loadingPlan !== null}
+                    onClick={() => {
+                      void startCheckout('plus').catch(err =>
+                        toast.error(err instanceof Error ? err.message : 'Checkout failed'),
+                      )
+                    }}
+                    className="inline-flex rounded-lg bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-700 disabled:opacity-60"
+                  >
+                    {loadingPlan === 'plus' ? 'Redirecting…' : 'Upgrade to Plus'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loadingPlan !== null}
+                    onClick={() => {
+                      void startCheckout('pro').catch(err =>
+                        toast.error(err instanceof Error ? err.message : 'Checkout failed'),
+                      )
+                    }}
+                    className="inline-flex rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60"
+                  >
+                    {loadingPlan === 'pro' ? 'Redirecting…' : 'Upgrade to Pro'}
+                  </button>
+                </>
+              )}
+              {slug === 'plus' && (
+                <button
+                  type="button"
+                  disabled={loadingPlan !== null}
+                  onClick={() => {
+                    void startCheckout('pro').catch(err =>
+                      toast.error(err instanceof Error ? err.message : 'Checkout failed'),
+                    )
+                  }}
+                  className="inline-flex rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60"
+                >
+                  {loadingPlan === 'pro' ? 'Redirecting…' : 'Upgrade to Pro'}
+                </button>
+              )}
+              <Link
+                href="/pricing"
+                className="inline-flex rounded-lg border border-pink-200 px-4 py-2 text-sm font-medium text-pink-700 hover:bg-pink-50"
+              >
+                Compare plans
+              </Link>
+              {billingMeta.canManageBilling && (
+                <button
+                  type="button"
+                  disabled={portalLoading}
+                  onClick={() => {
+                    void openPortal().catch(err =>
+                      toast.error(err instanceof Error ? err.message : 'Could not open portal'),
+                    )
+                  }}
+                  className="inline-flex rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                >
+                  {portalLoading ? 'Opening…' : 'Manage billing'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => void refreshSubscription()}
+                className="inline-flex rounded-lg border border-pink-200 px-4 py-2 text-sm font-medium text-pink-700 hover:bg-pink-50"
+              >
+                Refresh usage
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              Secure checkout powered by Stripe. Cancel anytime from Manage billing.
+            </p>
+          </div>
+
           {/* Profile Information */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Profile Information</h2>

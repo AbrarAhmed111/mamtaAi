@@ -11,6 +11,8 @@ import {
   getInAppAlertFlagsForNotificationRow,
   parseNotificationPreferences,
 } from '@/lib/notification-preferences'
+import { SubscriptionProvider } from '@/hooks/useSubscription'
+import PlanUsageBanner from '@/components/subscription/PlanUsageBanner'
 
 type PendingInvite = {
   id: string
@@ -287,6 +289,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
+    <SubscriptionProvider>
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50 flex">
       {activeInvite && (
         <div className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
@@ -383,9 +386,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }}
         />
 
-        <div className="flex-1 p-4 sm:p-6 w-full">{children}</div>
+        <div className="flex-1 p-4 sm:p-6 w-full">
+          <PlanUsageBanner />
+          {children}
+        </div>
       </div>
     </div>
+    </SubscriptionProvider>
   )
 }
 

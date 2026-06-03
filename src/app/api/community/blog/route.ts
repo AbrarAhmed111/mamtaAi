@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import {
+  checkLimit,
+  getPlanLimits,
+  incrementUsage,
+  planLimitErrorResponse,
+} from '@/lib/subscription'
 
 export async function GET(request: NextRequest) {
   try {
@@ -68,6 +74,12 @@ export async function POST(request: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { data: profile } = await supabase.from('profiles').select('timezone').eq('id', user.id).maybeSingle()
+    const timezone = (profile as { timezone?: string } | null)?.timezone ?? null
+    const planCtx = await getPlanLimits(user.id, timezone)
+    const blogLimit = await checkLimit(user.id, 'create_blog_post', { timezone })
+    if (!blogLimit.allowed) return planLimitErrorResponse(blogLimit, planCtx.slug)
 
     const body = await request.json()
     const {
@@ -217,6 +229,8 @@ export async function POST(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    await incrementUsage(user.id, 'blog_posts_count', 1, timezone)
 
     return NextResponse.json({ post: data }, { status: 201 })
   } catch (e: any) {

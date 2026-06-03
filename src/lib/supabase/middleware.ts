@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const AUTH_PAGES = ['/signin', '/signup', '/welcome', '/forget-password', '/reset-password']
 const PROTECTED_PATHS = ['/dashboard', '/onboarding']
-const PUBLIC_PATHS = ['/', '/maintenance']
+const PUBLIC_PATHS = ['/', '/maintenance', '/pricing', '/billing/success']
 
 export async function updateSession(request: NextRequest) {
   const currentPath = request.nextUrl.pathname
@@ -11,7 +11,7 @@ export async function updateSession(request: NextRequest) {
   const supabaseResponse = NextResponse.next()
 
   // Avoid interfering with Supabase auth handshakes (PKCE, email link)
-  if (currentPath.startsWith('/api/auth/')) {
+  if (currentPath.startsWith('/api/auth/') || currentPath.startsWith('/api/webhooks/')) {
     return NextResponse.next()
   }
 
