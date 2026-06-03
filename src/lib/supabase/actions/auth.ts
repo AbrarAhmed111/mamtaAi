@@ -107,6 +107,13 @@ export async function signUpWithEmail(data: SignupData): Promise<{ user: AuthUse
       return { user: null, error: { message: 'Failed to create user profile', code: profileError.code } };
     }
 
+    try {
+      const { ensureFreeSubscription } = await import('@/lib/subscription')
+      await ensureFreeSubscription(authData.user.id)
+    } catch {
+      // non-fatal
+    }
+
     return {
       user: {
         id: authData.user.id,

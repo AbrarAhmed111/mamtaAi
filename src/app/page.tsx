@@ -31,15 +31,13 @@ import {
   FaTwitter,
   FaInstagram,
   FaLinkedin,
-  FaBars,
-  FaTimes,
   FaClock,
   FaLock,
   FaCheckCircle
 } from 'react-icons/fa';
-import logo from '@/assets/img/smallLogo.png'
 import motherAndBaby from '@/assets/img/motherandbaby.png'
 import Image from 'next/image';
+import LandingNav from '@/components/marketing/LandingNav';
 
 
 function FAQAccordion() {
@@ -60,7 +58,7 @@ function FAQAccordion() {
     },
     {
       question: "Do I need special equipment?",
-      answer: "No special equipment is required. You can use your smartphone's microphone to record cries, or upload existing audio files. Optional oximeter integration is available for enhanced health monitoring, but it's completely optional."
+      answer: "No special equipment is required. Use your smartphone's microphone to record cries in the app. Optional oximeter integration is available for enhanced health monitoring, but it's completely optional."
     },
     {
       question: "Is there a mobile app?",
@@ -128,7 +126,6 @@ function FAQAccordion() {
 }
 
 function HomeContent() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user } = useAuth();
   const router = useRouter();
   const qs = useSearchParams();
@@ -167,112 +164,7 @@ function HomeContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50">
-      {/* Enhanced Navigation */}
-      <nav className="fixed top-0 w-full bg-white/95 backdrop-blur-lg z-50 border-b border-pink-100/50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            {/* Logo Section */}
-            <div className="flex items-center group cursor-pointer">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
-                <div className="relative ">
-                  <Image src={logo} alt='' className="h-16 rounded-full w-16 text-blue-600 group-hover:text-purple-600 transition-colors duration-300" />
-                </div>
-              </div>
-              <div className="ml-3">
-                <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 bg-clip-text text-transparent">
-                  MamtaAI
-                </span>
-                <div className="text-xs text-gray-500 font-medium">AI-Powered Baby Care</div>
-              </div>
-            </div>
-            
-            {/* Desktop Navigation */}
-            <div className="hidden md:block">
-              <div className="ml-10 flex items-baseline space-x-1">
-                <a href="#home" className="relative px-4 py-2 text-sm font-medium text-gray-900 hover:text-pink-600 transition-colors duration-200 group">
-                  Home
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300"></span>
-                </a>
-                <a href="#features" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-pink-600 transition-colors duration-200 group">
-                  Features
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300"></span>
-                </a>
-                <a href="#faq" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-pink-600 transition-colors duration-200 group">
-                  FAQ
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300"></span>
-                </a>
-                <a href="#testimonials" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-pink-600 transition-colors duration-200 group">
-                  Testimonials
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300"></span>
-                </a>
-                <a href="#contact" className="relative px-4 py-2 text-sm font-medium text-gray-600 hover:text-pink-600 transition-colors duration-200 group">
-                  Contact
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300"></span>
-                </a>
-              </div>
-            </div>
-
-            {/* CTA Buttons */}
-            <div className="hidden md:flex items-center space-x-4">
-              {user ? (
-                <Link href="/dashboard" className="relative bg-gradient-to-r from-pink-500 to-rose-500 !text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                  Dashboard
-               
-                </Link>
-              ) : (
-                <>
-                  <Link href="/welcome" className="text-gray-600 hover:text-pink-600 px-4 py-2 text-sm font-medium transition-colors duration-200">
-                    Sign In
-                  </Link>
-                  <Link href="/welcome" className="relative bg-gradient-to-r from-pink-500 to-rose-500 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                    Get Started
-                   
-                  </Link>
-                </>
-              )}
-            </div>
-
-            {/* Mobile menu button */}
-            <div className="md:hidden">
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-              >
-                <span className="sr-only">Open main menu</span>
-                {isMenuOpen ? (
-                  <FaTimes className="h-6 w-6" />
-                ) : (
-                  <FaBars className="h-6 w-6" />
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Enhanced Mobile Navigation */}
-        {isMenuOpen && (
-          <div className="md:hidden bg-white/95 backdrop-blur-lg border-t border-gray-200/50 shadow-lg">
-            <div className="px-4 pt-2 pb-3 space-y-1">
-              <a href="#home" className="block px-3 py-3 text-base font-medium text-gray-900 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Home</a>
-              <a href="#features" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Features</a>
-              <a href="#faq" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">FAQ</a>
-              <a href="#testimonials" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Testimonials</a>
-              <a href="#contact" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Contact</a>
-                <div className="pt-4 border-t border-gray-200">
-                  {user ? (
-                    <Link href="/dashboard" className="block px-3 py-3 text-base font-medium bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300">Dashboard</Link>
-                  ) : (
-                    <>
-                      <Link href="/welcome" className="block px-3 py-3 text-base font-medium text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-lg transition-colors duration-200">Sign In</Link>
-                      <Link href="/welcome" className="block px-3 py-3 text-base font-medium bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300">Get Started</Link>
-                    </>
-                  )}
-                </div>
-            </div>
-          </div>
-        )}
-      </nav>
+      <LandingNav activePage="home" />
 
       {/* Hero Section */}
       <section id="home" className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
@@ -582,9 +474,12 @@ function HomeContent() {
             Start your journey today.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-white text-pink-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors">
-              Start Free Trial
-            </button>
+            <Link
+              href={user ? '/dashboard' : '/welcome'}
+              className="bg-white text-pink-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors inline-block"
+            >
+              Get started free
+            </Link>
             <button className="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-pink-600 transition-colors">
               Learn More
             </button>
@@ -672,10 +567,10 @@ function HomeContent() {
                     <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                     FAQ
                   </a></li>
-                  <li><a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
+                  <li><Link href="/pricing" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
                     <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                     Pricing
-                  </a></li>
+                  </Link></li>
                   {/* <li><a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
                     <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                     Download App

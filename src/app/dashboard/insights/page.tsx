@@ -3,7 +3,9 @@
 import { Suspense, useEffect, useId, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Spinner from '@/components/ui/spinner'
-import { FaChartLine, FaClock, FaExclamationTriangle, FaHistory, FaMicrophone, FaBaby } from 'react-icons/fa'
+import { toast } from '@/components/ui/sonner'
+import { FaChartLine, FaClock, FaExclamationTriangle, FaHistory, FaMicrophone, FaBaby, FaDownload } from 'react-icons/fa'
+import Link from 'next/link'
 
 type InsightResponse = {
   overview: {
@@ -31,6 +33,12 @@ type InsightResponse = {
     confidence: number
     urgency: string
   }>
+  subscription?: {
+    slug: string
+    insightsHistoryDays: number | null
+    allowExport: boolean
+    fullCharts: boolean
+  }
 }
 
 function formatTrendTickDate(iso: string) {
@@ -275,6 +283,44 @@ function InsightsPageContent() {
           Insights & Analytics
         </h1>
         <p className="text-sm text-gray-600 mt-2">Daily stats, cry history, and graphical trends for your babies.</p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          {data?.subscription?.allowExport ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-lg bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-700"
+              onClick={async () => {
+                const res = await fetch('/api/insights/export')
+                if (!res.ok) {
+                  const err = await res.json().catch(() => ({}))
+                  if (err?.error === 'PLAN_LIMIT_REACHED') {
+                    toast.error(err.message)
+                    return
+                  }
+                  toast.error(err?.error || 'Export failed')
+                  return
+                }
+                const blob = await res.blob()
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `mamtaai-insights-${new Date().toISOString().slice(0, 10)}.csv`
+                a.click()
+                URL.revokeObjectURL(url)
+                toast.success('Export downloaded')
+              }}
+            >
+              <FaDownload />
+              Export CSV
+            </button>
+          ) : (
+            <Link
+              href="/pricing"
+              className="inline-flex items-center gap-2 rounded-lg border border-pink-300 px-4 py-2 text-sm font-medium text-pink-700 hover:bg-pink-50"
+            >
+              Upgrade to export insights
+            </Link>
+          )}
+        </div>
         {focusBabyId ? (
           <p className="mt-3 text-sm rounded-xl border border-emerald-200 bg-emerald-50/80 text-emerald-900 px-4 py-2 max-w-2xl">
             <span className="font-semibold">Health context</span>{' '}

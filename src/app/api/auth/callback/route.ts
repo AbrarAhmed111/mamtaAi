@@ -62,6 +62,12 @@ export async function GET(request: NextRequest) {
               signupMethod: 'google',
             },
           } as any)
+          try {
+            const { ensureFreeSubscription } = await import('@/lib/subscription')
+            await ensureFreeSubscription(user.id)
+          } catch {
+            // non-fatal
+          }
         } else if (existingProfile && !existingProfile.avatar_url && avatarUrl) {
           // Update existing profile if it doesn't have an avatar but we have one from Google
           await supabase

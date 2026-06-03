@@ -260,7 +260,12 @@ export default function BabiesPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        toast.error(data?.error || 'Failed to create invite')
+        if (data?.error === 'PLAN_LIMIT_REACHED') {
+          const go = window.confirm(`${data.message}\n\nView plans?`)
+          if (go) window.location.href = '/pricing'
+          return
+        }
+        toast.error(data?.error || data?.message || 'Failed to create invite')
         return
       }
       if (data?.warning) {
