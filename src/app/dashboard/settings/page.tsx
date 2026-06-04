@@ -30,7 +30,6 @@ import {
 } from '@/lib/notification-preferences'
 import { useSubscription } from '@/hooks/useSubscription'
 import { useBilling } from '@/hooks/useBilling'
-import PlanChangeModal from '@/components/subscription/PlanChangeModal'
 import { PLAN_DEFINITIONS } from '@/lib/subscription/plans'
 
 interface Profile {
@@ -171,7 +170,6 @@ export default function SettingsPage() {
   } = useSubscription()
   const { loadingPlan, portalLoading, startCheckout, openPortal } = useBilling()
   const [billingLoaded, setBillingLoaded] = useState(false)
-  const [switchTarget, setSwitchTarget] = useState<'plus' | 'pro' | null>(null)
   const [activeTab, setActiveTab] = useState<SettingsTabId>('profile')
   const tabContentRef = useRef<HTMLDivElement>(null)
 
@@ -657,7 +655,7 @@ export default function SettingsPage() {
             <ul className="text-xs text-gray-500 space-y-1 mb-4">
               <li>Max recording length: {limitations.max_recording_duration_seconds}s</li>
               <li>Family invites: {limitations.allow_family_invites ? 'Yes' : 'Not on Free'}</li>
-              <li>Insights export: {limitations.allow_insights_export ? 'Yes' : 'Upgrade to Plus'}</li>
+              <li>Insights export: {limitations.allow_insights_export ? 'Yes' : 'Available on Plus'}</li>
             </ul>
             {billingMeta.cancelAtPeriodEnd && billingMeta.currentPeriodEnd && (
               <p className="text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-4">
@@ -694,41 +692,15 @@ export default function SettingsPage() {
               </div>
             )}
             <div className="flex flex-wrap gap-3">
-              {slug === 'free' && (
-                <>
-                  <button
-                    type="button"
-                    disabled={loadingPlan !== null}
-                    onClick={() => setSwitchTarget('plus')}
-                    className="inline-flex rounded-lg bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-700 disabled:opacity-60"
-                  >
-                    {loadingPlan === 'plus' ? 'Redirecting…' : 'Upgrade to Plus'}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={loadingPlan !== null}
-                    onClick={() => setSwitchTarget('pro')}
-                    className="inline-flex rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60"
-                  >
-                    {loadingPlan === 'pro' ? 'Redirecting…' : 'Upgrade to Pro'}
-                  </button>
-                </>
-              )}
-              {slug === 'plus' && (
-                <button
-                  type="button"
-                  disabled={loadingPlan !== null}
-                  onClick={() => setSwitchTarget('pro')}
-                  className="inline-flex rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60"
-                >
-                  {loadingPlan === 'pro' ? 'Redirecting…' : 'Upgrade to Pro'}
-                </button>
-              )}
               <Link
                 href="/pricing"
-                className="inline-flex rounded-lg border border-pink-200 px-4 py-2 text-sm font-medium text-pink-700 hover:bg-pink-50"
+                className={
+                  slug === 'pro'
+                    ? 'inline-flex rounded-lg border border-pink-200 px-4 py-2 text-sm font-medium text-pink-700 hover:bg-pink-50'
+                    : 'inline-flex rounded-lg bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-700'
+                }
               >
-                Compare plans
+                {slug === 'pro' ? 'Compare plans' : 'View plans & upgrade'}
               </Link>
               {billingMeta.canManageBilling && (
                 <button
@@ -830,24 +802,6 @@ export default function SettingsPage() {
             )}
           </div>
 
-          {switchTarget && (
-            <PlanChangeModal
-              open
-              currentSlug={slug}
-              currentPlanName={planName}
-              targetSlug={switchTarget}
-              submitting={loadingPlan === switchTarget}
-              onCancel={() => {
-                if (loadingPlan === null) setSwitchTarget(null)
-              }}
-              onConfirm={() => {
-                void startCheckout(switchTarget).catch(err => {
-                  toast.error(err instanceof Error ? err.message : 'Checkout failed')
-                  setSwitchTarget(null)
-                })
-              }}
-            />
-          )}
         </>
         )}
 
