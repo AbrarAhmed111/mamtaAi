@@ -12,7 +12,6 @@ import {
   parseNotificationPreferences,
 } from '@/lib/notification-preferences'
 import { SubscriptionProvider } from '@/hooks/useSubscription'
-import PlanUsageBanner from '@/components/subscription/PlanUsageBanner'
 
 type PendingInvite = {
   id: string
@@ -290,7 +289,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <SubscriptionProvider>
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50 flex">
+    <div className="h-[100dvh] overflow-hidden bg-[#fdf4f6] p-3 sm:p-4 lg:p-6">
+      <div className="mx-auto flex h-full max-h-full max-w-[1600px] items-stretch gap-3 sm:gap-4 lg:gap-6">
       {activeInvite && (
         <div className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-lg rounded-2xl border border-pink-100 bg-white shadow-xl p-6">
@@ -326,7 +326,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onToggle={toggleMobileMenu}
       />
 
-      <div className="flex-1 flex flex-col lg:ml-64">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-pink-100/80 bg-white shadow-lg shadow-pink-100/30">
         <DashboardHeader
           greeting={getGreeting()}
           userName={displayUser.name.split(' ')[0]}
@@ -386,10 +387,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }}
         />
 
-        <div className="flex-1 p-4 sm:p-6 w-full">
-          <PlanUsageBanner />
+        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:p-8">
           {children}
+        </main>
         </div>
+      </div>
       </div>
     </div>
     </SubscriptionProvider>
