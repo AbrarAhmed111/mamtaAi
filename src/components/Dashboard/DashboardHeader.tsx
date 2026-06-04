@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, type ReactNode } from 'react';
 import Image from 'next/image';
 import { FaBell, FaCog, FaBars } from 'react-icons/fa';
 import Link from 'next/link';
+import PlanHeaderBadge from '@/components/subscription/PlanHeaderBadge';
 
 interface DashboardHeaderProps {
   greeting?: string;
@@ -74,6 +75,7 @@ export default function DashboardHeader({
           </div>
           
           <div className="flex items-center space-x-2 sm:space-x-4" ref={menuRef}>
+            <PlanHeaderBadge />
             {showNotifications && (
               <div className="relative shrink-0">
                 <button

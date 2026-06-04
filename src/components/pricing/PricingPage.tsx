@@ -18,6 +18,7 @@ import {
   FaUsers,
 } from 'react-icons/fa'
 import { PLAN_DEFINITIONS, planRank } from '@/lib/subscription/plans'
+import PlanChangeModal from '@/components/subscription/PlanChangeModal'
 
 const PLAN_CARD_ANIMATION = ['animate-fade-in', 'animate-fade-in-delay-150', 'animate-fade-in-delay-300'] as const
 import type { PlanSlug } from '@/lib/subscription/types'
@@ -54,13 +55,24 @@ function PlanCta({
   slug,
   currentSlug,
   isLoggedIn,
+  loaded,
+  isLoading,
+  onSelect,
 }: {
   slug: PlanSlug
   currentSlug: string
   isLoggedIn: boolean
+  loaded: boolean
+  isLoading: boolean
+  onSelect: (slug: 'plus' | 'pro') => void
 }) {
-  const { loadingPlan, startCheckout } = useBilling()
-  const isLoading = loadingPlan === slug
+  // Skeleton while we don't yet know the user's current plan, to avoid a
+  // "Free → current plan" flash on the CTA.
+  if (isLoggedIn && !loaded) {
+    return (
+      <div className="h-[52px] w-full animate-pulse rounded-xl bg-gray-100" aria-hidden="true" />
+    )
+  }
 
   if (slug === currentSlug) {
     return (
@@ -110,11 +122,7 @@ function PlanCta({
       <button
         type="button"
         disabled={isLoading}
-        onClick={() => {
-          void startCheckout(slug).catch(err => {
-            toast.error(err instanceof Error ? err.message : 'Checkout failed')
-          })
-        }}
+        onClick={() => onSelect(slug)}
         className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-wait ${gradientClass}`}
       >
         {isLoading ? (isDowngradeTarget ? 'Scheduling…' : 'Redirecting to Stripe…') : idleLabel}
@@ -131,17 +139,26 @@ function PlanCta({
 
 export default function PricingPage() {
   const { user } = useAuth()
+  const { loadingPlan, startCheckout } = useBilling()
   const [currentSlug, setCurrentSlug] = useState<string>('free')
+  const [currentPlanName, setCurrentPlanName] = useState<string>('Free')
   const [apiPlans, setApiPlans] = useState<ApiPlan[]>([])
   const [openFaq, setOpenFaq] = useState<number | null>(0)
+  const [loaded, setLoaded] = useState(false)
+  const [modalTarget, setModalTarget] = useState<'plus' | 'pro' | null>(null)
 
   useEffect(() => {
     void (async () => {
-      const res = await fetch('/api/subscription', { cache: 'no-store' })
-      const data = await res.json().catch(() => ({}))
-      if (res.ok) {
-        setApiPlans(Array.isArray(data.plans) ? data.plans : [])
-        setCurrentSlug(data?.plan?.slug || 'free')
+      try {
+        const res = await fetch('/api/subscription', { cache: 'no-store' })
+        const data = await res.json().catch(() => ({}))
+        if (res.ok) {
+          setApiPlans(Array.isArray(data.plans) ? data.plans : [])
+          setCurrentSlug(data?.plan?.slug || 'free')
+          setCurrentPlanName(data?.plan?.name || 'Free')
+        }
+      } finally {
+        setLoaded(true)
       }
     })()
   }, [])
@@ -188,12 +205,18 @@ export default function PricingPage() {
             Start free with AI cry analysis and daily tracking. Upgrade for more babies, family invites,
             deeper insights, and community publishing.
           </p>
-          {user && (
-            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-white border border-pink-100 px-4 py-2 text-sm text-gray-700 shadow-sm animate-fade-in-delay-150">
-              Signed in — current plan:{' '}
-              <span className="font-bold capitalize text-pink-700">{currentSlug}</span>
-            </p>
-          )}
+          {user &&
+            (loaded ? (
+              <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-white border border-pink-100 px-4 py-2 text-sm text-gray-700 shadow-sm animate-fade-in-delay-150">
+                Signed in — current plan:{' '}
+                <span className="font-bold capitalize text-pink-700">{currentPlanName}</span>
+              </p>
+            ) : (
+              <span
+                className="mt-4 inline-block h-9 w-56 animate-pulse rounded-full bg-white/70 border border-pink-100"
+                aria-hidden="true"
+              />
+            ))}
           <div className="mt-10 flex flex-wrap justify-center gap-8 text-sm text-gray-600 animate-fade-in-delay-300">
             <span className="flex items-center gap-2 transition-transform duration-300 hover:-translate-y-0.5">
               <FaShieldAlt className="text-pink-500" /> Secure payments via Stripe
@@ -319,7 +342,14 @@ export default function PricingPage() {
                   </div>
 
                   <div className="p-8 pt-0 mt-auto">
-                    <PlanCta slug={plan.slug} currentSlug={currentSlug} isLoggedIn={Boolean(user)} />
+                    <PlanCta
+                      slug={plan.slug}
+                      currentSlug={currentSlug}
+                      isLoggedIn={Boolean(user)}
+                      loaded={loaded}
+                      isLoading={loadingPlan === plan.slug}
+                      onSelect={s => setModalTarget(s)}
+                    />
                   </div>
                 </article>
               )
@@ -486,6 +516,25 @@ export default function PricingPage() {
         </Link>
         <p className="mt-2">© {new Date().getFullYear()} MamtaAI. All rights reserved.</p>
       </footer>
+
+      {modalTarget && (
+        <PlanChangeModal
+          open
+          currentSlug={currentSlug as PlanSlug}
+          currentPlanName={currentPlanName}
+          targetSlug={modalTarget}
+          submitting={loadingPlan === modalTarget}
+          onCancel={() => {
+            if (loadingPlan === null) setModalTarget(null)
+          }}
+          onConfirm={() => {
+            void startCheckout(modalTarget).catch(err => {
+              toast.error(err instanceof Error ? err.message : 'Checkout failed')
+              setModalTarget(null)
+            })
+          }}
+        />
+      )}
     </div>
   )
 }

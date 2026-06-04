@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   FaUser,
@@ -15,6 +15,8 @@ import {
   FaUsers,
   FaBell,
   FaUserTimes,
+  FaCreditCard,
+  FaIdCard,
 } from 'react-icons/fa'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -28,6 +30,8 @@ import {
 } from '@/lib/notification-preferences'
 import { useSubscription } from '@/hooks/useSubscription'
 import { useBilling } from '@/hooks/useBilling'
+import PlanChangeModal from '@/components/subscription/PlanChangeModal'
+import { PLAN_DEFINITIONS } from '@/lib/subscription/plans'
 
 interface Profile {
   id: string
@@ -57,6 +61,53 @@ interface FamilyMemberRow {
   relationship: string
   accessLevel: string
   isPrimary: boolean
+}
+
+const SETTINGS_TABS = [
+  { id: 'profile', label: 'Profile', icon: FaUser },
+  { id: 'billing', label: 'Billing & plan', icon: FaCreditCard },
+  { id: 'notifications', label: 'Notifications', icon: FaBell },
+  { id: 'family', label: 'Family access', icon: FaUsers },
+  { id: 'account', label: 'Account', icon: FaIdCard },
+] as const
+
+type SettingsTabId = (typeof SETTINGS_TABS)[number]['id']
+const VALID_TAB_IDS: readonly string[] = SETTINGS_TABS.map(t => t.id)
+
+const TX_STATUS_STYLES: Record<string, string> = {
+  completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  processing: 'bg-amber-50 text-amber-700 border-amber-200',
+  pending: 'bg-amber-50 text-amber-700 border-amber-200',
+  failed: 'bg-red-50 text-red-700 border-red-200',
+  refunded: 'bg-gray-100 text-gray-600 border-gray-200',
+  cancelled: 'bg-gray-100 text-gray-600 border-gray-200',
+}
+
+function formatTxAmount(amount: number | null, currency: string): string {
+  if (amount == null) return '—'
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount)
+  } catch {
+    return `${amount.toFixed(2)} ${currency}`
+  }
+}
+
+function planLabelFromAmount(amount: number | null): string | null {
+  if (amount == null) return null
+  const match = Object.values(PLAN_DEFINITIONS).find(
+    p => p.slug !== 'free' && Math.abs(p.price_usd - amount) < 0.005,
+  )
+  return match ? match.name : null
+}
+
+function describeTransaction(tx: { type: string | null; amount: number | null }): string {
+  if (tx.type === 'refund') return 'Refund'
+  if (tx.type === 'subscription') {
+    const plan = planLabelFromAmount(tx.amount)
+    return plan ? `${plan} plan` : 'Subscription'
+  }
+  if (!tx.type) return 'Payment'
+  return tx.type.charAt(0).toUpperCase() + tx.type.slice(1).replace(/_/g, ' ')
 }
 
 function ToggleRow({
@@ -110,8 +161,30 @@ function ToggleRow({
 export default function SettingsPage() {
   const router = useRouter()
   const { refreshUser } = useAuth()
-  const { slug, planName, meters, limitations, refresh: refreshSubscription } = useSubscription()
+  const {
+    slug,
+    planName,
+    meters,
+    limitations,
+    loading: subLoading,
+    refresh: refreshSubscription,
+  } = useSubscription()
   const { loadingPlan, portalLoading, startCheckout, openPortal } = useBilling()
+  const [billingLoaded, setBillingLoaded] = useState(false)
+  const [switchTarget, setSwitchTarget] = useState<'plus' | 'pro' | null>(null)
+  const [activeTab, setActiveTab] = useState<SettingsTabId>('profile')
+  const tabContentRef = useRef<HTMLDivElement>(null)
+
+  const selectTab = (id: SettingsTabId) => {
+    setActiveTab(id)
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', `/dashboard/settings?tab=${id}`)
+      // Wait for the new panel to render, then gently scroll it into view.
+      requestAnimationFrame(() => {
+        tabContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }
+  }
   const [billingMeta, setBillingMeta] = useState<{
     canManageBilling: boolean
     cancelAtPeriodEnd: boolean
@@ -125,18 +198,49 @@ export default function SettingsPage() {
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [history, setHistory] = useState<
+    {
+      id: string
+      amount: number | null
+      currency: string
+      type: string | null
+      status: string | null
+      date: string | null
+      invoiceUrl: string | null
+      receiptUrl: string | null
+    }[]
+  >([])
+  const [historyLoaded, setHistoryLoaded] = useState(false)
 
   useEffect(() => {
     void (async () => {
-      const res = await fetch('/api/subscription', { cache: 'no-store' })
-      const data = await res.json().catch(() => ({}))
-      if (res.ok && data.billing) {
-        setBillingMeta({
-          canManageBilling: Boolean(data.billing.canManageBilling),
-          cancelAtPeriodEnd: Boolean(data.billing.cancelAtPeriodEnd),
-          currentPeriodEnd: data.billing.currentPeriodEnd ?? null,
-          pendingPlanChange: data.billing.pendingPlanChange ?? null,
-        })
+      try {
+        const res = await fetch('/api/billing/history', { cache: 'no-store' })
+        const data = await res.json().catch(() => ({}))
+        if (res.ok && Array.isArray(data.transactions)) {
+          setHistory(data.transactions)
+        }
+      } finally {
+        setHistoryLoaded(true)
+      }
+    })()
+  }, [slug])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch('/api/subscription', { cache: 'no-store' })
+        const data = await res.json().catch(() => ({}))
+        if (res.ok && data.billing) {
+          setBillingMeta({
+            canManageBilling: Boolean(data.billing.canManageBilling),
+            cancelAtPeriodEnd: Boolean(data.billing.cancelAtPeriodEnd),
+            currentPeriodEnd: data.billing.currentPeriodEnd ?? null,
+            pendingPlanChange: data.billing.pendingPlanChange ?? null,
+          })
+        }
+      } finally {
+        setBillingLoaded(true)
       }
     })()
   }, [slug])
@@ -154,26 +258,35 @@ export default function SettingsPage() {
     const billing = params.get('billing')
     const planParam = params.get('plan')
     const planLabel = planParam ? planParam.charAt(0).toUpperCase() + planParam.slice(1) : 'your new plan'
+
+    // Decide initial tab from the URL: explicit ?tab=, billing redirects, or #billing hash.
+    const tabParam = params.get('tab')
+    if (tabParam && VALID_TAB_IDS.includes(tabParam)) {
+      setActiveTab(tabParam as SettingsTabId)
+    } else if (billing || window.location.hash === '#billing') {
+      setActiveTab('billing')
+    }
+
     if (billing === 'success') {
       toast.success('Your subscription was updated successfully.')
       void refreshSubscription()
-      window.history.replaceState({}, '', '/dashboard/settings#billing')
+      window.history.replaceState({}, '', '/dashboard/settings?tab=billing')
     } else if (billing === 'scheduled') {
       toast.success(
         `You'll switch to ${planLabel} at the end of your current billing period. You keep your current plan until then.`,
       )
       void refreshSubscription()
-      window.history.replaceState({}, '', '/dashboard/settings#billing')
+      window.history.replaceState({}, '', '/dashboard/settings?tab=billing')
     } else if (billing === 'kept') {
       toast.success('Your scheduled plan change was cancelled. You keep your current plan.')
       void refreshSubscription()
-      window.history.replaceState({}, '', '/dashboard/settings#billing')
+      window.history.replaceState({}, '', '/dashboard/settings?tab=billing')
     } else if (billing === 'cancelled') {
       toast.error('Checkout was cancelled.')
-      window.history.replaceState({}, '', '/dashboard/settings#billing')
+      window.history.replaceState({}, '', '/dashboard/settings?tab=billing')
     } else if (billing === 'portal') {
       void refreshSubscription()
-      window.history.replaceState({}, '', '/dashboard/settings#billing')
+      window.history.replaceState({}, '', '/dashboard/settings?tab=billing')
     }
   }, [refreshSubscription, router])
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -478,12 +591,56 @@ export default function SettingsPage() {
         Settings
       </h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Billing & plan */}
+      {/* Tab navigation */}
+      <div className="mb-6 border-b border-pink-100 overflow-x-auto no-scroll">
+        <nav className="flex gap-1 -mb-px min-w-max" aria-label="Settings sections">
+          {SETTINGS_TABS.map(tab => {
+            const isActive = tab.id === activeTab
+            const Icon = tab.icon
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => selectTab(tab.id)}
+                aria-current={isActive ? 'page' : undefined}
+                className={`inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'border-pink-600 text-pink-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-200'
+                }`}
+              >
+                <Icon className="text-base" />
+                {tab.label}
+              </button>
+            )
+          })}
+        </nav>
+      </div>
+
+      <div ref={tabContentRef} className="space-y-6 scroll-mt-24">
+        {/* Billing & plan */}
+        {activeTab === 'billing' && (
+        <>
           <div className="bg-white rounded-xl shadow-lg p-6" id="billing">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Billing & plan</h2>
+            {subLoading || !billingLoaded ? (
+              <div className="animate-pulse" aria-hidden="true">
+                <div className="h-4 w-48 rounded bg-gray-100 mb-4" />
+                <div className="h-3.5 w-40 rounded bg-gray-100 mb-2" />
+                <div className="h-3.5 w-36 rounded bg-gray-100 mb-4" />
+                <div className="space-y-1.5 mb-4">
+                  <div className="h-3 w-44 rounded bg-gray-100" />
+                  <div className="h-3 w-40 rounded bg-gray-100" />
+                  <div className="h-3 w-36 rounded bg-gray-100" />
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <div className="h-9 w-32 rounded-lg bg-gray-100" />
+                  <div className="h-9 w-28 rounded-lg bg-gray-100" />
+                  <div className="h-9 w-28 rounded-lg bg-gray-100" />
+                </div>
+              </div>
+            ) : (
+            <>
             <p className="text-sm text-gray-600 mb-4">
               You&apos;re on <span className="font-semibold capitalize text-pink-700">{planName}</span> ({slug}).
             </p>
@@ -542,11 +699,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     disabled={loadingPlan !== null}
-                    onClick={() => {
-                      void startCheckout('plus').catch(err =>
-                        toast.error(err instanceof Error ? err.message : 'Checkout failed'),
-                      )
-                    }}
+                    onClick={() => setSwitchTarget('plus')}
                     className="inline-flex rounded-lg bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-700 disabled:opacity-60"
                   >
                     {loadingPlan === 'plus' ? 'Redirecting…' : 'Upgrade to Plus'}
@@ -554,11 +707,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     disabled={loadingPlan !== null}
-                    onClick={() => {
-                      void startCheckout('pro').catch(err =>
-                        toast.error(err instanceof Error ? err.message : 'Checkout failed'),
-                      )
-                    }}
+                    onClick={() => setSwitchTarget('pro')}
                     className="inline-flex rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60"
                   >
                     {loadingPlan === 'pro' ? 'Redirecting…' : 'Upgrade to Pro'}
@@ -569,11 +718,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   disabled={loadingPlan !== null}
-                  onClick={() => {
-                    void startCheckout('pro').catch(err =>
-                      toast.error(err instanceof Error ? err.message : 'Checkout failed'),
-                    )
-                  }}
+                  onClick={() => setSwitchTarget('pro')}
                   className="inline-flex rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60"
                 >
                   {loadingPlan === 'pro' ? 'Redirecting…' : 'Upgrade to Pro'}
@@ -610,9 +755,104 @@ export default function SettingsPage() {
             <p className="text-xs text-gray-400 mt-3">
               Secure checkout powered by Stripe. Cancel anytime from Manage billing.
             </p>
+            </>
+            )}
           </div>
 
-          {/* Profile Information */}
+          {/* Billing history */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Billing history</h2>
+            {!historyLoaded ? (
+              <div className="animate-pulse space-y-3" aria-hidden="true">
+                <div className="h-4 w-full rounded bg-gray-100" />
+                <div className="h-4 w-full rounded bg-gray-100" />
+                <div className="h-4 w-3/4 rounded bg-gray-100" />
+              </div>
+            ) : history.length === 0 ? (
+              <p className="text-sm text-gray-600">
+                No payments yet. Your subscription invoices and receipts will appear here after your
+                first paid plan.
+              </p>
+            ) : (
+              <div className="overflow-x-auto no-scroll">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-gray-100">
+                      <th className="py-2 pr-4 font-semibold">Date</th>
+                      <th className="py-2 pr-4 font-semibold">Description</th>
+                      <th className="py-2 pr-4 font-semibold">Amount</th>
+                      <th className="py-2 pr-4 font-semibold">Status</th>
+                      <th className="py-2 font-semibold text-right">Receipt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map(tx => {
+                      const link = tx.receiptUrl || tx.invoiceUrl
+                      return (
+                        <tr key={tx.id} className="border-b border-gray-50 last:border-0">
+                          <td className="py-3 pr-4 text-gray-700 whitespace-nowrap">
+                            {tx.date ? new Date(tx.date).toLocaleDateString() : '—'}
+                          </td>
+                          <td className="py-3 pr-4 text-gray-700">{describeTransaction(tx)}</td>
+                          <td className="py-3 pr-4 font-medium text-gray-900 whitespace-nowrap">
+                            {formatTxAmount(tx.amount, tx.currency)}
+                          </td>
+                          <td className="py-3 pr-4">
+                            <span
+                              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${
+                                TX_STATUS_STYLES[tx.status ?? ''] ??
+                                'bg-gray-100 text-gray-600 border-gray-200'
+                              }`}
+                            >
+                              {tx.status ?? 'unknown'}
+                            </span>
+                          </td>
+                          <td className="py-3 text-right">
+                            {link ? (
+                              <a
+                                href={link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium text-pink-600 hover:underline"
+                              >
+                                View
+                              </a>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {switchTarget && (
+            <PlanChangeModal
+              open
+              currentSlug={slug}
+              currentPlanName={planName}
+              targetSlug={switchTarget}
+              submitting={loadingPlan === switchTarget}
+              onCancel={() => {
+                if (loadingPlan === null) setSwitchTarget(null)
+              }}
+              onConfirm={() => {
+                void startCheckout(switchTarget).catch(err => {
+                  toast.error(err instanceof Error ? err.message : 'Checkout failed')
+                  setSwitchTarget(null)
+                })
+              }}
+            />
+          )}
+        </>
+        )}
+
+        {/* Profile Information */}
+        {activeTab === 'profile' && (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Profile Information</h2>
 
@@ -719,8 +959,10 @@ export default function SettingsPage() {
               </div>
             </form>
           </div>
+        )}
 
-          {/* Notification preferences */}
+        {/* Notification preferences */}
+        {activeTab === 'notifications' && (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
               <FaBell className="text-pink-600" />
@@ -812,9 +1054,18 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+        )}
 
-          {/* Family access — guardians & relatives */}
-          {familyBabies.length > 0 && (
+        {/* Family access — guardians & relatives */}
+        {activeTab === 'family' && (
+          familyLoading && familyBabies.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-pink-600" />
+                Loading family access…
+              </div>
+            </div>
+          ) : familyBabies.length > 0 ? (
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
                 <FaUsers className="text-pink-600" />
@@ -896,9 +1147,16 @@ export default function SettingsPage() {
                 </div>
               )}
             </div>
-          )}
+          ) : (
+            <div className="bg-white rounded-xl shadow-lg p-6 text-sm text-gray-600">
+              You don&apos;t manage family access for any child yet. When you add a baby or invite a
+              caregiver from a child&apos;s page, they&apos;ll appear here.
+            </div>
+          ))}
 
           {/* Account Information */}
+          {activeTab === 'account' && (
+          <>
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Account Information</h2>
             <div className="space-y-3">
@@ -922,10 +1180,7 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
           {/* Your Activity */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Your Activity</h2>
@@ -1008,7 +1263,8 @@ export default function SettingsPage() {
               </Link>
             </div>
           </div>
-        </div>
+        </>
+        )}
       </div>
     </div>
   )

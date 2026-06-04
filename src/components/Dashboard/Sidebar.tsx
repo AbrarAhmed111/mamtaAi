@@ -81,7 +81,11 @@ export default function Sidebar({ currentPath = '/dashboard', user, isOpen = fal
       `}>
         {/* Mobile Header */}
         <div className="lg:hidden flex items-center justify-between p-4 border-b border-pink-100 bg-gradient-to-r from-pink-50/50 to-rose-50/50">
-          <div className="flex items-center space-x-3">
+          <Link
+            href="/"
+            className="flex items-center space-x-3 rounded-lg transition-opacity hover:opacity-80"
+            aria-label="MamtaAI home"
+          >
             <Image
               src={logo}
               alt="MamtaAI"
@@ -90,7 +94,7 @@ export default function Sidebar({ currentPath = '/dashboard', user, isOpen = fal
               className="object-contain rounded-full"
             />
             <h1 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">MamtaAI</h1>
-          </div>
+          </Link>
           <button
             onClick={onToggle}
             className="p-2 text-gray-400 hover:text-gray-600"
@@ -101,7 +105,11 @@ export default function Sidebar({ currentPath = '/dashboard', user, isOpen = fal
 
         {/* Logo - Desktop */}
         <div className="hidden lg:block p-6 border-b border-pink-100 bg-gradient-to-r from-pink-50/50 to-rose-50/50">
-          <div className="flex items-center space-x-3">
+          <Link
+            href="/"
+            className="flex items-center space-x-3 rounded-lg transition-opacity hover:opacity-80"
+            aria-label="MamtaAI home"
+          >
             <Image
               src={logo}
               alt="MamtaAI"
@@ -110,7 +118,7 @@ export default function Sidebar({ currentPath = '/dashboard', user, isOpen = fal
               className="object-contain rounded-full"
             />
             <h1 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">MamtaAI</h1>
-          </div>
+          </Link>
         </div>
 
         {/* Navigation */}

@@ -79,6 +79,12 @@ function WelcomeContent() {
   }, [email, emailError])
 
   const handleEmailBlur = (value: string): void => {
+    // Don't surface a "required" error just because focus left an empty field
+    // (e.g. when clicking "Continue with Google"). Required is still enforced on submit.
+    if (!value.trim()) {
+      setEmailError('')
+      return
+    }
     const validation = validateEmail(value)
     setEmailError(validation.error || '')
   }
@@ -136,6 +142,7 @@ function WelcomeContent() {
 
       <div className="mt-4">
         <button
+          type="button"
           onClick={handleGoogleLogin}
           className="flex items-center justify-center w-full gap-3 rounded-2xl min-h-[46px] md:min-h-[56px] border-2 border-pink-200 bg-white px-4 py-2.5 sm:py-3 text-sm sm:text-[16px] font-semibold text-gray-700 shadow-sm transition-all duration-300 hover:bg-pink-50 hover:border-pink-300 hover:shadow-md"
         >
