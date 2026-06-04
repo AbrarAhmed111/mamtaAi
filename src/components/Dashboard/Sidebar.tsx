@@ -133,7 +133,9 @@ function SidebarPanel({
               <h1 className="text-[17px] font-bold leading-tight bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
                 MamtaAI
               </h1>
-              <p className="mt-0.5 text-[11px] font-medium text-gray-500">AI for happier babies</p>
+              <p className="mt-0.5 max-w-[9.5rem] text-[10px] font-medium leading-snug text-gray-500">
+                Understanding Your Baby&apos;s Every Cry
+              </p>
             </div>
           </Link>
           {showClose && (
