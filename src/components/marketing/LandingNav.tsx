@@ -147,7 +147,9 @@ export default function LandingNav({ activePage = 'home' }: LandingNavProps) {
               <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 bg-clip-text text-transparent">
                 MamtaAI
               </span>
-              <div className="text-xs text-gray-500 font-medium">AI-Powered Baby Care</div>
+              <div className="text-xs text-gray-500 font-medium leading-snug max-w-[11rem]">
+                Understanding Your Baby&apos;s Every Cry
+              </div>
             </div>
           </Link>
 
