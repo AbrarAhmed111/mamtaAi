@@ -30,8 +30,6 @@ import {
 } from '@/lib/notification-preferences'
 import { useSubscription } from '@/hooks/useSubscription'
 import { useBilling } from '@/hooks/useBilling'
-import { PLAN_DEFINITIONS } from '@/lib/subscription/plans'
-
 interface Profile {
   id: string
   full_name: string
@@ -72,42 +70,6 @@ const SETTINGS_TABS = [
 
 type SettingsTabId = (typeof SETTINGS_TABS)[number]['id']
 const VALID_TAB_IDS: readonly string[] = SETTINGS_TABS.map(t => t.id)
-
-const TX_STATUS_STYLES: Record<string, string> = {
-  completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  processing: 'bg-amber-50 text-amber-700 border-amber-200',
-  pending: 'bg-amber-50 text-amber-700 border-amber-200',
-  failed: 'bg-red-50 text-red-700 border-red-200',
-  refunded: 'bg-gray-100 text-gray-600 border-gray-200',
-  cancelled: 'bg-gray-100 text-gray-600 border-gray-200',
-}
-
-function formatTxAmount(amount: number | null, currency: string): string {
-  if (amount == null) return '—'
-  try {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount)
-  } catch {
-    return `${amount.toFixed(2)} ${currency}`
-  }
-}
-
-function planLabelFromAmount(amount: number | null): string | null {
-  if (amount == null) return null
-  const match = Object.values(PLAN_DEFINITIONS).find(
-    p => p.slug !== 'free' && Math.abs(p.price_usd - amount) < 0.005,
-  )
-  return match ? match.name : null
-}
-
-function describeTransaction(tx: { type: string | null; amount: number | null }): string {
-  if (tx.type === 'refund') return 'Refund'
-  if (tx.type === 'subscription') {
-    const plan = planLabelFromAmount(tx.amount)
-    return plan ? `${plan} plan` : 'Subscription'
-  }
-  if (!tx.type) return 'Payment'
-  return tx.type.charAt(0).toUpperCase() + tx.type.slice(1).replace(/_/g, ' ')
-}
 
 function ToggleRow({
   id,
@@ -196,33 +158,6 @@ export default function SettingsPage() {
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [history, setHistory] = useState<
-    {
-      id: string
-      amount: number | null
-      currency: string
-      type: string | null
-      status: string | null
-      date: string | null
-      invoiceUrl: string | null
-      receiptUrl: string | null
-    }[]
-  >([])
-  const [historyLoaded, setHistoryLoaded] = useState(false)
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await fetch('/api/billing/history', { cache: 'no-store' })
-        const data = await res.json().catch(() => ({}))
-        if (res.ok && Array.isArray(data.transactions)) {
-          setHistory(data.transactions)
-        }
-      } finally {
-        setHistoryLoaded(true)
-      }
-    })()
-  }, [slug])
 
   useEffect(() => {
     void (async () => {
@@ -728,77 +663,6 @@ export default function SettingsPage() {
               Secure checkout powered by Stripe. Cancel anytime from Manage billing.
             </p>
             </>
-            )}
-          </div>
-
-          {/* Billing history */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Billing history</h2>
-            {!historyLoaded ? (
-              <div className="animate-pulse space-y-3" aria-hidden="true">
-                <div className="h-4 w-full rounded bg-gray-100" />
-                <div className="h-4 w-full rounded bg-gray-100" />
-                <div className="h-4 w-3/4 rounded bg-gray-100" />
-              </div>
-            ) : history.length === 0 ? (
-              <p className="text-sm text-gray-600">
-                No payments yet. Your subscription invoices and receipts will appear here after your
-                first paid plan.
-              </p>
-            ) : (
-              <div className="overflow-x-auto no-scroll">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-gray-100">
-                      <th className="py-2 pr-4 font-semibold">Date</th>
-                      <th className="py-2 pr-4 font-semibold">Description</th>
-                      <th className="py-2 pr-4 font-semibold">Amount</th>
-                      <th className="py-2 pr-4 font-semibold">Status</th>
-                      <th className="py-2 font-semibold text-right">Receipt</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {history.map(tx => {
-                      const link = tx.receiptUrl || tx.invoiceUrl
-                      return (
-                        <tr key={tx.id} className="border-b border-gray-50 last:border-0">
-                          <td className="py-3 pr-4 text-gray-700 whitespace-nowrap">
-                            {tx.date ? new Date(tx.date).toLocaleDateString() : '—'}
-                          </td>
-                          <td className="py-3 pr-4 text-gray-700">{describeTransaction(tx)}</td>
-                          <td className="py-3 pr-4 font-medium text-gray-900 whitespace-nowrap">
-                            {formatTxAmount(tx.amount, tx.currency)}
-                          </td>
-                          <td className="py-3 pr-4">
-                            <span
-                              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${
-                                TX_STATUS_STYLES[tx.status ?? ''] ??
-                                'bg-gray-100 text-gray-600 border-gray-200'
-                              }`}
-                            >
-                              {tx.status ?? 'unknown'}
-                            </span>
-                          </td>
-                          <td className="py-3 text-right">
-                            {link ? (
-                              <a
-                                href={link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="font-medium text-pink-600 hover:underline"
-                              >
-                                View
-                              </a>
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
             )}
           </div>
 

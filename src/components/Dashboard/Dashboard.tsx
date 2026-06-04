@@ -6,9 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Spinner from '@/components/ui/spinner';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FaBaby, FaCamera, FaUsers, FaPlay, FaStop, FaPause, FaUser } from 'react-icons/fa';
-import Sidebar from './Sidebar';
-import DashboardHeader from './DashboardHeader';
+import { FaBaby, FaCamera, FaUsers, FaPlay, FaStop, FaUser, FaMicrophone, FaClock, FaShieldAlt, FaBell } from 'react-icons/fa';
 import WelcomeChecklist from './WelcomeChecklist';
 import RecordingSection from './RecordingSection';
 import BabyProfiles from './BabyProfiles';
@@ -448,58 +446,97 @@ export default function Dashboard({
           isOnboardingIncomplete ||
           (isParent && babiesListResolved && babies.length === 0)) &&
           !(isParent && !babiesListResolved) && (
-          <div className=" mt-4 mb-4">
-            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <p className="font-medium">
-                    {isRoleUnset
-                      ? 'Please choose your role (Parent or Expert).'
-                      : 'Please add at least one baby to continue.'}
-                  </p>
-                  <p className="text-sm text-yellow-700 mt-1">
-                    {isRoleUnset
-                      ? 'This helps us tailor the dashboard to your needs.'
-                      : 'Add a baby to start tracking and get personalized insights.'}
-                  </p>
+          <div className="mb-6">
+            <div className="rounded-3xl border border-amber-100/80 bg-[#fdf6e8] p-4 shadow-sm sm:p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex gap-4">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100/80 text-amber-700 ring-4 ring-amber-50">
+                    <FaBaby className="text-xl" />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-amber-950">
+                      {isRoleUnset
+                        ? 'Please choose your role (Parent or Expert).'
+                        : 'Please add at least one baby to continue.'}
+                    </p>
+                    <p className="mt-1 text-sm text-amber-800/90">
+                      {isRoleUnset
+                        ? 'This helps us tailor the dashboard to your needs.'
+                        : 'Add a baby to start tracking and get personalized insights.'}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  {!isRoleUnset && (
-                    <Link
-                      href="/dashboard/babies/add-baby"
-                      onClick={handleAddBaby}
-                      className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                    >
-                      Add Baby
-                    </Link>
-                  )}
-                </div>
+                {!isRoleUnset && (
+                  <Link
+                    href="/dashboard/babies/add-baby"
+                    onClick={handleAddBaby}
+                    className="inline-flex shrink-0 items-center justify-center rounded-xl bg-pink-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-pink-200/60 transition-all hover:bg-pink-600 hover:shadow-lg"
+                  >
+                    Add Baby
+                  </Link>
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {/* Daily overview card (top of overview page) */}
-        <section className="mb-4">
-          <div className="bg-white rounded-xl border border-pink-100 p-4 sm:p-5 shadow-sm bg-gradient-to-br from-white to-pink-50/20">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Today&apos;s Overview</h3>
-            <div className="mt-3 grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="rounded-lg bg-pink-50 px-3 py-2">
-                <div className="text-xs text-gray-500">Recordings</div>
-                <div className="text-lg font-bold text-gray-900">{dailyStats?.recordingsToday ?? 0}</div>
-              </div>
-              <div className="rounded-lg bg-pink-50 px-3 py-2">
-                <div className="text-xs text-gray-500">Cry Minutes</div>
-                <div className="text-lg font-bold text-gray-900">{dailyStats?.minutesToday ?? 0}m</div>
-              </div>
-              <div className="rounded-lg bg-pink-50 px-3 py-2">
-                <div className="text-xs text-gray-500">Avg Confidence</div>
-                <div className="text-lg font-bold text-gray-900">{dailyStats?.avgConfidenceToday ?? 0}%</div>
-              </div>
-              <div className="rounded-lg bg-red-50 px-3 py-2">
-                <div className="text-xs text-gray-500">Urgent Alerts</div>
-                <div className="text-lg font-bold text-red-600">{dailyStats?.urgentToday ?? 0}</div>
-              </div>
+        {/* Today's overview */}
+        <section className="mb-6">
+          <div className="rounded-3xl border border-pink-100/80 bg-white p-5 shadow-md shadow-pink-100/20 sm:p-6">
+            <h3 className="text-lg font-bold text-gray-900">Today&apos;s Overview</h3>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
+              {[
+                {
+                  label: 'Recordings',
+                  value: dailyStats?.recordingsToday ?? 0,
+                  icon: FaMicrophone,
+                  card: 'border-pink-100/80 bg-pink-50/60',
+                  iconWrap: 'bg-pink-100 text-pink-500',
+                  valueClass: 'text-gray-900',
+                },
+                {
+                  label: 'Cry Minutes',
+                  value: `${dailyStats?.minutesToday ?? 0}m`,
+                  icon: FaClock,
+                  card: 'border-purple-100/80 bg-purple-50/50',
+                  iconWrap: 'bg-purple-100 text-purple-500',
+                  valueClass: 'text-gray-900',
+                },
+                {
+                  label: 'Avg Confidence',
+                  value: `${dailyStats?.avgConfidenceToday ?? 0}%`,
+                  icon: FaShieldAlt,
+                  card: 'border-emerald-100/80 bg-emerald-50/50',
+                  iconWrap: 'bg-emerald-100 text-emerald-600',
+                  valueClass: 'text-gray-900',
+                },
+                {
+                  label: 'Urgent Alerts',
+                  value: dailyStats?.urgentToday ?? 0,
+                  icon: FaBell,
+                  card: 'border-rose-100/80 bg-rose-50/50',
+                  iconWrap: 'bg-rose-100 text-rose-500',
+                  valueClass: 'text-rose-600',
+                },
+              ].map(stat => {
+                const Icon = stat.icon;
+                return (
+                  <div
+                    key={stat.label}
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-4 ${stat.card}`}
+                  >
+                    <span
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${stat.iconWrap}`}
+                    >
+                      <Icon className="text-base" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-500">{stat.label}</p>
+                      <p className={`text-xl font-bold sm:text-2xl ${stat.valueClass}`}>{stat.value}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -522,19 +559,16 @@ export default function Dashboard({
           isLoading={babiesLoading}
         />
 
-        <div className="p-0">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6 lg:space-y-8">
-          <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <WelcomeChecklist
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+            {/* Welcome checklist + recording */}
+            <div className="space-y-6 lg:col-span-2 lg:space-y-8">
+          <WelcomeChecklist
                 checklist={checklist}
                 onItemAction={handleChecklistAction}
               />
-          </div>
-              
+
               {isParent && (
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <div className="rounded-3xl border border-pink-100/80 bg-white p-5 shadow-md shadow-pink-100/20">
                 <RecordingSection
                   onStartRecording={() => {
                     // This callback is called:
@@ -568,9 +602,8 @@ export default function Dashboard({
           )}
             </div>
 
-            {/* Sidebar */}
+            {/* Right column — quick actions & profiles */}
             <div className="space-y-6">
-              {/* BadgesSection removed */}
               <QuickActions onActionClick={handleActionClick} />
               {isParent && (
                 babiesLoading ? (
@@ -592,13 +625,15 @@ export default function Dashboard({
                     onBabyClick={handleBabyClick}
                   />
                 ) : (
-                  <div className="bg-white rounded-xl p-6 border border-dashed border-gray-200 text-center">
-                    <p className="text-gray-700 font-medium">No babies added yet</p>
-                    <p className="text-gray-500 text-sm mt-1">Add your baby to start tracking and getting insights.</p>
+                  <div className="rounded-3xl border border-dashed border-pink-200 bg-white p-6 text-center shadow-sm">
+                    <p className="font-medium text-gray-700">No babies added yet</p>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Add your baby to start tracking and getting insights.
+                    </p>
                     <Link
                       href="/dashboard/babies/add-baby"
                       onClick={handleAddBaby}
-                      className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                      className="mt-4 inline-flex items-center gap-2 rounded-xl bg-pink-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-pink-200/50 hover:bg-pink-600"
                     >
                       Add Baby
                     </Link>
@@ -607,8 +642,10 @@ export default function Dashboard({
               )}
 
           {/* Recent recordings */}
-          <div className="bg-white rounded-2xl border border-pink-100 p-5 bg-gradient-to-br from-white to-pink-50/20">
-            <h3 className="text-lg font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent mb-4">Your Baby Recordings</h3>
+          <div className="rounded-3xl border border-pink-100/80 bg-white p-5 shadow-md shadow-pink-100/20">
+            <h3 className="mb-4 text-lg font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
+              Your Baby Recordings
+            </h3>
             {recentLoading ? (
               <div className="text-gray-600 text-sm">Loading recordings...</div>
             ) : recentRecs.length === 0 ? (
@@ -670,7 +707,6 @@ export default function Dashboard({
             )}
           </div>
             </div>
-          </div>
         </div>
       {showAddBaby && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">

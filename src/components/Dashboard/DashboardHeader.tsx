@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect, type ReactNode } from 'react';
 import Image from 'next/image';
-import { FaBell, FaCog, FaBars } from 'react-icons/fa';
+import { FaBell, FaCog, FaChevronDown } from 'react-icons/fa';
 import Link from 'next/link';
 import PlanHeaderBadge from '@/components/subscription/PlanHeaderBadge';
+import { SidebarMenuButton } from './Sidebar';
 
 interface DashboardHeaderProps {
   greeting?: string;
@@ -12,7 +13,6 @@ interface DashboardHeaderProps {
   subtitle?: string;
   showNotifications?: boolean;
   onNotificationClick?: () => void;
-  /** Rendered under the bell, inside sticky header so it stays with the bar while scrolling. */
   notificationDropdown?: ReactNode;
   onSettingsClick?: () => void;
   onMenuToggle?: () => void;
@@ -26,7 +26,7 @@ interface DashboardHeaderProps {
 export default function DashboardHeader({
   greeting = 'Good Morning',
   userName = 'Sarah',
-  subtitle = 'Welcome to your MamtaAI dashboard. Let\'s help you understand your baby better.',
+  subtitle = "Welcome to your MamtaAI dashboard. Let's help you understand your baby better.",
   showNotifications = true,
   onNotificationClick,
   notificationDropdown,
@@ -52,111 +52,114 @@ export default function DashboardHeader({
   }, []);
 
   return (
-  <header className="sticky top-0 z-30 bg-white/90 supports-[backdrop-filter]:bg-white/60 backdrop-blur shadow-sm border-b border-pink-100">
-      <div className="px-4 sm:px-6 py-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            {/* Mobile Menu Button */}
-            <button
-              onClick={onMenuToggle}
-              className="lg:hidden p-2 text-gray-400 hover:text-gray-600"
-            >
-              <FaBars className="text-lg" />
-            </button>
-            
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
-                {greeting}, {userName}! 👋
-              </h2>
-              <p className="text-sm sm:text-base text-gray-600 hidden sm:block">
-                {subtitle}
-              </p>
-            </div>
+    <header className="relative z-30 shrink-0 border-b border-pink-100/60 bg-white/75 px-4 py-5 shadow-sm shadow-pink-100/30 backdrop-blur-lg backdrop-saturate-150 supports-[backdrop-filter]:bg-white/60 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <SidebarMenuButton onClick={onMenuToggle} />
+          <div className="min-w-0">
+            <h1 className="truncate text-[21px] font-bold leading-tight bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent sm:hidden">
+              MamtaAI
+            </h1>
+            <h2 className="hidden truncate text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent sm:block sm:text-2xl">
+              {greeting}, {userName}! 👋
+            </h2>
+            <p className="mt-0.5 hidden text-sm text-gray-600 sm:block">
+              {subtitle}
+            </p>
           </div>
-          
-          <div className="flex items-center space-x-2 sm:space-x-4" ref={menuRef}>
-            <PlanHeaderBadge />
-            {showNotifications && (
-              <div className="relative shrink-0">
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-3" ref={menuRef}>
+          <PlanHeaderBadge />
+          {showNotifications && (
+            <div className="relative">
+              <button
+                type="button"
+                aria-label={
+                  unreadNotificationCount > 0
+                    ? `Notifications, ${unreadNotificationCount} unread`
+                    : 'Notifications'
+                }
+                aria-expanded={Boolean(notificationDropdown)}
+                className={`rounded-full p-2.5 transition-colors ${
+                  notificationBlink
+                    ? 'bg-pink-50 text-pink-600 ring-2 ring-pink-300 ring-offset-2 animate-bell-alert'
+                    : unreadNotificationCount > 0
+                      ? 'bg-pink-50 text-pink-600'
+                      : 'text-gray-400 hover:bg-pink-50/80 hover:text-gray-600'
+                }`}
+                onClick={onNotificationClick}
+              >
+                <FaBell className="text-lg" />
+                {unreadNotificationCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                  </span>
+                )}
+              </button>
+              {notificationDropdown}
+            </div>
+          )}
+          <button
+            type="button"
+            className="hidden rounded-full p-2.5 text-gray-400 transition-colors hover:bg-pink-50/80 hover:text-gray-600 md:block"
+            onClick={onSettingsClick}
+            aria-label="Settings"
+          >
+            <FaCog className="text-lg" />
+          </button>
+
+          <div className="relative">
+            {isLoading ? (
+              <div className="flex items-center gap-2 rounded-full border border-pink-100 py-1 pl-1 pr-2">
+                <div className="h-9 w-9 animate-pulse rounded-full bg-gray-100" />
+                <div className="hidden h-4 w-16 animate-pulse rounded bg-gray-100 sm:block" />
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-full border border-pink-100 bg-white py-1 pl-1 pr-2.5 transition-colors hover:bg-pink-50/50"
+                onClick={() => setOpen(prev => !prev)}
+              >
+                <Image
+                  src={
+                    userAvatarUrl ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=FCE7F3&color=9D174D&size=64`
+                  }
+                  alt={userName}
+                  width={36}
+                  height={36}
+                  className="h-9 w-9 rounded-full object-cover"
+                />
+                <span className="hidden max-w-[7rem] truncate text-sm font-semibold text-gray-700 sm:inline">
+                  {userName}
+                </span>
+                <FaChevronDown
+                  className={`hidden h-3 w-3 text-gray-400 transition-transform sm:block ${open ? 'rotate-180' : ''}`}
+                />
+              </button>
+            )}
+            {open && (
+              <div className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-2xl border border-pink-100 bg-white shadow-lg shadow-pink-100/40">
+                <Link
+                  href="/dashboard/settings"
+                  className="block w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-pink-50"
+                  onClick={() => setOpen(false)}
+                >
+                  Profile & Settings
+                </Link>
                 <button
                   type="button"
-                  aria-label={
-                    unreadNotificationCount > 0
-                      ? `Notifications, ${unreadNotificationCount} unread`
-                      : 'Notifications'
-                  }
-                  aria-expanded={Boolean(notificationDropdown)}
-                  className={`p-2 relative rounded-full transition-colors ${
-                    notificationBlink
-                      ? 'text-pink-600 bg-pink-50 ring-2 ring-pink-400 ring-offset-2 ring-offset-white animate-bell-alert'
-                      : unreadNotificationCount > 0
-                        ? 'text-pink-600 bg-pink-50/90'
-                        : 'text-gray-400 hover:text-gray-600'
-                  }`}
-                  onClick={onNotificationClick}
+                  className="w-full border-t border-pink-50 px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-pink-50"
+                  onClick={() => {
+                    setOpen(false);
+                    onSignOut?.();
+                  }}
                 >
-                  <FaBell className="text-lg" />
-                  {unreadNotificationCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center font-semibold shadow-sm">
-                      {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
-                    </span>
-                  )}
+                  Logout
                 </button>
-                {notificationDropdown}
               </div>
             )}
-            <button 
-              className="p-2 text-gray-400 hover:text-gray-600 hidden md:block"
-              onClick={onSettingsClick}
-            >
-              <FaCog className="text-lg" />
-            </button>
-
-            {/* User dropdown */}
-            <div className="relative">
-              {isLoading ? (
-                <div className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-pink-200">
-                  <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
-                  <div className="hidden sm:block">
-                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-pink-200 hover:bg-pink-50 transition-colors"
-                  onClick={() => setOpen(prev => !prev)}
-                >
-                  <Image
-                    src={userAvatarUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(userName) + '&background=E5E7EB&color=111827&size=64'}
-                    alt={userName}
-                    width={32}
-                    height={32}
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
-                  <span className="hidden sm:inline text-sm font-medium text-gray-700">{userName}</span>
-                </button>
-              )}
-              {open && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-pink-100 rounded-xl shadow-lg z-50 overflow-hidden">
-                  <Link
-                    href="/dashboard/settings"
-                    className="block w-full text-left px-4 py-2 text-sm hover:bg-pink-50 text-gray-700 transition-colors"
-                    onClick={() => setOpen(false)}
-                  >
-                    Profile & Settings
-                  </Link>
-                  <button
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-pink-50 text-gray-700 transition-colors border-t border-pink-100"
-                    onClick={() => {
-                      setOpen(false);
-                      onSignOut && onSignOut();
-                    }}
-                  >
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>

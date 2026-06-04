@@ -1,6 +1,6 @@
 'use client';
 
-import { FaUsers, FaChartLine, FaCog } from 'react-icons/fa';
+import { FaUsers, FaChartLine, FaCog, FaChevronRight } from 'react-icons/fa';
 import Link from 'next/link';
 
 interface QuickActionsProps {
@@ -13,45 +13,48 @@ export default function QuickActions({ onActionClick }: QuickActionsProps) {
       href: '/dashboard/community',
       label: 'Join Community',
       icon: FaUsers,
-      iconColor: 'text-pink-600',
-      bgGradient: 'from-pink-50 to-rose-50'
+      iconBg: 'bg-pink-50',
+      iconColor: 'text-pink-500',
     },
     {
-      href: '/insights',
+      href: '/dashboard/insights',
       label: 'View Insights',
       icon: FaChartLine,
-      iconColor: 'text-purple-600',
-      bgGradient: 'from-purple-50 to-pink-50'
+      iconBg: 'bg-purple-50',
+      iconColor: 'text-purple-500',
     },
     {
       href: '/dashboard/settings',
       label: 'Settings',
       icon: FaCog,
-      iconColor: 'text-gray-600',
-      bgGradient: 'from-gray-50 to-gray-100'
-    }
+      iconBg: 'bg-gray-50',
+      iconColor: 'text-gray-500',
+    },
   ];
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-pink-100 p-6 bg-gradient-to-br from-white to-pink-50/20">
-      <h3 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent mb-5">
-        Quick Actions
-      </h3>
-      
-      <div className="space-y-3">
-        {actions.map((action) => {
+    <div className="rounded-3xl border border-pink-100/80 bg-white p-5 shadow-md shadow-pink-100/20">
+      <h3 className="mb-4 text-lg font-bold text-gray-900">Quick Actions</h3>
+
+      <div className="space-y-2">
+        {actions.map(action => {
           const Icon = action.icon;
           return (
             <Link
               key={action.href}
               href={action.href}
-              className="flex items-center space-x-4 p-4 rounded-xl hover:shadow-md transition-all duration-300 bg-gradient-to-r hover:from-pink-50 hover:to-rose-50 border border-pink-100 hover:border-pink-200 group"
+              className="group flex items-center gap-3 rounded-2xl border border-transparent bg-pink-50/30 p-3.5 transition-all hover:border-pink-100 hover:bg-pink-50/60"
               onClick={() => onActionClick?.(action.label)}
             >
-              <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${action.bgGradient} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                <Icon className={`text-lg ${action.iconColor}`} />
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${action.iconBg}`}
+              >
+                <Icon className={`text-base ${action.iconColor}`} />
               </div>
-              <span className="text-sm font-semibold text-gray-900 group-hover:text-pink-600 transition-colors">{action.label}</span>
+              <span className="flex-1 text-sm font-semibold text-gray-800 group-hover:text-pink-700">
+                {action.label}
+              </span>
+              <FaChevronRight className="h-3 w-3 shrink-0 text-gray-300 transition-colors group-hover:text-pink-400" />
             </Link>
           );
         })}
