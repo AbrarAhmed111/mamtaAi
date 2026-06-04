@@ -116,7 +116,13 @@ export default function SettingsPage() {
     canManageBilling: boolean
     cancelAtPeriodEnd: boolean
     currentPeriodEnd: string | null
-  }>({ canManageBilling: false, cancelAtPeriodEnd: false, currentPeriodEnd: null })
+    pendingPlanChange: { plan_slug: string; effective_at: string } | null
+  }>({
+    canManageBilling: false,
+    cancelAtPeriodEnd: false,
+    currentPeriodEnd: null,
+    pendingPlanChange: null,
+  })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -129,6 +135,7 @@ export default function SettingsPage() {
           canManageBilling: Boolean(data.billing.canManageBilling),
           cancelAtPeriodEnd: Boolean(data.billing.cancelAtPeriodEnd),
           currentPeriodEnd: data.billing.currentPeriodEnd ?? null,
+          pendingPlanChange: data.billing.pendingPlanChange ?? null,
         })
       }
     })()
@@ -145,8 +152,20 @@ export default function SettingsPage() {
       return
     }
     const billing = params.get('billing')
+    const planParam = params.get('plan')
+    const planLabel = planParam ? planParam.charAt(0).toUpperCase() + planParam.slice(1) : 'your new plan'
     if (billing === 'success') {
       toast.success('Your subscription was updated successfully.')
+      void refreshSubscription()
+      window.history.replaceState({}, '', '/dashboard/settings#billing')
+    } else if (billing === 'scheduled') {
+      toast.success(
+        `You'll switch to ${planLabel} at the end of your current billing period. You keep your current plan until then.`,
+      )
+      void refreshSubscription()
+      window.history.replaceState({}, '', '/dashboard/settings#billing')
+    } else if (billing === 'kept') {
+      toast.success('Your scheduled plan change was cancelled. You keep your current plan.')
       void refreshSubscription()
       window.history.replaceState({}, '', '/dashboard/settings#billing')
     } else if (billing === 'cancelled') {
@@ -489,6 +508,33 @@ export default function SettingsPage() {
                 {new Date(billingMeta.currentPeriodEnd).toLocaleDateString()}. You will move to Free
                 after that.
               </p>
+            )}
+            {billingMeta.pendingPlanChange && (
+              <div className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-4">
+                <p>
+                  Your plan will switch to{' '}
+                  <span className="font-semibold capitalize">
+                    {billingMeta.pendingPlanChange.plan_slug}
+                  </span>{' '}
+                  on {new Date(billingMeta.pendingPlanChange.effective_at).toLocaleDateString()}. You
+                  keep your current <span className="font-semibold capitalize">{slug}</span> plan and
+                  features until then.
+                </p>
+                {(slug === 'plus' || slug === 'pro') && (
+                  <button
+                    type="button"
+                    disabled={loadingPlan !== null}
+                    onClick={() => {
+                      void startCheckout(slug).catch(err =>
+                        toast.error(err instanceof Error ? err.message : 'Could not cancel change'),
+                      )
+                    }}
+                    className="mt-2 inline-flex rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-60"
+                  >
+                    {loadingPlan === slug ? 'Cancelling…' : `Keep ${planName} instead`}
+                  </button>
+                )}
+              </div>
             )}
             <div className="flex flex-wrap gap-3">
               {slug === 'free' && (

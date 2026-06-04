@@ -17,7 +17,7 @@ import {
   FaStar,
   FaUsers,
 } from 'react-icons/fa'
-import { PLAN_DEFINITIONS } from '@/lib/subscription/plans'
+import { PLAN_DEFINITIONS, planRank } from '@/lib/subscription/plans'
 
 const PLAN_CARD_ANIMATION = ['animate-fade-in', 'animate-fade-in-delay-150', 'animate-fade-in-delay-300'] as const
 import type { PlanSlug } from '@/lib/subscription/types'
@@ -81,8 +81,13 @@ function PlanCta({
     )
   }
 
-  const gradientClass =
-    slug === 'plus'
+  const planLabel = slug === 'plus' ? 'Plus' : 'Pro'
+  const isDowngradeTarget =
+    currentSlug !== 'free' && planRank(slug) < planRank(currentSlug as PlanSlug)
+
+  const gradientClass = isDowngradeTarget
+    ? 'bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800'
+    : slug === 'plus'
       ? 'bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600'
       : 'bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500'
 
@@ -98,20 +103,29 @@ function PlanCta({
     )
   }
 
+  const idleLabel = isDowngradeTarget ? `Switch to ${planLabel}` : `Upgrade to ${planLabel}`
+
   return (
-    <button
-      type="button"
-      disabled={isLoading}
-      onClick={() => {
-        void startCheckout(slug).catch(err => {
-          toast.error(err instanceof Error ? err.message : 'Checkout failed')
-        })
-      }}
-      className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-wait ${gradientClass}`}
-    >
-      {isLoading ? 'Redirecting to Stripe…' : `Upgrade to ${slug === 'plus' ? 'Plus' : 'Pro'}`}
-      {!isLoading && <FaArrowRight className="h-3.5 w-3.5" />}
-    </button>
+    <div>
+      <button
+        type="button"
+        disabled={isLoading}
+        onClick={() => {
+          void startCheckout(slug).catch(err => {
+            toast.error(err instanceof Error ? err.message : 'Checkout failed')
+          })
+        }}
+        className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-wait ${gradientClass}`}
+      >
+        {isLoading ? (isDowngradeTarget ? 'Scheduling…' : 'Redirecting to Stripe…') : idleLabel}
+        {!isLoading && <FaArrowRight className="h-3.5 w-3.5" />}
+      </button>
+      {isDowngradeTarget && (
+        <p className="mt-2 text-center text-xs text-gray-500">
+          Takes effect at the end of your billing period. You keep your current plan until then.
+        </p>
+      )}
+    </div>
   )
 }
 

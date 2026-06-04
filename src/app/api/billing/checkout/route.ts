@@ -27,13 +27,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { url } = await createCheckoutOrUpgrade({
+    const { url, outcome } = await createCheckoutOrUpgrade({
       userId: user.id,
       email: user.email,
       planSlug,
     })
 
-    return NextResponse.json({ url })
+    return NextResponse.json({ url, outcome })
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Checkout failed'
     const status = message.includes('already on this plan') ? 400 : 500

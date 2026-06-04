@@ -36,12 +36,16 @@ export async function GET() {
 
     const { data: billingRow } = await supabase
       .from('user_subscriptions')
-      .select('status, cancel_at_period_end, stripe_customer_id, stripe_subscription_id, current_period_end')
+      .select('status, cancel_at_period_end, stripe_customer_id, stripe_subscription_id, current_period_end, metadata')
       .eq('user_id', user.id)
       .in('status', ['trial', 'active', 'paused', 'payment_failed', 'cancelled'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
+
+    const pendingChange = (billingRow?.metadata as {
+      pending_plan_change?: { plan_slug: string; effective_at: string }
+    } | null)?.pending_plan_change ?? null
 
     const recordingsMeter = usageMeter({ ...ctx, usage }, 'recordings')
     const activitiesMeter = usageMeter({ ...ctx, usage }, 'activities')
@@ -72,6 +76,7 @@ export async function GET() {
         cancelAtPeriodEnd: Boolean(billingRow?.cancel_at_period_end),
         subscriptionStatus: billingRow?.status ?? ctx.status,
         currentPeriodEnd: billingRow?.current_period_end ?? null,
+        pendingPlanChange: pendingChange,
       },
       usage,
       meters: {

@@ -13,6 +13,13 @@ type SubscriptionRow = {
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
   usage_stats: Record<string, unknown> | null
+  metadata: Record<string, unknown> | null
+}
+
+export type PendingPlanChange = {
+  plan_slug: PlanSlug
+  effective_at: string
+  stripe_schedule_id: string | null
 }
 
 function mapStripeSubscriptionStatus(status: Stripe.Subscription.Status): string {
@@ -54,12 +61,38 @@ function periodBounds(subscription: Stripe.Subscription) {
 async function getUserSubscriptionRow(userId: string): Promise<SubscriptionRow | null> {
   const { data } = await (supabaseAdmin as any)
     .from('user_subscriptions')
-    .select('id, user_id, plan_id, status, stripe_customer_id, stripe_subscription_id, usage_stats')
+    .select(
+      'id, user_id, plan_id, status, stripe_customer_id, stripe_subscription_id, usage_stats, metadata',
+    )
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
   return (data as SubscriptionRow) ?? null
+}
+
+export async function setPendingPlanChange(
+  userId: string,
+  pending: PendingPlanChange,
+): Promise<void> {
+  const row = await getUserSubscriptionRow(userId)
+  if (!row?.id) return
+  const metadata = { ...(row.metadata ?? {}), pending_plan_change: pending }
+  await (supabaseAdmin as any)
+    .from('user_subscriptions')
+    .update({ metadata, updated_at: new Date().toISOString() })
+    .eq('id', row.id)
+}
+
+export async function clearPendingPlanChange(userId: string): Promise<void> {
+  const row = await getUserSubscriptionRow(userId)
+  if (!row?.id || !row.metadata || !('pending_plan_change' in row.metadata)) return
+  const metadata = { ...row.metadata }
+  delete (metadata as Record<string, unknown>).pending_plan_change
+  await (supabaseAdmin as any)
+    .from('user_subscriptions')
+    .update({ metadata, updated_at: new Date().toISOString() })
+    .eq('id', row.id)
 }
 
 async function resolvePlanSlugFromSubscription(
@@ -130,7 +163,21 @@ export async function applyPaidPlanFromStripeSubscription(
 
   const row = await getUserSubscriptionRow(userId)
   if (row?.id) {
-    await (supabaseAdmin as any).from('user_subscriptions').update(payload).eq('id', row.id)
+    const pending = (row.metadata as { pending_plan_change?: PendingPlanChange } | null)
+      ?.pending_plan_change
+    // If the scheduled change has now taken effect, drop the pending marker.
+    const finalPayload =
+      pending && pending.plan_slug === slug
+        ? {
+            ...payload,
+            metadata: (() => {
+              const meta = { ...(row.metadata ?? {}) }
+              delete (meta as Record<string, unknown>).pending_plan_change
+              return meta
+            })(),
+          }
+        : payload
+    await (supabaseAdmin as any).from('user_subscriptions').update(finalPayload).eq('id', row.id)
     return
   }
 

@@ -4,7 +4,11 @@ import { createServerClient } from '@/lib/supabase/server'
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
   const code = url.searchParams.get('code')
-  const returnUrl = url.searchParams.get('returnUrl')
+  // returnUrl is carried in a cookie (see /api/auth/login) so the OAuth redirect_to
+  // stays clean and matches the Supabase redirect allow-list. Fall back to the query
+  // param for backwards compatibility.
+  const returnUrl =
+    request.cookies.get('oauth_return_url')?.value || url.searchParams.get('returnUrl')
 
   if (!code) {
     const redirectUrl = new URL('/signin', request.url)
@@ -118,14 +122,18 @@ export async function GET(request: NextRequest) {
       try {
         const candidate = new URL(returnUrl, url.origin)
         if (candidate.origin === url.origin) {
-          return NextResponse.redirect(candidate)
+          const res = NextResponse.redirect(candidate)
+          res.cookies.delete('oauth_return_url')
+          return res
         }
       } catch {
         // ignore malformed returnUrl
       }
     }
 
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    const res = NextResponse.redirect(new URL('/dashboard', request.url))
+    res.cookies.delete('oauth_return_url')
+    return res
   } catch (e: any) {
     const redirectUrl = new URL('/signin', request.url)
     redirectUrl.searchParams.set('error', 'true')

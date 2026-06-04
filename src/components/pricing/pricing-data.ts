@@ -31,6 +31,10 @@ export const PRICING_FAQ = [
     q: 'Can I cancel anytime?',
     a: 'Paid plans can be canceled before renewal. After canceling, you keep access until the end of the billing period, then return to Free limits.',
   },
+  {
+    q: 'What happens if I switch to a lower plan?',
+    a: 'Upgrades take effect right away. Downgrades (for example Pro to Plus) are scheduled for the end of your current billing period — you keep your current plan and features until then, and the lower price starts at the next renewal. You can cancel a scheduled change anytime before it takes effect.',
+  },
 ]
 
 export const COMPARISON_ROWS: ComparisonRow[] = [

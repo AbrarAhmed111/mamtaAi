@@ -141,3 +141,11 @@ export function recommendedUpgrade(from: PlanSlug): PlanSlug {
   if (from === 'free') return 'plus'
   return 'pro'
 }
+
+export function planRank(slug: PlanSlug): number {
+  return PLAN_DEFINITIONS[slug]?.display_order ?? 0
+}
+
+export function isDowngrade(from: PlanSlug, to: PlanSlug): boolean {
+  return planRank(to) < planRank(from)
+}
