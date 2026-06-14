@@ -36,8 +36,9 @@ yarn-error.log*
 next-env.d.ts
 previousProject/
 
-# python backend (separate project)
-/mamtaai_python_backend
+# project docs (local only)
+/docs
 
 # python backend (separate project)
 /mamtaai_python_backend
+

@@ -1,6 +1,6 @@
 # MamtaAI
 
-MamtaAI is an AI-powered baby care platform that helps families track activities, manage caregiver access, receive notifications, and analyze baby cries to support day-to-day parenting decisions.
+MamtaAI is an AI-powered baby care platform that helps families track activities, manage caregiver access, receive notifications, analyze baby cries, and monitor supported Bluetooth pulse oximeters to support day-to-day parenting decisions.
 
 **Built by [Abrar Ahmed](https://www.abrarahmed.pro/)** — Full Stack Engineer ([GitHub](https://github.com/AbrarAhmed111) · [Portfolio](https://www.abrarahmed.pro/))
 
@@ -13,6 +13,8 @@ This repository is **not** a Next.js-only app. MamtaAI is built as a **multi-ser
 | **Audio / ML backend** | **Python 3 + FastAPI** (separate service) | Live audio streaming, noise reduction, feature extraction, cry classification — consumed via `NEXT_PUBLIC_BACKEND_URL` |
 
 The browser talks to **Next.js** first. Next.js enforces auth and plan limits, reads/writes **Supabase**, and coordinates with the **FastAPI** service when a recording needs AI processing. Cry analysis will not work without the Python backend running.
+
+The oximeter module runs inside the Next.js app through the browser **Web Bluetooth API**. It pairs supported pulse oximeters, decodes live SpO2/pulse packets, saves readings and sessions to Supabase, and triggers configurable baby-level alerts.
 
 The FastAPI project is maintained as a **sibling codebase** (often cloned as `mamtaai_python_backend` next to this repo; see `.gitignore`). It is not bundled inside this Next.js tree.
 
@@ -39,12 +41,21 @@ The FastAPI project is maintained as a **sibling codebase** (often cloned as `ma
 3. The client posts to Next.js `POST /api/audio/process`, which uploads to **Supabase Storage** and creates a `recordings` row.
 4. Predictions are saved via `POST /api/recordings/[id]/prediction`; insights APIs read from Supabase.
 
+**Typical oximeter monitoring flow**
+
+1. User opens `/dashboard/oximeter`, selects a baby, and pairs a supported device through Web Bluetooth.
+2. `OximeterContext` receives BLE packets, decodes verified vitals, and keeps live cards/charts updated.
+3. `POST /api/oximeter/sessions` starts or reuses an active monitoring session.
+4. `POST /api/oximeter/readings` stores readings, raw payload metadata, and session aggregates in Supabase.
+5. Baby-specific alert thresholds trigger in-app notifications through `POST /api/oximeter/alerts`.
+
 ## Highlights
 
 - Baby profiles with age, growth, and relation management.
 - Family invites and role-based access (primary parent vs invited caregivers).
 - Recording and activity timeline (feeding, sleep, cry-related flows).
 - **Cry analysis** via the **Python (FastAPI)** ML backend, with results stored in Supabase.
+- **Oximeter integration** via Web Bluetooth with live SpO2/pulse cards, trend charts, session history, and configurable baby alert limits.
 - Insights dashboard and health suggestion popovers.
 - Community (blog, forum, resources, favorites).
 - In-app notifications with sound/highlight preferences.
@@ -62,6 +73,7 @@ The FastAPI project is maintained as a **sibling codebase** (often cloned as `ma
 | Frontend & app API | Next.js 15 (App Router), React 19, TypeScript |
 | Data & auth | Supabase (Postgres, Auth, Storage, RLS) |
 | **Audio / ML backend** | **Python 3, FastAPI, Uvicorn** (external service; streaming + inference) |
+| Oximeter / device I/O | Web Bluetooth API, BLE parsing helpers, Supabase-backed readings/sessions |
 | Payments | Stripe (Checkout, Customer Portal, webhooks) |
 | UI | Tailwind CSS, Framer Motion |
 | Tooling | Jest, ESLint, Prettier, Husky, Commitlint |
@@ -109,6 +121,8 @@ Run in the Supabase SQL Editor (first-time and when upgrading):
 | `supabase/profiles_last_active_at.sql` | Track user last activity |
 | `supabase/discount_coupons.sql` | Coupon schema helpers |
 | `supabase/content_reports_blog_comment.sql` | Blog comment reporting |
+| `supabase/oximeter_integration.sql` | Oximeter sessions, device columns, reading columns, and RLS |
+| `supabase/baby_oximeter_alerts.sql` | Baby metadata for oximeter alert thresholds and caregiver edit policy |
 
 Add your local and production URLs to **Authentication → Redirect URLs**.
 
@@ -141,6 +155,8 @@ Open:
 
 - Web app: `http://localhost:3000`
 - Pricing: `http://localhost:3000/pricing`
+- Oximeter marketing page: `http://localhost:3000/oximeter`
+- Dashboard oximeter page: `http://localhost:3000/dashboard/oximeter`
 - FastAPI health (verify ML backend): `http://localhost:8000/health`
 
 ### 6. Stripe webhooks (local)
@@ -150,6 +166,32 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 ```
 
 Use the signing secret from the CLI as `STRIPE_WEBHOOK_SECRET` in `.env.local`.
+
+## Oximeter integration
+
+MamtaAI includes a browser-based pulse oximeter module for supported Bluetooth Low Energy devices. It is implemented in the Next.js app and does **not** require the Python/FastAPI ML backend.
+
+| Surface | Purpose |
+|---------|---------|
+| `/oximeter` | Public marketing and setup guide for the oximeter feature |
+| `/dashboard/oximeter` | Authenticated live monitoring page |
+| `OximeterContext` | Client state for pairing, BLE packets, readings, sessions, reconnect, alerts |
+| `ConnectOximeterModal` | Device search, baby selection, and pairing workflow |
+| Baby settings | Stores per-baby SpO2/pulse alert limits in `babies.metadata->oximeterAlerts` |
+
+**Oximeter API routes**
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/oximeter/devices` | GET/POST | List/register trusted oximeter devices |
+| `/api/oximeter/devices/[id]` | PATCH/DELETE | Update connection status or remove a device |
+| `/api/oximeter/sessions` | GET/POST | List sessions or start/reuse an active session |
+| `/api/oximeter/sessions/[id]` | GET/PATCH | Read or complete a monitoring session |
+| `/api/oximeter/readings` | GET/POST | List/save SpO2, pulse, signal quality, raw payload metadata |
+| `/api/oximeter/readings/latest` | GET | Latest saved reading for a baby |
+| `/api/oximeter/alerts` | POST | Dispatch in-app/email oximeter alerts when sustained thresholds are breached |
+
+**Important browser note:** Web Bluetooth is mainly supported in Chrome/Edge on desktop and Android. iOS Safari does not support direct browser Bluetooth pairing.
 
 ## Subscription plans
 
@@ -192,6 +234,10 @@ src/hooks/useSubscription.tsx  # Client subscription context
 src/hooks/useBilling.ts        # Checkout / portal helpers
 src/components/Dashboard/ProcessingProgress.tsx  # FastAPI streaming client
 src/app/api/audio/process/     # Recording upload + FastAPI coordination
+src/contexts/OximeterContext.tsx                # Web Bluetooth + live oximeter state
+src/lib/oximeter/                              # BLE parsing, thresholds, validation, sessions
+src/app/api/oximeter/                          # Oximeter devices, sessions, readings, alerts
+src/components/oximeter/                       # Monitoring UI, charts, modals, alert settings
 ```
 
 ### Documentation
@@ -291,6 +337,7 @@ src/
       experts/                   # Expert application & profile APIs
       session/status/            # Mid-session reconcile endpoint
       audio/process/             # Recording upload; coordinates with FastAPI
+      oximeter/                  # Devices, sessions, readings, alerts
       billing/                   # Stripe checkout, portal, history, confirm
       webhooks/stripe/           # Stripe webhooks
       subscription/              # Plan + usage API
@@ -299,11 +346,15 @@ src/
       admin/                     # Admin panel UI
       expert/                    # Expert profile & articles
       expert-application/        # In-app expert apply form
+      oximeter/                  # Live oximeter monitoring
+    oximeter/                    # Public oximeter integration page
     pricing/                     # Public pricing page
   components/
     Dashboard/                   # Dashboard UI (incl. ProcessingProgress → FastAPI)
     Dashboard/Admin/             # Admin tables, queues, overview
     Dashboard/Expert/            # Expert overview, switcher, request status
+    oximeter/                    # Oximeter cards, charts, modals, settings
+    marketing/oximeter/          # Public oximeter landing/preview components
     pricing/
     subscription/
   lib/
@@ -311,8 +362,11 @@ src/
     expert/                      # Applications, active view, is_expert helpers
     session/                     # requireActiveProfile, dashboardFetch
     subscription/                # Plan definitions, limits, usage
+    oximeter/                    # BLE helpers, thresholds, validation, stats
     stripe/
     supabase/
+  contexts/
+    OximeterContext.tsx          # Web Bluetooth pairing + live vitals state
   hooks/
     useSubscription.tsx
     useSessionReconcile.ts       # Mid-session profile/plan sync
@@ -336,6 +390,7 @@ docs/                          # Planning & subscription docs
 | Babies & family | `src/app/api/babies`, invites, members |
 | Recordings | `src/app/api/recordings`, `src/app/api/audio/process` |
 | Cry ML integration | `ProcessingProgress.tsx` → FastAPI; `audio/process` → Supabase Storage |
+| Oximeter monitoring | `src/contexts/OximeterContext.tsx`, `src/app/api/oximeter/*`, `src/components/oximeter/*` |
 | Notifications | `src/app/api/notifications` |
 | Subscriptions & billing | `src/app/api/subscription`, `src/app/api/billing`, Stripe webhooks |
 | Community | `src/app/dashboard/community`, community API routes |
@@ -351,6 +406,7 @@ docs/                          # Planning & subscription docs
 - Admin accounts use `role = admin`; assign via Supabase or admin user detail UI.
 - Keep secrets out of source control (`.env.local` is git-ignored).
 - **`NEXT_PUBLIC_BACKEND_URL`** must point at a running **Python (FastAPI)** instance for cry analysis.
+- Oximeter monitoring is browser/Bluetooth-driven; run `supabase/oximeter_integration.sql` and `supabase/baby_oximeter_alerts.sql` before testing saved readings and alert thresholds.
 - Subscription limits are enforced in **Next.js API routes**; UI mirrors them for messaging only.
 - Stripe defaults to **test mode**; switch to live keys and webhooks for production billing.
 

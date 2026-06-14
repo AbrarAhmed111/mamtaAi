@@ -54,27 +54,6 @@ function OximeterStatusImage({
   )
 }
 
-function MarketingImage({
-  src,
-  alt,
-  className = '',
-}: {
-  src: typeof heroImage
-  alt: string
-  className?: string
-}) {
-  return (
-    <div className={`relative overflow-hidden rounded-2xl ${className}`}>
-      <Image
-        src={src}
-        alt={alt}
-        className="w-full h-auto block"
-        sizes="(max-width: 768px) 100vw, 560px"
-      />
-    </div>
-  )
-}
-
 const connectSteps = [
   {
     step: 1,
@@ -120,8 +99,8 @@ export default function OximeterIntegrationPage() {
 
       {/* Hero */}
       <section className="pt-32 pb-16 lg:pb-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          <div className="space-y-6 animate-fade-in">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 lg:items-center">
+          <div className="space-y-6 animate-fade-in lg:py-2">
             <SectionBadge>MamtaAI Oximeter Integration</SectionBadge>
             <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-bold text-gray-900 leading-tight">
               Real-Time Oxygen and Pulse Monitoring,{' '}
@@ -156,10 +135,21 @@ export default function OximeterIntegrationPage() {
             </div>
           </div>
 
-          <div className="relative">
-            <div className="absolute inset-6 bg-gradient-to-br from-rose-300/35 to-pink-400/25 rounded-[2rem] blur-2xl pointer-events-none" />
-            <div className="relative rounded-[2rem] overflow-hidden border border-pink-100/80 bg-gradient-to-br from-rose-50 to-pink-50 shadow-2xl shadow-pink-200/40 p-4 sm:p-6">
-              <MarketingImage src={heroImage} alt="MamtaAI oximeter integration overview" />
+          <div className="relative flex justify-center lg:justify-end lg:pt-1">
+            <div className="relative w-full max-w-[220px] sm:max-w-[240px] lg:max-w-[260px]">
+              <div
+                className="absolute -inset-3 sm:-inset-4 rounded-2xl bg-gradient-to-br from-pink-300/45 via-rose-300/35 to-purple-300/30 blur-2xl opacity-80 pointer-events-none"
+                aria-hidden
+              />
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-pink-300/25 ring-1 ring-pink-100/70">
+                <Image
+                  src={heroImage}
+                  alt="MamtaAI oximeter integration overview"
+                  className="w-full h-auto block"
+                  sizes="(max-width: 640px) 220px, 260px"
+                  priority
+                />
+              </div>
             </div>
           </div>
         </div>
