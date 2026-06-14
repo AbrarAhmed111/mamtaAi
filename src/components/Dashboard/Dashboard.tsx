@@ -5,6 +5,7 @@ import { toast, Toaster } from '@/components/ui/sonner';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Spinner from '@/components/ui/spinner';
+import Select from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FaBaby, FaCamera, FaUsers, FaPlay, FaStop, FaUser, FaMicrophone, FaClock, FaShieldAlt, FaBell } from 'react-icons/fa';
 import WelcomeChecklist from './WelcomeChecklist';
@@ -14,6 +15,10 @@ import BabySelectionModal from './BabySelectionModal';
 import ProcessingProgress from './ProcessingProgress';
 // import BadgesSection from './BadgesSection';
 import QuickActions from './QuickActions';
+import ExpertRequestStatusCard, {
+  type ExpertApplicationSummary,
+} from './Expert/ExpertRequestStatusCard';
+import { usePlanLimit } from '@/hooks/useSubscription';
 
 interface ChecklistItem {
   id: string;
@@ -57,6 +62,7 @@ export default function Dashboard({
   onboardingCompleted
 }: DashboardProps) {
   const router = useRouter();
+  const handlePlanLimit = usePlanLimit();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([
     {
@@ -126,15 +132,29 @@ export default function Dashboard({
   const [processingAudio, setProcessingAudio] = useState<{ blob: Blob; durationSeconds: number } | null>(null);
   const [processingResult, setProcessingResult] = useState<any>(null);
   const [dailyStats, setDailyStats] = useState<{ recordingsToday: number; minutesToday: number; avgConfidenceToday: number; urgentToday: number } | null>(null);
+  const [expertApplyStatus, setExpertApplyStatus] = useState<
+    'none' | 'pending' | 'approved' | 'rejected'
+  >('none');
+  const [expertApplication, setExpertApplication] = useState<ExpertApplicationSummary | null>(null);
+  const [expertCanApply, setExpertCanApply] = useState(true);
+  const [expertReapplyAt, setExpertReapplyAt] = useState<string | null>(null);
+  const [expertHasIntent, setExpertHasIntent] = useState(false);
+  const [expertApplyLoaded, setExpertApplyLoaded] = useState(false);
 
   useEffect(() => {
     // Points and badges removed
   }, [checklist, babies]);
 
   const effectiveRole = (role ?? user.role ?? '').toLowerCase();
+  const isAdmin = effectiveRole === 'admin';
   const isParent = effectiveRole === 'parent';
-  const isRoleUnset = !effectiveRole || (effectiveRole !== 'parent' && effectiveRole !== 'expert');
+  const isRoleUnset = !effectiveRole || (effectiveRole !== 'parent' && effectiveRole !== 'admin');
   const isOnboardingIncomplete = onboardingCompleted === false;
+  const showSetupBanner =
+    !isAdmin &&
+    (isRoleUnset ||
+      isOnboardingIncomplete ||
+      (isParent && babiesListResolved && babies.length === 0));
 
   const loadBabies = useCallback(async () => {
     if (!isParent) {
@@ -176,6 +196,25 @@ export default function Dashboard({
   useEffect(() => {
     void loadBabies();
   }, [loadBabies]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch('/api/experts/apply', { cache: 'no-store' });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return;
+        setExpertApplyStatus(json.status || 'none');
+        setExpertApplication(json.application ?? null);
+        setExpertCanApply(Boolean(json.canApply));
+        setExpertReapplyAt(json.reapplyAt ?? null);
+        setExpertHasIntent(Boolean(json.hasExpertIntent));
+      } catch {
+        // ignore
+      } finally {
+        setExpertApplyLoaded(true);
+      }
+    })();
+  }, []);
 
   // Fetch dynamic checklist stats
   useEffect(() => {
@@ -430,6 +469,37 @@ export default function Dashboard({
   return (
     <>
      
+        {expertApplyLoaded &&
+          (expertApplyStatus === 'pending' || expertApplyStatus === 'rejected') && (
+            <ExpertRequestStatusCard
+              status={expertApplyStatus}
+              application={expertApplication}
+              canApply={expertCanApply}
+              reapplyAt={expertReapplyAt}
+            />
+          )}
+
+        {expertApplyLoaded &&
+          expertApplyStatus === 'none' &&
+          expertHasIntent &&
+          expertCanApply && (
+            <div className="mb-6 rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-white p-5 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                Request status
+              </p>
+              <p className="mt-2 font-semibold text-gray-900">Complete your expert application</p>
+              <p className="mt-1 text-sm text-gray-600">
+                You chose Expert during signup. Upload your verification document to submit for review.
+              </p>
+              <Link
+                href="/dashboard/expert-application"
+                className="mt-4 inline-flex rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 px-4 py-2 text-sm font-semibold text-white hover:from-pink-700 hover:to-rose-700"
+              >
+                Continue application
+              </Link>
+            </div>
+          )}
+
         {isParent && !babiesListResolved && (
           <div className="mt-4 mb-4 rounded-xl border border-pink-100 bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -442,24 +512,21 @@ export default function Dashboard({
           </div>
         )}
 
-        {(isRoleUnset ||
-          isOnboardingIncomplete ||
-          (isParent && babiesListResolved && babies.length === 0)) &&
-          !(isParent && !babiesListResolved) && (
+        {showSetupBanner && !(isParent && !babiesListResolved) && (
           <div className="mb-6">
-            <div className="rounded-3xl border border-amber-100/80 bg-[#fdf6e8] p-4 shadow-sm sm:p-5">
+            <div className="rounded-3xl border border-pink-100/80 bg-gradient-to-r from-pink-50 via-rose-50 to-purple-50 p-4 shadow-sm shadow-pink-100/20 sm:p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex gap-4">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100/80 text-amber-700 ring-4 ring-amber-50">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-pink-100 text-pink-600 ring-4 ring-pink-50">
                     <FaBaby className="text-xl" />
                   </span>
                   <div>
-                    <p className="font-semibold text-amber-950">
+                    <p className="font-semibold text-gray-900">
                       {isRoleUnset
                         ? 'Please choose your role (Parent or Expert).'
                         : 'Please add at least one baby to continue.'}
                     </p>
-                    <p className="mt-1 text-sm text-amber-800/90">
+                    <p className="mt-1 text-sm text-gray-600">
                       {isRoleUnset
                         ? 'This helps us tailor the dashboard to your needs.'
                         : 'Add a baby to start tracking and get personalized insights.'}
@@ -768,37 +835,39 @@ export default function Dashboard({
               </div>
               <div>
                 <label className="block text-sm text-gray-700 mb-1">Gender</label>
-                <select
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                <Select
                   value={babyGender}
-                  onChange={e => setBabyGender(e.target.value as 'male' | 'female' | '')}
-                >
-                  <option value="">Select gender (optional)</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                </select>
+                  onChange={v => setBabyGender(v as 'male' | 'female' | '')}
+                  options={[
+                    { value: '', label: 'Select gender (optional)' },
+                    { value: 'male', label: 'Male' },
+                    { value: 'female', label: 'Female' },
+                  ]}
+                  aria-label="Gender"
+                />
               </div>
               <div>
                 <label className="block text-sm text-gray-700 mb-1">Your relationship to the baby</label>
-                <select
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                <Select
                   value={babyRelationship}
-                  onChange={e => {
-                    setBabyRelationship(e.target.value as any);
+                  onChange={v => {
+                    setBabyRelationship(v as typeof babyRelationship);
                     if (relationshipError) setRelationshipError('');
                   }}
                   onBlur={() => {
                     if (!babyRelationship) setRelationshipError('Please select your relationship');
                   }}
-                >
-                  <option value="">Select relationship</option>
-                  <option value="mother">Mother</option>
-                  <option value="father">Father</option>
-                  <option value="guardian">Guardian</option>
-                  <option value="caregiver">Caregiver</option>
-                  <option value="grandparent">Grandparent</option>
-                  <option value="other">Other</option>
-                </select>
+                  options={[
+                    { value: '', label: 'Select relationship' },
+                    { value: 'mother', label: 'Mother' },
+                    { value: 'father', label: 'Father' },
+                    { value: 'guardian', label: 'Guardian' },
+                    { value: 'caregiver', label: 'Caregiver' },
+                    { value: 'grandparent', label: 'Grandparent' },
+                    { value: 'other', label: 'Other' },
+                  ]}
+                  aria-label="Your relationship to the baby"
+                />
                 {relationshipError && <p className="text-xs text-red-600 mt-1">{relationshipError}</p>}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -855,11 +924,10 @@ export default function Dashboard({
               </div>
               <div>
                 <label className="block text-sm text-gray-700 mb-1">Blood Type</label>
-                <select
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                <Select
                   value={babyBloodType}
-                  onChange={e => {
-                    setBabyBloodType(e.target.value);
+                  onChange={v => {
+                    setBabyBloodType(v);
                     if (bloodError) setBloodError('');
                   }}
                   onBlur={() => {
@@ -867,17 +935,19 @@ export default function Dashboard({
                       setBloodError('Invalid blood type');
                     }
                   }}
-                >
-                  <option value="">Select blood type (optional)</option>
-                  <option value="A+">A+</option>
-                  <option value="A-">A-</option>
-                  <option value="B+">B+</option>
-                  <option value="B-">B-</option>
-                  <option value="AB+">AB+</option>
-                  <option value="AB-">AB-</option>
-                  <option value="O+">O+</option>
-                  <option value="O-">O-</option>
-                </select>
+                  options={[
+                    { value: '', label: 'Select blood type (optional)' },
+                    { value: 'A+', label: 'A+' },
+                    { value: 'A-', label: 'A-' },
+                    { value: 'B+', label: 'B+' },
+                    { value: 'B-', label: 'B-' },
+                    { value: 'AB+', label: 'AB+' },
+                    { value: 'AB-', label: 'AB-' },
+                    { value: 'O+', label: 'O+' },
+                    { value: 'O-', label: 'O-' },
+                  ]}
+                  aria-label="Blood type"
+                />
                 {bloodError && <p className="text-xs text-red-600 mt-1">{bloodError}</p>}
               </div>
               <div>
@@ -942,7 +1012,8 @@ export default function Dashboard({
                     });
                     const data = await res.json().catch(() => ({}));
                     if (!res.ok) {
-                      setFormError(data?.error || 'Failed to add baby');
+                      if (handlePlanLimit(data)) return;
+                      setFormError(data?.message || data?.error || 'Failed to add baby');
                       return;
                     }
                     toast.success('Baby added successfully');

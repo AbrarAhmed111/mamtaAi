@@ -37,7 +37,12 @@ export async function GET(
         author:profiles!forum_threads_author_id_fkey (
           id,
           full_name,
-          avatar_url
+          avatar_url,
+          role,
+          is_expert,
+          is_verified,
+          verification_data,
+          created_at
         )
       `)
       .eq('id', id)

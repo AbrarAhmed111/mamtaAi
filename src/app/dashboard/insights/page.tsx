@@ -6,6 +6,7 @@ import Spinner from '@/components/ui/spinner'
 import { toast } from '@/components/ui/sonner'
 import { FaChartLine, FaClock, FaExclamationTriangle, FaHistory, FaMicrophone, FaBaby, FaDownload } from 'react-icons/fa'
 import Link from 'next/link'
+import { usePlanLimit } from '@/hooks/useSubscription'
 
 type InsightResponse = {
   overview: {
@@ -222,6 +223,7 @@ function SimpleBars({
 
 function InsightsPageContent() {
   const searchParams = useSearchParams()
+  const handlePlanLimit = usePlanLimit()
   const focusBabyId = (searchParams.get('babyId') || '').trim()
 
   const [loading, setLoading] = useState(true)
@@ -292,11 +294,8 @@ function InsightsPageContent() {
                 const res = await fetch('/api/insights/export')
                 if (!res.ok) {
                   const err = await res.json().catch(() => ({}))
-                  if (err?.error === 'PLAN_LIMIT_REACHED') {
-                    toast.error(err.message)
-                    return
-                  }
-                  toast.error(err?.error || 'Export failed')
+                  if (handlePlanLimit(err)) return
+                  toast.error(err?.message || err?.error || 'Export failed')
                   return
                 }
                 const blob = await res.blob()

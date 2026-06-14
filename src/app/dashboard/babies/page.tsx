@@ -9,7 +9,9 @@ import Spinner from '@/components/ui/spinner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip } from '@/components/ui/tooltip'
 import { toast } from '@/components/ui/sonner'
+import Select from '@/components/ui/select'
 import { buildBabyHealthSuggestions } from '@/lib/baby-health-suggestions'
+import { usePlanLimit } from '@/hooks/useSubscription'
 import { FaTrash, FaPlus, FaBaby, FaArrowRight, FaEye, FaUser, FaUserPlus, FaTimes, FaHeartbeat } from 'react-icons/fa'
 
 interface Baby {
@@ -103,6 +105,7 @@ function HealthSuggestionsHeartButton({
 
 export default function BabiesPage() {
   const router = useRouter()
+  const handlePlanLimit = usePlanLimit()
   const [babies, setBabies] = useState<BabyListRow[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -260,12 +263,8 @@ export default function BabiesPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        if (data?.error === 'PLAN_LIMIT_REACHED') {
-          const go = window.confirm(`${data.message}\n\nView plans?`)
-          if (go) window.location.href = '/pricing'
-          return
-        }
-        toast.error(data?.error || data?.message || 'Failed to create invite')
+        if (handlePlanLimit(data)) return
+        toast.error(data?.message || data?.error || 'Failed to create invite')
         return
       }
       if (data?.warning) {
@@ -300,7 +299,7 @@ export default function BabiesPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6 overflow-x-hidden">
       {inviteModalBaby && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl border border-pink-100 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -321,18 +320,19 @@ export default function BabiesPage() {
                   placeholder="relative@email.com"
                   className="sm:col-span-2 rounded-xl border border-pink-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-300"
                 />
-                <select
+                <Select
                   value={inviteRelationship}
-                  onChange={e => setInviteRelationship(e.target.value)}
-                  className="rounded-xl border border-pink-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-300"
-                >
-                  <option value="mother">Mother</option>
-                  <option value="father">Father</option>
-                  <option value="guardian">Guardian</option>
-                  <option value="caregiver">Caregiver</option>
-                  <option value="grandparent">Grandparent</option>
-                  <option value="other">Other</option>
-                </select>
+                  onChange={setInviteRelationship}
+                  options={[
+                    { value: 'mother', label: 'Mother' },
+                    { value: 'father', label: 'Father' },
+                    { value: 'guardian', label: 'Guardian' },
+                    { value: 'caregiver', label: 'Caregiver' },
+                    { value: 'grandparent', label: 'Grandparent' },
+                    { value: 'other', label: 'Other' },
+                  ]}
+                  aria-label="Relationship to baby"
+                />
               </div>
               <button
                 onClick={sendInvite}
@@ -385,13 +385,13 @@ export default function BabiesPage() {
         </div>
       )}
       {/* Page hero */}
-      <section className="bg-gradient-to-r from-pink-50 via-rose-50 to-purple-50 rounded-2xl border border-pink-100 p-6 sm:p-8 shadow-sm">
-        <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
+      <section className="rounded-2xl border border-pink-100 bg-gradient-to-r from-pink-50 via-rose-50 to-purple-50 p-4 shadow-sm sm:p-8">
+        <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent sm:text-3xl">
               My Babies
             </h1>
-            <p className="text-gray-600 text-sm mt-2">Manage your babies, view relations, and jump into details.</p>
+            <p className="mt-2 text-sm text-gray-600">Manage your babies, view relations, and jump into details.</p>
           </div>
           <div className="w-full sm:w-auto">
             <Link
@@ -418,9 +418,9 @@ export default function BabiesPage() {
             </div>
           </div>
         ) : babies.length > 0 ? (
-          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm sm:p-6">
             {/* Mobile: cards */}
-            <div className="md:hidden space-y-4">
+            <div className="space-y-4 md:hidden">
               {babies.map(b => {
                 const tooltip = b.relations.map(r => `${r.name} ${r.relationship?.charAt(0).toUpperCase()}${r.relationship?.slice(1)}`).join('\n')
                 const isConfirming = confirmDeleteId === b.id
@@ -439,99 +439,94 @@ export default function BabiesPage() {
                 return (
                   <div
                     key={b.id}
-                    className="relative border border-pink-100 rounded-xl p-4 hover:shadow-md transition-all duration-300 bg-gradient-to-br from-white to-pink-50/30"
+                    className="rounded-xl border border-pink-100 bg-gradient-to-br from-white to-pink-50/30 p-4 shadow-sm"
                   >
-                    <Link
-                      href={`/dashboard/babies/${b.id}`}
-                      className="block group"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="relative">
-                          <div className={`w-14 h-14 rounded-full border-2 border-pink-200 shadow-sm flex items-center justify-center overflow-hidden ${avatarBgClass}`}>
-                            {b.avatar ? (
-                              <Image
-                                src={b.avatar}
-                                alt={b.name}
-                                width={56}
-                                height={56}
-                                className="w-14 h-14 object-cover"
-                              />
-                            ) : (
-                              <FaUser className={avatarIconClass} />
-                            )}
-                          </div>
-                          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-pink-400 rounded-full border-2 border-white flex items-center justify-center">
-                            <FaBaby className="text-white text-xs" />
-                          </div>
+                    <div className="flex items-start gap-3">
+                      <Link href={`/dashboard/babies/${b.id}`} className="relative shrink-0">
+                        <div className={`flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-pink-200 shadow-sm ${avatarBgClass}`}>
+                          {b.avatar ? (
+                            <Image
+                              src={b.avatar}
+                              alt={b.name}
+                              width={56}
+                              height={56}
+                              className="h-14 w-14 object-cover"
+                            />
+                          ) : (
+                            <FaUser className={avatarIconClass} />
+                          )}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between">
-                            <p className="font-semibold text-gray-900 truncate text-lg">{b.name}</p>
-                            <span className="text-xs text-pink-600 font-medium ml-2 shrink-0 bg-pink-100 px-2 py-1 rounded-full">{b.age}</span>
-                          </div>
-                          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">
-                            <span><span className="text-gray-500">Gender:</span> <span className="capitalize font-medium">{b.gender || '-'}</span></span>
-                            <span><span className="text-gray-500">Blood:</span> <span className="font-medium">{b.bloodType || '-'}</span></span>
-                            <span><span className="text-gray-500">Weight:</span> <span className="font-medium">{b.weightKg != null ? `${b.weightKg} kg` : '-'}</span></span>
-                            <span><span className="text-gray-500">Height:</span> <span className="font-medium">{b.heightCm != null ? `${b.heightCm} cm` : '-'}</span></span>
-                          </div>
+                        <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-pink-400">
+                          <FaBaby className="text-xs text-white" />
                         </div>
-                        <Tooltip content={tooltip || 'No relations'}>
-                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-pink-100 to-rose-100 text-pink-700 text-xs font-medium shrink-0 border border-pink-200">
-                            {b.relations.length} {b.relations.length === 1 ? 'relation' : 'relations'}
-                          </span>
-                        </Tooltip>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-pink-600 text-xs font-medium hidden group-hover:inline">View</span>
-                          <FaArrowRight className="text-pink-500 group-hover:text-pink-600 group-hover:translate-x-1 transition-all duration-200" />
+                      </Link>
+
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/dashboard/babies/${b.id}`} className="block min-w-0">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <p className="truncate text-lg font-semibold text-gray-900">{b.name}</p>
+                            <span className="shrink-0 rounded-full bg-pink-100 px-2 py-0.5 text-xs font-medium text-pink-600">
+                              {b.age}
+                            </span>
+                          </div>
+                        </Link>
+
+                        <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-600">
+                          <span><span className="text-gray-500">Gender:</span> <span className="font-medium capitalize">{b.gender || '-'}</span></span>
+                          <span><span className="text-gray-500">Blood:</span> <span className="font-medium">{b.bloodType || '-'}</span></span>
+                          <span><span className="text-gray-500">Weight:</span> <span className="font-medium">{b.weightKg != null ? `${b.weightKg} kg` : '-'}</span></span>
+                          <span><span className="text-gray-500">Height:</span> <span className="font-medium">{b.heightCm != null ? `${b.heightCm} cm` : '-'}</span></span>
                         </div>
                       </div>
-                    </Link>
-                    <div className="absolute top-4 right-4 flex items-center gap-2">
-                    <HealthSuggestionsHeartButton
-                      baby={b}
-                      isOpen={healthPop?.babyId === b.id}
-                      onPress={e => toggleHealthPop(e, b)}
-                    />
-                    {b.iAmPrimary && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          openInviteModal(b)
-                        }}
-                        className="p-2 rounded-lg bg-pink-50 text-pink-600 hover:bg-pink-100 transition-all duration-200"
-                        title="Invite relatives"
-                      >
-                        <FaUserPlus className="text-sm" />
-                      </button>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        handleDelete(b.id, b.name)
-                      }}
-                      disabled={deletingId === b.id}
-                      className={`p-2 rounded-lg transition-all duration-200 ${
-                        isConfirming
-                          ? 'bg-red-500 text-white hover:bg-red-600'
-                          : 'bg-red-50 text-red-600 hover:bg-red-100'
-                      } ${deletingId === b.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      title={isConfirming ? 'Click again to confirm' : 'Delete baby'}
-                    >
-                      {deletingId === b.id ? (
-                        <Spinner size={16} />
-                      ) : (
-                        <FaTrash className="text-sm" />
-                      )}
-                    </button>
                     </div>
-                    {isConfirming && (
-                      <div className="mt-3 pt-3 border-t border-pink-200">
-                        <p className="text-xs text-red-600 font-medium mb-2">Are you sure? This cannot be undone.</p>
-                      </div>
-                    )}
+
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-pink-100/80 pt-3">
+                      <Tooltip content={tooltip || 'No relations'}>
+                        <span className="inline-flex max-w-full items-center truncate rounded-full border border-pink-200 bg-gradient-to-r from-pink-100 to-rose-100 px-3 py-1 text-xs font-medium text-pink-700">
+                          {b.relations.length} {b.relations.length === 1 ? 'relation' : 'relations'}
+                        </span>
+                      </Tooltip>
+
+                      <Link
+                        href={`/dashboard/babies/${b.id}`}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-pink-600 hover:text-pink-700"
+                      >
+                        View profile
+                        <FaArrowRight className="text-[10px]" />
+                      </Link>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <HealthSuggestionsHeartButton
+                        baby={b}
+                        isOpen={healthPop?.babyId === b.id}
+                        onPress={e => toggleHealthPop(e, b)}
+                      />
+                      {b.iAmPrimary && (
+                        <button
+                          onClick={() => openInviteModal(b)}
+                          className="rounded-lg bg-pink-50 p-2 text-pink-600 transition-all duration-200 hover:bg-pink-100"
+                          title="Invite relatives"
+                        >
+                          <FaUserPlus className="text-sm" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDelete(b.id, b.name)}
+                        disabled={deletingId === b.id}
+                        className={`rounded-lg p-2 transition-all duration-200 ${
+                          isConfirming
+                            ? 'bg-red-500 text-white hover:bg-red-600'
+                            : 'bg-red-50 text-red-600 hover:bg-red-100'
+                        } ${deletingId === b.id ? 'cursor-not-allowed opacity-50' : ''}`}
+                        title={isConfirming ? 'Click again to confirm' : 'Delete baby'}
+                      >
+                        {deletingId === b.id ? <Spinner size={16} /> : <FaTrash className="text-sm" />}
+                      </button>
+                      {isConfirming && (
+                        <span className="text-xs font-medium text-red-600">Tap delete again to confirm</span>
+                      )}
+                    </div>
                   </div>
                 )
               })}

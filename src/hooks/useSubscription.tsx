@@ -1,7 +1,10 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { dashboardFetch } from '@/lib/session/client'
 import type { PlanLimitations, PlanSlug, UsageStats } from '@/lib/subscription/types'
+import PlanLimitModal from '@/components/subscription/PlanLimitModal'
+import { registerPlanLimitHandler } from '@/lib/subscription/plan-limit-client'
 
 export type SubscriptionMeter = {
   used: number
@@ -22,6 +25,9 @@ export type SubscriptionState = {
     exports: SubscriptionMeter
   }
   refresh: () => Promise<void>
+  showPlanLimitModal: (payload: PlanLimitApiError) => void
+  closePlanLimitModal: () => void
+  handlePlanLimit: (data: unknown) => boolean
 }
 
 const SubscriptionContext = createContext<SubscriptionState | null>(null)
@@ -38,10 +44,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     activities: null,
     exports: null,
   })
+  const [planLimitPayload, setPlanLimitPayload] = useState<PlanLimitApiError | null>(null)
+  const [planLimitOpen, setPlanLimitOpen] = useState(false)
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch('/api/subscription', { cache: 'no-store' })
+      const res = await dashboardFetch('/api/subscription', { cache: 'no-store' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) return
       setSlug((data?.plan?.slug as PlanSlug) || 'free')
@@ -63,6 +71,29 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     void refresh()
   }, [refresh])
 
+  const showPlanLimitModal = useCallback((payload: PlanLimitApiError) => {
+    setPlanLimitPayload(payload)
+    setPlanLimitOpen(true)
+  }, [])
+
+  useEffect(() => {
+    registerPlanLimitHandler(showPlanLimitModal)
+    return () => registerPlanLimitHandler(null)
+  }, [showPlanLimitModal])
+
+  const closePlanLimitModal = useCallback(() => {
+    setPlanLimitOpen(false)
+  }, [])
+
+  const handlePlanLimit = useCallback(
+    (data: unknown): boolean => {
+      if (!isPlanLimitError(data)) return false
+      showPlanLimitModal(data)
+      return true
+    },
+    [showPlanLimitModal],
+  )
+
   const value = useMemo(
     () => ({
       loading,
@@ -73,11 +104,36 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       showUpsellBanners,
       meters,
       refresh,
+      showPlanLimitModal,
+      closePlanLimitModal,
+      handlePlanLimit,
     }),
-    [loading, slug, planName, limitations, usage, showUpsellBanners, meters, refresh],
+    [
+      loading,
+      slug,
+      planName,
+      limitations,
+      usage,
+      showUpsellBanners,
+      meters,
+      refresh,
+      showPlanLimitModal,
+      closePlanLimitModal,
+      handlePlanLimit,
+    ],
   )
 
-  return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>
+  return (
+    <SubscriptionContext.Provider value={value}>
+      {children}
+      <PlanLimitModal
+        open={planLimitOpen}
+        payload={planLimitPayload}
+        currentPlanName={planName}
+        onClose={closePlanLimitModal}
+      />
+    </SubscriptionContext.Provider>
+  )
 }
 
 export function useSubscription(): SubscriptionState {
@@ -88,11 +144,20 @@ export function useSubscription(): SubscriptionState {
   return ctx
 }
 
+/** Use anywhere in the dashboard to open the upgrade modal on plan limit API errors. */
+export function usePlanLimit() {
+  const { handlePlanLimit } = useSubscription()
+  return handlePlanLimit
+}
+
 export type PlanLimitApiError = {
   error: 'PLAN_LIMIT_REACHED'
   message: string
   upgradeRequired?: boolean
   recommendedPlan?: PlanSlug
+  code?: string
+  current?: number
+  max?: number | null
 }
 
 export function isPlanLimitError(data: unknown): data is PlanLimitApiError {
@@ -103,6 +168,7 @@ export function isPlanLimitError(data: unknown): data is PlanLimitApiError {
   )
 }
 
+/** @deprecated Prefer `usePlanLimit()` inside React components. */
 export function handlePlanLimitResponse(
   data: unknown,
   onUpgrade?: (recommended?: PlanSlug) => void,

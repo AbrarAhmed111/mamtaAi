@@ -4,12 +4,14 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from '@/components/ui/sonner'
 import Spinner from '@/components/ui/spinner'
-import { useSubscription } from '@/hooks/useSubscription'
+import Select from '@/components/ui/select'
+import { useSubscription, usePlanLimit } from '@/hooks/useSubscription'
 import Link from 'next/link'
 
 export default function AddBabyPage() {
   const router = useRouter()
   const { slug, limitations } = useSubscription()
+  const handlePlanLimit = usePlanLimit()
   const [adding, setAdding] = useState(false)
   const babyCap = limitations.max_babies_soft_cap ?? limitations.max_babies
 
@@ -241,11 +243,8 @@ export default function AddBabyPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        if (data?.error === 'PLAN_LIMIT_REACHED') {
-          setFormError(data.message || 'Plan limit reached')
-          return
-        }
-        setFormError(data?.error || data?.message || 'Failed to add baby')
+        if (handlePlanLimit(data)) return
+        setFormError(data.message || data?.error || 'Failed to add baby')
         return
       }
       toast.success('Baby added successfully')
@@ -311,15 +310,16 @@ export default function AddBabyPage() {
 
           <div>
             <label className="block text-sm text-gray-700 mb-1">Gender</label>
-            <select
-              className="w-full rounded-md border border-gray-300 px-3 py-2"
+            <Select
               value={gender}
-              onChange={e => setGender(e.target.value as any)}
-            >
-              <option value="">Select gender (optional)</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
+              onChange={v => setGender(v as typeof gender)}
+              options={[
+                { value: '', label: 'Select gender (optional)' },
+                { value: 'male', label: 'Male' },
+                { value: 'female', label: 'Female' },
+              ]}
+              aria-label="Gender"
+            />
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm text-gray-700 mb-1">Avatar</label>
@@ -399,25 +399,25 @@ export default function AddBabyPage() {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Relationship</h2>
         <div>
           <label className="block text-sm text-gray-700 mb-1">Your relationship to the baby <span className="text-red-600">*</span></label>
-          <select
-            className="w-full rounded-md border border-gray-300 px-3 py-2"
+          <Select
             value={relationship}
-            onChange={e => {
-              setRelationship(e.target.value as any)
+            onChange={v => {
+              setRelationship(v as typeof relationship)
               if (relationshipError) setRelationshipError('')
             }}
-            onBlur={() => {
-              validateRelationship(relationship)
-            }}
-          >
-            <option value="">Select relationship</option>
-            <option value="mother">Mother</option>
-            <option value="father">Father</option>
-            <option value="guardian">Guardian</option>
-            <option value="caregiver">Caregiver</option>
-            <option value="grandparent">Grandparent</option>
-            <option value="other">Other</option>
-          </select>
+            onBlur={() => validateRelationship(relationship)}
+            options={[
+              { value: '', label: 'Select relationship' },
+              { value: 'mother', label: 'Mother' },
+              { value: 'father', label: 'Father' },
+              { value: 'guardian', label: 'Guardian' },
+              { value: 'caregiver', label: 'Caregiver' },
+              { value: 'grandparent', label: 'Grandparent' },
+              { value: 'other', label: 'Other' },
+            ]}
+            required
+            aria-label="Your relationship to the baby"
+          />
           {relationshipError && <p className="text-xs text-red-600 mt-1">{relationshipError}</p>}
         </div>
       </section>
@@ -468,27 +468,26 @@ export default function AddBabyPage() {
           </div>
           <div>
             <label className="block text-sm text-gray-700 mb-1">Blood Type</label>
-            <select
-              className="w-full rounded-md border border-gray-300 px-3 py-2"
+            <Select
               value={bloodType}
-              onChange={e => {
-                setBloodType(e.target.value)
+              onChange={v => {
+                setBloodType(v)
                 if (bloodError) setBloodError('')
               }}
-              onBlur={() => {
-                validateBloodType(bloodType)
-              }}
-            >
-              <option value="">Select blood type (optional)</option>
-              <option value="A+">A+</option>
-              <option value="A-">A-</option>
-              <option value="B+">B+</option>
-              <option value="B-">B-</option>
-              <option value="AB+">AB+</option>
-              <option value="AB-">AB-</option>
-              <option value="O+">O+</option>
-              <option value="O-">O-</option>
-            </select>
+              onBlur={() => validateBloodType(bloodType)}
+              options={[
+                { value: '', label: 'Select blood type (optional)' },
+                { value: 'A+', label: 'A+' },
+                { value: 'A-', label: 'A-' },
+                { value: 'B+', label: 'B+' },
+                { value: 'B-', label: 'B-' },
+                { value: 'AB+', label: 'AB+' },
+                { value: 'AB-', label: 'AB-' },
+                { value: 'O+', label: 'O+' },
+                { value: 'O-', label: 'O-' },
+              ]}
+              aria-label="Blood type"
+            />
             {bloodError && <p className="text-xs text-red-600 mt-1">{bloodError}</p>}
           </div>
         </div>
