@@ -37,7 +37,7 @@ next-env.d.ts
 previousProject/
 
 # project docs (local only)
-/docs
+/docs/
 
 # python backend (separate project)
 /mamtaai_python_backend
