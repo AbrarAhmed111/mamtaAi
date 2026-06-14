@@ -49,6 +49,12 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: metaErr.message }, { status: 500 })
       }
       updateData.metadata = mergeNotificationPreferencesIntoMetadata(existing?.metadata ?? null, patch)
+      if ('oximeterSpo2' in patch || 'oximeterPulse' in patch) {
+        const merged = updateData.metadata as Record<string, unknown>
+        const prefs = (merged.notificationPreferences ?? {}) as Record<string, boolean>
+        updateData.oximeter_alerts_enabled =
+          prefs.oximeterSpo2 !== false || prefs.oximeterPulse !== false
+      }
     }
 
     if (Object.keys(updateData).length === 0) {

@@ -34,6 +34,10 @@ export type NotificationPreferences = {
   adminNotifyAdminActions: boolean
   /** High/critical system errors from the error log. */
   adminNotifySystemErrors: boolean
+  /** Low SpO₂ alerts from connected oximeter. */
+  oximeterSpo2: boolean
+  /** High/low pulse alerts from connected oximeter. */
+  oximeterPulse: boolean
 }
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
@@ -52,6 +56,8 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   adminNotifyCoupons: true,
   adminNotifyAdminActions: true,
   adminNotifySystemErrors: true,
+  oximeterSpo2: true,
+  oximeterPulse: true,
 }
 
 const ADMIN_CATEGORY_PREF: Record<AdminNotifyCategory, keyof NotificationPreferences> = {
@@ -125,6 +131,8 @@ export function parseNotificationPreferences(metadata: unknown): NotificationPre
     adminNotifyCoupons: p.adminNotifyCoupons !== false,
     adminNotifyAdminActions: p.adminNotifyAdminActions !== false,
     adminNotifySystemErrors: p.adminNotifySystemErrors !== false,
+    oximeterSpo2: p.oximeterSpo2 !== false,
+    oximeterPulse: p.oximeterPulse !== false,
   }
 }
 
@@ -151,6 +159,8 @@ export function sanitizeNotificationPreferencesPatch(
     'adminNotifyCoupons',
     'adminNotifyAdminActions',
     'adminNotifySystemErrors',
+    'oximeterSpo2',
+    'oximeterPulse',
   ]
   for (const k of keys) {
     if (typeof src[k] === 'boolean') out[k] = src[k] as boolean
@@ -192,6 +202,20 @@ export function getInAppAlertFlagsForNotificationRow(
     categoryAllowed =
       prefs.adminAlerts !== false &&
       isAdminEventCategoryEnabled(prefs, event, actionData)
+  } else if (cat === 'oximeter') {
+    const actionData =
+      row.action_data && typeof row.action_data === 'object' && !Array.isArray(row.action_data)
+        ? (row.action_data as Record<string, unknown>)
+        : null
+    const breaches = Array.isArray(actionData?.breaches)
+      ? (actionData.breaches as string[])
+      : []
+    const hasSpo2 = breaches.some(b => b === 'spo2_low' || b === 'spo2_high')
+    const hasPulse = breaches.some(b => b === 'pulse_low' || b === 'pulse_high')
+    categoryAllowed =
+      (hasSpo2 && prefs.oximeterSpo2 !== false) ||
+      (hasPulse && prefs.oximeterPulse !== false) ||
+      (breaches.length === 0 && (prefs.oximeterSpo2 !== false || prefs.oximeterPulse !== false))
   }
 
   return {

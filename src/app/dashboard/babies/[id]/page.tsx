@@ -8,6 +8,7 @@ import { toast } from '@/components/ui/sonner'
 import { FaTrash, FaExclamationTriangle, FaUser, FaUserMinus } from 'react-icons/fa'
 import { accessBadgeLabel } from '@/lib/baby-permissions'
 import { usePlanLimit } from '@/hooks/useSubscription'
+import BabyOximeterThresholdsSection from '@/components/babies/BabyOximeterThresholdsSection'
 
 export default function BabyDetailPage() {
   const params = useParams<{ id: string }>()
@@ -602,6 +603,12 @@ export default function BabyDetailPage() {
         </>
         ) : null}
       </section>
+
+      <BabyOximeterThresholdsSection
+        key={babyId}
+        babyId={babyId!}
+        canEdit={canEditBaby}
+      />
 
       {/* Relations */}
       <section className="bg-white rounded-2xl border border-pink-100 p-5 shadow-sm bg-gradient-to-br from-white to-pink-50/20">

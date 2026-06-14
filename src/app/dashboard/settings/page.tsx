@@ -1072,29 +1072,25 @@ export default function SettingsPage() {
             <div className="mt-8 pt-6 border-t border-dashed border-gray-200">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <h3 className="text-sm font-bold text-gray-900">Oximeter readings</h3>
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
-                  Feature coming soon
-                </span>
               </div>
               <p className="text-xs text-gray-500 mb-4">
-                SpO₂ and pulse alerts from a connected oximeter will appear here. These options are not available yet.
+                SpO₂ and pulse alerts from a connected oximeter. Requires an active oximeter session on a
+                Bluetooth-capable browser.
               </p>
               <div className="rounded-lg border border-gray-100 bg-gray-50/80 px-4">
                 <ToggleRow
                   id="pref-oxi-spo2"
                   label="Low oxygen (SpO₂) alerts"
-                  description="Notify when oxygen saturation drops below your chosen threshold."
-                  checked={false}
-                  onChange={() => {}}
-                  disabled
+                  description="Notify when oxygen saturation drops below the attention threshold."
+                  checked={notifPrefs.oximeterSpo2}
+                  onChange={v => setNotifPrefs(p => ({ ...p, oximeterSpo2: v }))}
                 />
                 <ToggleRow
                   id="pref-oxi-pulse"
                   label="Heart rate alerts"
                   description="Notify when pulse is unusually high or low."
-                  checked={false}
-                  onChange={() => {}}
-                  disabled
+                  checked={notifPrefs.oximeterPulse}
+                  onChange={v => setNotifPrefs(p => ({ ...p, oximeterPulse: v }))}
                 />
               </div>
             </div>
