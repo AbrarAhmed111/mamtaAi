@@ -5,6 +5,7 @@ import Providers from '@/store/Providers'
 import { AuthProvider } from '@/lib/supabase/context'
 import SmoothHashScroll from '@/components/marketing/SmoothHashScroll'
 import { metadata as siteMetadata, viewport as siteViewport } from '@/lib/site-metadata'
+import { getServerAuthUser } from '@/lib/supabase/server-auth'
 
 export const metadata = siteMetadata
 export const viewport = siteViewport
@@ -13,18 +14,20 @@ type RootLayoutProps = {
   children: ReactNode
 }
 
-export default function RootLayout({ children }: RootLayoutProps) {
+export default async function RootLayout({ children }: RootLayoutProps) {
+  const initialUser = await getServerAuthUser()
+
   return (
-    <Providers>
-      <AuthProvider>
-        <html lang="en" suppressHydrationWarning>
-          <body suppressHydrationWarning className="antialiased">
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning className="antialiased">
+        <Providers>
+          <AuthProvider initialUser={initialUser}>
             <SmoothHashScroll />
             <Toaster position="top-center" />
             {children}
-          </body>
-        </html>
-      </AuthProvider>
-    </Providers>
+          </AuthProvider>
+        </Providers>
+      </body>
+    </html>
   )
 }
