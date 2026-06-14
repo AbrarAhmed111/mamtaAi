@@ -16,6 +16,7 @@ import {
   isStickyExpertReviewNotification,
 } from '@/lib/notifications/sticky-expert-notifications'
 import { SubscriptionProvider } from '@/hooks/useSubscription'
+import { OnboardingStatsProvider } from '@/contexts/OnboardingStatsContext'
 import { OximeterProvider } from '@/contexts/OximeterContext'
 import ConnectOximeterModal from '@/components/oximeter/ConnectOximeterModal'
 import OximeterAlertModal from '@/components/oximeter/OximeterAlertModal'
@@ -33,6 +34,7 @@ import ExpertApplicationBanner from '@/components/Dashboard/Expert/ExpertApplica
 import DashboardSessionReconcile from '@/components/Dashboard/DashboardSessionReconcile'
 import { dashboardFetch } from '@/lib/session/client'
 import type { SubscriptionSnapshot } from '@/lib/subscription/snapshot-types'
+import type { OnboardingStatsSnapshot } from '@/lib/onboarding/stats-snapshot'
 
 type PendingInvite = {
   id: string
@@ -73,11 +75,13 @@ function mapDbRowToAppNotification(row: Record<string, unknown>): AppNotificatio
 type DashboardClientLayoutProps = {
   children: React.ReactNode
   initialSubscription?: SubscriptionSnapshot | null
+  initialOnboardingStats?: OnboardingStatsSnapshot | null
 }
 
 export default function DashboardClientLayout({
   children,
   initialSubscription = null,
+  initialOnboardingStats = null,
 }: DashboardClientLayoutProps) {
   const pathname = usePathname()
   const router = useRouter()
@@ -356,6 +360,7 @@ export default function DashboardClientLayout({
 
   return (
     <SubscriptionProvider initialState={initialSubscription}>
+    <OnboardingStatsProvider initialStats={initialOnboardingStats}>
     <OximeterProvider>
     <ConnectOximeterModal />
     <OximeterAlertModal />
@@ -406,7 +411,8 @@ export default function DashboardClientLayout({
           userName={displayUser.name.split(' ')[0]}
           userAvatarUrl={displayUser.avatar}
           isLoading={loading}
-          showPlanBadge={activeView === 'parent'}
+          showPlanBadge={activeView === 'parent' && !adminAccount}
+          showAdminBadge={adminAccount}
           headerExtra={
             adminAccount ? (
               <AdminViewSwitcher activeView={adminViewPreference} />
@@ -417,17 +423,12 @@ export default function DashboardClientLayout({
           onMenuToggle={toggleMobileMenu}
           unreadNotificationCount={unreadCount}
           notificationBlink={notificationBlink}
+          notificationsOpen={notificationsOpen}
+          onNotificationsClose={() => setNotificationsOpen(false)}
           onNotificationClick={handleNotificationClick}
           notificationDropdown={
             notificationsOpen ? (
-              <>
-                <button
-                  type="button"
-                  aria-label="Close notifications"
-                  className="fixed inset-0 z-[64] bg-black/25 sm:hidden"
-                  onClick={() => setNotificationsOpen(false)}
-                />
-                <div className="fixed left-3 right-3 top-24 z-[65] flex max-h-[min(24rem,calc(100dvh-6.5rem))] flex-col overflow-hidden rounded-xl border border-pink-100 bg-white shadow-xl sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[min(92vw,24rem)] sm:max-h-[min(24rem,calc(100vh-7rem))]">
+              <div className="fixed left-3 right-3 top-24 z-[65] flex max-h-[min(24rem,calc(100dvh-6.5rem))] flex-col overflow-hidden rounded-xl border border-pink-100 bg-white shadow-xl sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[min(92vw,24rem)] sm:max-h-[min(24rem,calc(100vh-7rem))]">
                   <div className="flex shrink-0 items-center justify-between border-b border-pink-100 p-3">
                     <p className="text-sm font-semibold text-gray-900">Notifications</p>
                     <button
@@ -474,7 +475,6 @@ export default function DashboardClientLayout({
                     )}
                   </div>
                 </div>
-              </>
             ) : null
           }
           onSettingsClick={() => {
@@ -501,6 +501,7 @@ export default function DashboardClientLayout({
       </div>
     </div>
     </OximeterProvider>
+    </OnboardingStatsProvider>
     </SubscriptionProvider>
   )
 }

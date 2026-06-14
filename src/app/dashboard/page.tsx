@@ -47,15 +47,18 @@ export default function DashboardPage() {
     return <ExpertOverview />;
   }
 
+  const dashboardRole =
+    activeView === 'parent' ? 'parent' : (user.profile.role || 'parent');
+
   return (
     <Dashboard
       user={{
         name: user.profile.full_name,
-        role: user.profile.role || 'parent',
+        role: dashboardRole,
         avatar: user.profile.avatar_url || undefined
       }}
       currentPath="/dashboard"
-      role={user.profile.role}
+      role={dashboardRole}
       onboardingCompleted={user.profile.onboarding_completed ?? null}
       onSignOut={async () => {
         try {

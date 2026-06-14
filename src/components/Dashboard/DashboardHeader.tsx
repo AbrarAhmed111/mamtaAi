@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { FaBell, FaCog, FaChevronDown } from 'react-icons/fa';
 import Link from 'next/link';
 import PlanHeaderBadge from '@/components/subscription/PlanHeaderBadge';
+import AdminHeaderBadge from '@/components/Dashboard/Admin/AdminHeaderBadge';
 import { SidebarMenuButton } from './Sidebar';
 
 interface DashboardHeaderProps {
@@ -22,7 +23,10 @@ interface DashboardHeaderProps {
   unreadNotificationCount?: number;
   notificationBlink?: boolean;
   showPlanBadge?: boolean;
+  showAdminBadge?: boolean;
   headerExtra?: ReactNode;
+  notificationsOpen?: boolean;
+  onNotificationsClose?: () => void;
 }
 
 export default function DashboardHeader({
@@ -40,10 +44,14 @@ export default function DashboardHeader({
   unreadNotificationCount = 0,
   notificationBlink = false,
   showPlanBadge = true,
+  showAdminBadge = false,
   headerExtra,
+  notificationsOpen = false,
+  onNotificationsClose,
 }: DashboardHeaderProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -54,6 +62,27 @@ export default function DashboardHeader({
     window.addEventListener('click', handler);
     return () => window.removeEventListener('click', handler);
   }, []);
+
+  useEffect(() => {
+    if (!notificationsOpen) return;
+
+    const onPointerDown = (event: MouseEvent) => {
+      const root = notificationRef.current;
+      if (!root || root.contains(event.target as Node)) return;
+      onNotificationsClose?.();
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onNotificationsClose?.();
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [notificationsOpen, onNotificationsClose]);
 
   return (
     <header className="relative z-30 shrink-0 border-b border-pink-100/60 bg-white/75 px-4 py-5 shadow-sm shadow-pink-100/30 backdrop-blur-lg backdrop-saturate-150 supports-[backdrop-filter]:bg-white/60 sm:px-6 lg:px-8">
@@ -75,35 +104,49 @@ export default function DashboardHeader({
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-3" ref={menuRef}>
           {headerExtra}
-          {showPlanBadge ? <PlanHeaderBadge /> : null}
+          {showAdminBadge ? (
+            <AdminHeaderBadge />
+          ) : showPlanBadge ? (
+            <PlanHeaderBadge />
+          ) : null}
           {showNotifications && (
-            <div className="relative">
-              <button
-                type="button"
-                aria-label={
-                  unreadNotificationCount > 0
-                    ? `Notifications, ${unreadNotificationCount} unread`
-                    : 'Notifications'
-                }
-                aria-expanded={Boolean(notificationDropdown)}
-                className={`rounded-full p-2.5 transition-colors ${
-                  notificationBlink
-                    ? 'bg-pink-50 text-pink-600 ring-2 ring-pink-300 ring-offset-2 animate-bell-alert'
-                    : unreadNotificationCount > 0
-                      ? 'bg-pink-50 text-pink-600'
-                      : 'text-gray-400 hover:bg-pink-50/80 hover:text-gray-600'
-                }`}
-                onClick={onNotificationClick}
-              >
-                <FaBell className="text-lg" />
-                {unreadNotificationCount > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
-                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
-                  </span>
-                )}
-              </button>
-              {notificationDropdown}
-            </div>
+            <>
+              {notificationsOpen && (
+                <button
+                  type="button"
+                  aria-label="Close notifications"
+                  className="fixed inset-0 z-[64] bg-black/25 sm:bg-transparent"
+                  onClick={() => onNotificationsClose?.()}
+                />
+              )}
+              <div className="relative" ref={notificationRef}>
+                <button
+                  type="button"
+                  aria-label={
+                    unreadNotificationCount > 0
+                      ? `Notifications, ${unreadNotificationCount} unread`
+                      : 'Notifications'
+                  }
+                  aria-expanded={notificationsOpen}
+                  className={`rounded-full p-2.5 transition-colors ${
+                    notificationBlink
+                      ? 'bg-pink-50 text-pink-600 ring-2 ring-pink-300 ring-offset-2 animate-bell-alert'
+                      : unreadNotificationCount > 0
+                        ? 'bg-pink-50 text-pink-600'
+                        : 'text-gray-400 hover:bg-pink-50/80 hover:text-gray-600'
+                  }`}
+                  onClick={onNotificationClick}
+                >
+                  <FaBell className="text-lg" />
+                  {unreadNotificationCount > 0 && (
+                    <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+                      {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                    </span>
+                  )}
+                </button>
+                {notificationDropdown}
+              </div>
+            </>
           )}
           <button
             type="button"

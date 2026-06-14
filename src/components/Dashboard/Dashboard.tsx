@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast, Toaster } from '@/components/ui/sonner';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Spinner from '@/components/ui/spinner';
 import Select from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FaBaby, FaCamera, FaPlay, FaStop, FaUser, FaMicrophone, FaClock, FaShieldAlt, FaBell } from 'react-icons/fa';
+import { FaBaby, FaCamera, FaMicrophone, FaClock, FaShieldAlt, FaBell } from 'react-icons/fa';
 import WelcomeChecklist from './WelcomeChecklist';
 import RecordingSection from './RecordingSection';
 import BabyProfiles from './BabyProfiles';
@@ -19,7 +19,9 @@ import ExpertRequestStatusCard, {
   type ExpertApplicationSummary,
 } from './Expert/ExpertRequestStatusCard';
 import { usePlanLimit } from '@/hooks/useSubscription';
+import { useOnboardingStats } from '@/contexts/OnboardingStatsContext';
 import OximeterOverviewCard from '@/components/oximeter/OximeterOverviewCard';
+import OximeterOverviewRecentReadings from '@/components/oximeter/OximeterOverviewRecentReadings';
 
 interface ChecklistItem {
   id: string;
@@ -64,25 +66,30 @@ export default function Dashboard({
 }: DashboardProps) {
   const router = useRouter();
   const handlePlanLimit = usePlanLimit();
+  const { hasBaby, hasRecording, loading: statsLoading, refresh: refreshOnboardingStats } =
+    useOnboardingStats();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [checklist, setChecklist] = useState<ChecklistItem[]>([
-    {
-      id: 'add-baby',
-      title: 'Add Baby Profile',
-      description: 'Complete your baby\'s profile with photos and details',
-      completed: false,
-      icon: FaBaby,
-      action: 'Complete Profile'
-    },
-    {
-      id: 'first-cry',
-      title: 'Record First Cry',
-      description: 'Record your baby\'s cry to get AI-powered insights',
-      completed: false,
-      icon: FaCamera,
-      action: 'Record Cry'
-    }
-  ]);
+  const checklistItems = useMemo<ChecklistItem[]>(
+    () => [
+      {
+        id: 'add-baby',
+        title: 'Add Baby Profile',
+        description: 'Complete your baby\'s profile with photos and details',
+        completed: hasBaby,
+        icon: FaBaby,
+        action: 'Complete Profile',
+      },
+      {
+        id: 'first-cry',
+        title: 'Record First Cry',
+        description: 'Record your baby\'s cry to get AI-powered insights',
+        completed: hasRecording,
+        icon: FaCamera,
+        action: 'Record Cry',
+      },
+    ],
+    [hasBaby, hasRecording],
+  );
 
   // Badges removed
 
@@ -113,13 +120,6 @@ export default function Dashboard({
 
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [hasBaby, setHasBaby] = useState(false);
-  const [hasRecording, setHasRecording] = useState(false);
-  const [recentRecs, setRecentRecs] = useState<Array<{ id: string; fileUrl: string; durationSeconds: number | null; recordedAt: string; babyId: string; babyName: string; babyAvatar?: string | null; babyGender?: string | null }>>([]);
-  const [recentLoading, setRecentLoading] = useState(false);
-  const [playingRecordingId, setPlayingRecordingId] = useState<string | null>(null);
-  const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
   const [showProcessingProgress, setShowProcessingProgress] = useState(false);
   const [processingAudio, setProcessingAudio] = useState<{ blob: Blob; durationSeconds: number } | null>(null);
   const [processingResult, setProcessingResult] = useState<any>(null);
@@ -133,15 +133,13 @@ export default function Dashboard({
   const [expertHasIntent, setExpertHasIntent] = useState(false);
   const [expertApplyLoaded, setExpertApplyLoaded] = useState(false);
 
-  useEffect(() => {
-    // Points and badges removed
-  }, [checklist, babies]);
-
   const effectiveRole = (role ?? user.role ?? '').toLowerCase();
   const isAdmin = effectiveRole === 'admin';
   const isParent = effectiveRole === 'parent';
   const isRoleUnset = !effectiveRole || (effectiveRole !== 'parent' && effectiveRole !== 'admin');
   const isOnboardingIncomplete = onboardingCompleted === false;
+  const onboardingChecklistComplete = hasBaby && hasRecording;
+  const showWelcomeChecklist = !statsLoading && !onboardingChecklistComplete;
   const showSetupBanner =
     !isAdmin &&
     (isRoleUnset ||
@@ -182,8 +180,9 @@ export default function Dashboard({
     } finally {
       setBabiesLoading(false);
       setBabiesListResolved(true);
+      if (isParent) void refreshOnboardingStats();
     }
-  }, [isParent]);
+  }, [isParent, refreshOnboardingStats]);
 
   useEffect(() => {
     void loadBabies();
@@ -208,22 +207,6 @@ export default function Dashboard({
     })();
   }, []);
 
-  // Fetch dynamic checklist stats
-  useEffect(() => {
-    const loadStats = async () => {
-      try {
-        setStatsLoading(true);
-        const res = await fetch('/api/user/stats', { cache: 'no-store' });
-        const json = await res.json().catch(() => ({}));
-        setHasBaby(Boolean(json?.hasBaby));
-        setHasRecording(Boolean(json?.hasRecording));
-      } finally {
-        setStatsLoading(false);
-      }
-    };
-    loadStats();
-  }, []);
-
   useEffect(() => {
     const loadDailyStats = async () => {
       try {
@@ -240,34 +223,6 @@ export default function Dashboard({
     void loadDailyStats();
   }, []);
 
-  // Apply stats to checklist items
-  useEffect(() => {
-    setChecklist(prev =>
-      prev.map(item => {
-        if (item.id === 'add-baby') return { ...item, completed: hasBaby, loading: statsLoading };
-        if (item.id === 'first-cry') return { ...item, completed: hasRecording, loading: statsLoading };
-        return { ...item, loading: statsLoading };
-      }),
-    );
-  }, [hasBaby, hasRecording, statsLoading]);
-
-  const loadRecentRecordings = async () => {
-    try {
-      setRecentLoading(true);
-      const res = await fetch('/api/recordings', { cache: 'no-store' });
-      const json = await res.json().catch(() => ({}));
-      const allRecordings = Array.isArray(json?.items) ? json.items : [];
-      // Limit to latest 5 recordings for dashboard display
-      setRecentRecs(allRecordings.slice(0, 5));
-    } finally {
-      setRecentLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadRecentRecordings();
-  }, []);
-
   function formatAge(birthDateISO: string): string {
     try {
       const bd = new Date(birthDateISO);
@@ -282,15 +237,6 @@ export default function Dashboard({
       return '';
     }
   }
-
-  const completeChecklistItem = (itemId: string) => {
-    setChecklist(prev => prev.map(item => {
-      if (item.id === itemId && !item.completed) {
-        return { ...item, completed: true };
-      }
-      return item;
-    }));
-  };
 
   const startRecording = () => {
     // Trigger actual recording start in RecordingSection
@@ -340,7 +286,7 @@ export default function Dashboard({
       setShowSelectBaby(true);
       return;
     }
-    completeChecklistItem(itemId);
+    handleAddBaby();
   };
 
   const handleAddBaby = () => {
@@ -398,63 +344,6 @@ export default function Dashboard({
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
-
-  const handlePlayRecording = (recording: { id: string; fileUrl: string; babyName: string }) => {
-    // Stop any currently playing audio
-    Object.values(audioRefs.current).forEach(audio => {
-      if (audio && !audio.paused) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
-    });
-
-    if (playingRecordingId === recording.id) {
-      // If clicking the same recording, stop it
-      setPlayingRecordingId(null);
-      return;
-    }
-
-    // Create or get audio element
-    if (!audioRefs.current[recording.id]) {
-      const audio = new Audio(recording.fileUrl);
-      audioRefs.current[recording.id] = audio;
-      audio.onended = () => {
-        setPlayingRecordingId(null);
-      };
-      audio.onerror = () => {
-        toast.error('Failed to play recording');
-        setPlayingRecordingId(null);
-      };
-    }
-
-    const audio = audioRefs.current[recording.id];
-    audio.play();
-    setPlayingRecordingId(recording.id);
-  };
-
-  const handleStopRecording = () => {
-    Object.values(audioRefs.current).forEach(audio => {
-      if (audio && !audio.paused) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
-    });
-    setPlayingRecordingId(null);
-  };
-
-  // Cleanup: tear down all HTMLAudioElements we created (must read .current at unmount, not mount)
-  useEffect(() => {
-    return () => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: latest audio map on unmount only
-      const audios = audioRefs.current;
-      Object.values(audios).forEach(audio => {
-        if (audio) {
-          audio.pause();
-          audio.src = '';
-        }
-      });
-    };
-  }, []);
 
   return (
     <>
@@ -623,10 +512,18 @@ export default function Dashboard({
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
             {/* Welcome checklist + recording */}
             <div className="space-y-6 lg:col-span-2 lg:space-y-8">
-          <WelcomeChecklist
-                checklist={checklist}
-                onItemAction={handleChecklistAction}
-              />
+              {showWelcomeChecklist && (
+                <WelcomeChecklist
+                  checklist={checklistItems}
+                  onItemAction={handleChecklistAction}
+                />
+              )}
+
+              {onboardingChecklistComplete && isParent && (
+                <OximeterOverviewRecentReadings
+                  babies={babies.map(b => ({ id: b.id, name: b.name }))}
+                />
+              )}
 
               {isParent && (
             <div className="rounded-3xl border border-pink-100/80 bg-white p-5 shadow-md shadow-pink-100/20">
@@ -702,71 +599,6 @@ export default function Dashboard({
                 )
               )}
 
-          {/* Recent recordings */}
-          <div className="rounded-3xl border border-pink-100/80 bg-white p-5 shadow-md shadow-pink-100/20">
-            <h3 className="mb-4 text-lg font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
-              Your Baby Recordings
-            </h3>
-            {recentLoading ? (
-              <div className="text-gray-600 text-sm">Loading recordings...</div>
-            ) : recentRecs.length === 0 ? (
-              <div className="text-gray-600 text-sm">No recordings yet.</div>
-            ) : (
-              <ul className="space-y-3">
-                {recentRecs.map(r => {
-                  const isPlaying = playingRecordingId === r.id;
-                  const avatarBgClass =
-                    r.babyGender === 'male'
-                      ? 'bg-blue-50'
-                      : r.babyGender === 'female'
-                      ? 'bg-pink-50'
-                      : 'bg-gray-50';
-                  const avatarIconClass =
-                    r.babyGender === 'male'
-                      ? 'text-blue-400'
-                      : r.babyGender === 'female'
-                      ? 'text-pink-400'
-                      : 'text-gray-400';
-                  return (
-                    <li key={r.id} className="flex items-center justify-between text-sm p-3 rounded-lg hover:bg-pink-50/50 transition-colors">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className={`w-10 h-10 rounded-full overflow-hidden border-2 border-pink-200 flex-shrink-0 flex items-center justify-center ${avatarBgClass}`}>
-                          {r.babyAvatar ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={r.babyAvatar} alt={r.babyName} className="w-full h-full object-cover" />
-                          ) : (
-                            <FaUser className={`text-sm ${avatarIconClass}`} />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-gray-900 truncate">{r.babyName}</div>
-                          <div className="text-gray-600 text-xs">
-                            {new Date(r.recordedAt).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric',
-                              hour: 'numeric',
-                              minute: '2-digit'
-                            })} • {r.durationSeconds ? `${Math.floor(r.durationSeconds / 60)}:${String(Math.floor(r.durationSeconds % 60)).padStart(2, '0')}` : '—'}
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => isPlaying ? handleStopRecording() : handlePlayRecording(r)}
-                        className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-110 flex-shrink-0"
-                        title={isPlaying ? 'Stop playback' : 'Play recording'}
-                      >
-                        {isPlaying ? (
-                          <FaStop className="text-xs" />
-                        ) : (
-                          <FaPlay className="text-xs ml-0.5" />
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
             </div>
         </div>
       {showAddBaby && (
@@ -1021,6 +853,7 @@ export default function Dashboard({
                     setBabyNotes('');
                     setBabyRelationship('');
                     await loadBabies();
+                    void refreshOnboardingStats();
                   } catch (e: any) {
                     setFormError('Failed to add baby');
                   } finally {
@@ -1046,13 +879,7 @@ export default function Dashboard({
             setProcessingResult(null);
             // Reset selectedBabyId so modal appears again next time
             setSelectedBabyId(null);
-            // Refresh stats and recordings
-            void loadRecentRecordings();
-            try {
-              fetch('/api/user/stats', { cache: 'no-store' }).then(res => res.json()).then(s => {
-                setHasRecording(Boolean(s?.hasRecording));
-              }).catch(() => {});
-            } catch {}
+            void refreshOnboardingStats();
           }}
           onComplete={(result) => {
             setProcessingResult(result);
