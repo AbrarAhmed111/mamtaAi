@@ -264,6 +264,7 @@ export function OximeterProvider({ children }: { children: ReactNode }) {
             body,
           }),
         })
+        window.dispatchEvent(new CustomEvent('mamta:oximeter-alert-created'))
       } catch {
         // ignore transient failures; modal and sound already shown locally
       }

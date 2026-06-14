@@ -15,6 +15,22 @@ type PredictionLite = {
   urgency_level: string | null
 }
 
+async function countOximeterAlertsToday(
+  supabase: any,
+  userId: string,
+  startOfToday: Date,
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('notification_type', 'oximeter_alert')
+    .gte('created_at', startOfToday.toISOString())
+
+  if (error) return 0
+  return count || 0
+}
+
 export async function GET(_req: NextRequest) {
   try {
     const supabase: any = await createServerClient()
@@ -39,6 +55,9 @@ export async function GET(_req: NextRequest) {
       )
     }
 
+    const now = new Date()
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
     const { data: memberships, error: memError } = await supabase
       .from('baby_parents')
       .select('baby_id, babies:babies!baby_parents_baby_id_fkey(name)')
@@ -50,12 +69,13 @@ export async function GET(_req: NextRequest) {
     const babyIds = Array.from(new Set((memberships || []).map((m: any) => m.baby_id).filter(Boolean)))
 
     if (!babyIds.length) {
+      const oximeterUrgentToday = await countOximeterAlertsToday(supabase, user.id, startOfToday)
       return NextResponse.json({
         overview: {
           recordingsToday: 0,
           minutesToday: 0,
           avgConfidenceToday: 0,
-          urgentToday: 0,
+          urgentToday: oximeterUrgentToday,
         },
         totals: {
           babies: 0,
@@ -119,8 +139,6 @@ export async function GET(_req: NextRequest) {
       }
     }
 
-    const now = new Date()
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
@@ -139,7 +157,11 @@ export async function GET(_req: NextRequest) {
       todayPredictions.length > 0
         ? todayPredictions.reduce((sum, p) => sum + Number(p.confidence_score || 0), 0) / todayPredictions.length
         : 0
-    const urgentToday = todayPredictions.filter(p => ['high', 'critical'].includes(String(p.urgency_level))).length
+    const cryUrgentToday = todayPredictions.filter(p =>
+      ['high', 'critical'].includes(String(p.urgency_level)),
+    ).length
+    const oximeterUrgentToday = await countOximeterAlertsToday(supabase, user.id, startOfToday)
+    const urgentToday = cryUrgentToday + oximeterUrgentToday
 
     const typeCount = new Map<string, number>()
     recsLast30Days.forEach(r => {

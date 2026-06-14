@@ -107,6 +107,19 @@ export function breachKindLabel(kind: OximeterBreachKind): string {
   }
 }
 
+function breachParentHint(kind: OximeterBreachKind): string {
+  switch (kind) {
+    case 'spo2_low':
+      return 'readings look lower than usual'
+    case 'spo2_high':
+      return 'readings look higher than usual'
+    case 'pulse_low':
+      return 'readings look slower than usual'
+    case 'pulse_high':
+      return 'readings look faster than usual'
+  }
+}
+
 export function buildOximeterAlertCopy(args: {
   babyName: string
   breaches: OximeterBreachKind[]
@@ -114,19 +127,23 @@ export function buildOximeterAlertCopy(args: {
   pulse: number
   alerts: BabyOximeterAlerts
 }): { title: string; body: string } {
-  const { babyName, breaches, spo2, pulse, alerts } = args
-  const labels = breaches.map(breachKindLabel)
-  const title =
-    breaches.length === 1
-      ? `Oximeter alert for ${babyName}`
-      : `Multiple oximeter alerts for ${babyName}`
+  const { babyName, breaches } = args
+
+  const title = `Please check on ${babyName}`
+
+  if (breaches.length === 1) {
+    const body = [
+      `Please check your baby — ${babyName}'s monitor ${breachParentHint(breaches[0])} for a few moments.`,
+      'Make sure they are comfortable, calm, and the sensor is fitted properly.',
+      'If something does not look right or you feel worried, contact your doctor or seek medical advice.',
+    ].join(' ')
+    return { title, body }
+  }
 
   const body = [
-    `${babyName}'s reading stayed out of range for at least 5 seconds.`,
-    `Current: SpO₂ ${spo2}%, pulse ${pulse} BPM.`,
-    `Triggered: ${labels.join('; ')}.`,
-    `Your limits: SpO₂ ${alerts.spo2Min}–${alerts.spo2Max}%, pulse ${alerts.pulseMin}–${alerts.pulseMax} BPM.`,
-    'Check sensor placement and contact a healthcare professional if needed. Device readings can be affected by motion and fit.',
+    `Please check your baby — ${babyName}'s monitor readings need your attention.`,
+    'Make sure they are comfortable, calm, and the sensor is fitted properly.',
+    'If something does not look right or you feel worried, contact your doctor or seek medical advice.',
   ].join(' ')
 
   return { title, body }

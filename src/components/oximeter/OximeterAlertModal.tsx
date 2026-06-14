@@ -36,16 +36,6 @@ export default function OximeterAlertModal() {
             <p id="oximeter-alert-body" className="mt-2 text-sm leading-relaxed text-gray-700">
               {alertModal.body}
             </p>
-            {alertModal.spo2 != null && alertModal.pulse != null && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-800">
-                  SpO₂ {alertModal.spo2}%
-                </span>
-                <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-800">
-                  Pulse {alertModal.pulse} BPM
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -55,7 +45,7 @@ export default function OximeterAlertModal() {
             onClick={closeAlertModal}
             className="rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 px-5 py-2.5 text-sm font-semibold text-white hover:from-pink-700 hover:to-rose-700"
           >
-            I understand
+            OK, I&apos;ll check
           </button>
         </div>
       </div>

@@ -221,6 +221,12 @@ export default function Dashboard({
       }
     };
     void loadDailyStats();
+
+    const onOximeterAlert = () => {
+      void loadDailyStats();
+    };
+    window.addEventListener('mamta:oximeter-alert-created', onOximeterAlert);
+    return () => window.removeEventListener('mamta:oximeter-alert-created', onOximeterAlert);
   }, []);
 
   function formatAge(birthDateISO: string): string {
