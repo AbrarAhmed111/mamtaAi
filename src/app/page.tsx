@@ -36,6 +36,7 @@ import {
   FaCheckCircle
 } from 'react-icons/fa';
 import motherAndBaby from '@/assets/img/motherandbaby.png'
+import smallLogo from '@/assets/img/smallLogo.png'
 import Image from 'next/image';
 import LandingNav from '@/components/marketing/LandingNav';
 
@@ -525,8 +526,12 @@ function HomeContent() {
                 <div className="flex items-center mb-6">
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur opacity-75"></div>
-                    <div className="relative bg-white/10 p-3 rounded-full">
-                      <FaBaby className="h-8 w-8 text-blue-300" />
+                    <div className="relative">
+                      <Image
+                        src={smallLogo}
+                        alt="MamtaAI"
+                        className="h-12 w-12 rounded-full"
+                      />
                     </div>
                   </div>
                   <div className="ml-3">

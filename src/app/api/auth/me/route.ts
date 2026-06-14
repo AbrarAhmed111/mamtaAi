@@ -1,48 +1,28 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { requireActiveProfile } from '@/lib/session/server'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
-    const supabase = await createServerClient()
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+    const auth = await requireActiveProfile()
+    if (!auth.ok) return auth.response
 
-    if (userError || !user) {
-      return NextResponse.json({ error: 'No user' }, { status: 401 })
-    }
+    const { user, profile } = auth
 
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError) {
-      return NextResponse.json({ error: 'No profile' }, { status: 404 })
-    }
-
-    // Fallback to auth user metadata if profile doesn't have avatar_url (for Google OAuth users)
-    const avatarUrl = profile.avatar_url || 
-      (user.user_metadata?.avatar_url as string) || 
-      (user.user_metadata?.picture as string) || 
+    const avatarUrl =
+      profile.avatar_url ||
+      (user.user_metadata?.avatar_url as string) ||
+      (user.user_metadata?.picture as string) ||
       null
 
-    const fullName = profile.full_name || 
-      (user.user_metadata?.full_name as string) || 
-      (user.user_metadata?.name as string) || 
-      `${user.user_metadata?.given_name || ''} ${user.user_metadata?.family_name || ''}`.trim() ||
+    const fullName =
       profile.full_name ||
+      (user.user_metadata?.full_name as string) ||
+      (user.user_metadata?.name as string) ||
+      `${user.user_metadata?.given_name || ''} ${user.user_metadata?.family_name || ''}`.trim() ||
       'User'
 
-    // Update profile if we have better data from auth metadata
     if (!profile.avatar_url && avatarUrl) {
-      // Update profile asynchronously (don't block the response)
-      void supabase
-        .from('profiles')
-        .update({ avatar_url: avatarUrl })
-        .eq('id', user.id)
+      void auth.supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', user.id)
     }
 
     return NextResponse.json({
@@ -54,12 +34,10 @@ export async function GET(request: NextRequest) {
         full_name: fullName || profile.full_name,
       },
     })
-  } catch (e: any) {
+  } catch (e: unknown) {
     return NextResponse.json(
-      { error: e?.message || 'Unknown error' },
+      { error: e instanceof Error ? e.message : 'Unknown error' },
       { status: 500 },
     )
   }
 }
-
-

@@ -62,3 +62,16 @@ export async function getPlanIdBySlug(slug: PlanSlug): Promise<string | null> {
     .maybeSingle()
   return data?.id ?? null
 }
+
+export async function getPlanSlugByPlanId(planId: string): Promise<PlanSlug | null> {
+  const { data } = await (supabaseAdmin as any)
+    .from('subscription_plans')
+    .select('slug')
+    .eq('id', planId)
+    .maybeSingle()
+
+  if (data?.slug === 'plus' || data?.slug === 'pro' || data?.slug === 'free') {
+    return data.slug
+  }
+  return null
+}

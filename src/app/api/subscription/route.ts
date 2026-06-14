@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { requireActiveProfile } from '@/lib/session/server'
 import {
   ensureFreeSubscription,
   getPlanLimits,
@@ -12,25 +12,14 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const supabase = await createServerClient()
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+    const auth = await requireActiveProfile()
+    if (!auth.ok) return auth.response
 
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, profile, supabase } = auth
 
     await ensureFreeSubscription(user.id)
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('timezone')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    const timezone = (profile as { timezone?: string } | null)?.timezone ?? null
+    const timezone = profile.timezone ?? null
     const usage = await syncUsageFromDatabase(user.id, timezone)
     const ctx = await getPlanLimits(user.id, timezone)
 

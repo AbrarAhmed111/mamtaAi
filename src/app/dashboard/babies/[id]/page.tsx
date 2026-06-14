@@ -3,13 +3,16 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Spinner from '@/components/ui/spinner'
+import Select from '@/components/ui/select'
 import { toast } from '@/components/ui/sonner'
 import { FaTrash, FaExclamationTriangle, FaUser, FaUserMinus } from 'react-icons/fa'
 import { accessBadgeLabel } from '@/lib/baby-permissions'
+import { usePlanLimit } from '@/hooks/useSubscription'
 
 export default function BabyDetailPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
+  const handlePlanLimit = usePlanLimit()
   const babyId = params?.id
 
   const [loading, setLoading] = useState(true)
@@ -274,7 +277,8 @@ export default function BabyDetailPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        toast.error(data?.error || 'Failed to save feeding record')
+        if (handlePlanLimit(data)) return
+        toast.error(data?.message || data?.error || 'Failed to save feeding record')
         return
       }
       setFeedingTime('')
@@ -334,7 +338,8 @@ export default function BabyDetailPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        toast.error(data?.error || 'Failed to save sleep record')
+        if (handlePlanLimit(data)) return
+        toast.error(data?.message || data?.error || 'Failed to save sleep record')
         return
       }
       setSleepStart('')
@@ -566,18 +571,11 @@ export default function BabyDetailPage() {
           </div>
           <div>
             <label className="block text-sm text-gray-700 mb-1 font-medium">Gender</label>
-            <select className="w-full rounded-xl border border-pink-200 bg-pink-50/50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-pink-300 transition-all" value={gender} onChange={e => setGender(e.target.value as any)}>
-              <option value="">Select</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
+            <Select value={gender} onChange={v => setGender(v as typeof gender)} options={[{ value: '', label: 'Select' }, { value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }]} aria-label="Gender" />
           </div>
           <div>
             <label className="block text-sm text-gray-700 mb-1 font-medium">Blood Type</label>
-            <select className="w-full rounded-xl border border-pink-200 bg-pink-50/50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-pink-300 transition-all" value={bloodType} onChange={e => setBloodType(e.target.value)}>
-              <option value="">Select</option>
-              {['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(bt => <option key={bt} value={bt}>{bt}</option>)}
-            </select>
+            <Select value={bloodType} onChange={setBloodType} options={[{ value: '', label: 'Select' }, ...['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(bt => ({ value: bt, label: bt }))]} aria-label="Blood type" />
           </div>
           <div>
             <label className="block text-sm text-gray-700 mb-1 font-medium">Birth Weight (kg)</label>
@@ -729,16 +727,17 @@ export default function BabyDetailPage() {
               </div>
               <div>
                 <label className="block text-xs text-gray-600 mb-1">Type</label>
-                <select
-                  className="w-full rounded-lg border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                <Select
                   value={feedingType}
-                  onChange={e => setFeedingType(e.target.value as FeedingRecord['feedingType'])}
-                >
-                  <option value="breast">Breast</option>
-                  <option value="formula">Formula</option>
-                  <option value="solid">Solid</option>
-                  <option value="other">Other</option>
-                </select>
+                  onChange={v => setFeedingType(v as FeedingRecord['feedingType'])}
+                  options={[
+                    { value: 'breast', label: 'Breast' },
+                    { value: 'formula', label: 'Formula' },
+                    { value: 'solid', label: 'Solid' },
+                    { value: 'other', label: 'Other' },
+                  ]}
+                  aria-label="Feeding type"
+                />
               </div>
               <div>
                 <label className="block text-xs text-gray-600 mb-1">Amount (ml)</label>

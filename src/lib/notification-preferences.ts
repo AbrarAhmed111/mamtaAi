@@ -1,5 +1,14 @@
 import type { Json } from '@/types/supabase'
 
+export type AdminNotifyCategory =
+  | 'signups'
+  | 'experts'
+  | 'subscriptions'
+  | 'moderation'
+  | 'coupons'
+  | 'adminActions'
+  | 'systemErrors'
+
 export type NotificationPreferences = {
   familyInvites: boolean
   insights: boolean
@@ -7,6 +16,24 @@ export type NotificationPreferences = {
   emailProductUpdates: boolean
   inAppSound: boolean
   highlightBell: boolean
+  /** Master in-app switch for admin panel alerts. */
+  adminAlerts: boolean
+  /** Master email switch for admin panel alerts. */
+  emailAdminAlerts: boolean
+  /** New parent and non-expert user signups. */
+  adminNotifySignups: boolean
+  /** Expert signup / verification requests. */
+  adminNotifyExperts: boolean
+  /** Subscriptions, plan changes, payment failures, cancellations. */
+  adminNotifySubscriptions: boolean
+  /** Content reports (posts, threads, replies, comments). */
+  adminNotifyModeration: boolean
+  /** Discount coupon redemptions at checkout. */
+  adminNotifyCoupons: boolean
+  /** Actions performed by other admins (audit log events). */
+  adminNotifyAdminActions: boolean
+  /** High/critical system errors from the error log. */
+  adminNotifySystemErrors: boolean
 }
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
@@ -16,6 +43,61 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   emailProductUpdates: true,
   inAppSound: true,
   highlightBell: true,
+  adminAlerts: true,
+  emailAdminAlerts: true,
+  adminNotifySignups: true,
+  adminNotifyExperts: true,
+  adminNotifySubscriptions: true,
+  adminNotifyModeration: true,
+  adminNotifyCoupons: true,
+  adminNotifyAdminActions: true,
+  adminNotifySystemErrors: true,
+}
+
+const ADMIN_CATEGORY_PREF: Record<AdminNotifyCategory, keyof NotificationPreferences> = {
+  signups: 'adminNotifySignups',
+  experts: 'adminNotifyExperts',
+  subscriptions: 'adminNotifySubscriptions',
+  moderation: 'adminNotifyModeration',
+  coupons: 'adminNotifyCoupons',
+  adminActions: 'adminNotifyAdminActions',
+  systemErrors: 'adminNotifySystemErrors',
+}
+
+export function adminCategoryFromEvent(
+  event: string,
+  actionData?: Record<string, unknown> | null,
+): AdminNotifyCategory | null {
+  switch (event) {
+    case 'user_signup':
+      return actionData?.role === 'expert' || actionData?.role === 'expert_application' ? 'experts' : 'signups'
+    case 'expert_application':
+      return 'experts'
+    case 'subscription_issue':
+      return 'subscriptions'
+    case 'content_report':
+      return 'moderation'
+    case 'coupon_usage':
+      return 'coupons'
+    case 'admin_action':
+      return 'adminActions'
+    case 'system_error':
+      return 'systemErrors'
+    default:
+      return null
+  }
+}
+
+/** Whether this admin alert category is enabled (defaults to true when unknown). */
+export function isAdminEventCategoryEnabled(
+  prefs: NotificationPreferences,
+  event: string,
+  actionData?: Record<string, unknown> | null,
+): boolean {
+  const category = adminCategoryFromEvent(event, actionData)
+  if (!category) return true
+  const key = ADMIN_CATEGORY_PREF[category]
+  return prefs[key] !== false
 }
 
 export function parseNotificationPreferences(metadata: unknown): NotificationPreferences {
@@ -34,6 +116,15 @@ export function parseNotificationPreferences(metadata: unknown): NotificationPre
     emailProductUpdates: p.emailProductUpdates !== false,
     inAppSound: p.inAppSound !== false,
     highlightBell: p.highlightBell !== false,
+    adminAlerts: p.adminAlerts !== false,
+    emailAdminAlerts: p.emailAdminAlerts !== false,
+    adminNotifySignups: p.adminNotifySignups !== false,
+    adminNotifyExperts: p.adminNotifyExperts !== false,
+    adminNotifySubscriptions: p.adminNotifySubscriptions !== false,
+    adminNotifyModeration: p.adminNotifyModeration !== false,
+    adminNotifyCoupons: p.adminNotifyCoupons !== false,
+    adminNotifyAdminActions: p.adminNotifyAdminActions !== false,
+    adminNotifySystemErrors: p.adminNotifySystemErrors !== false,
   }
 }
 
@@ -51,6 +142,15 @@ export function sanitizeNotificationPreferencesPatch(
     'emailProductUpdates',
     'inAppSound',
     'highlightBell',
+    'adminAlerts',
+    'emailAdminAlerts',
+    'adminNotifySignups',
+    'adminNotifyExperts',
+    'adminNotifySubscriptions',
+    'adminNotifyModeration',
+    'adminNotifyCoupons',
+    'adminNotifyAdminActions',
+    'adminNotifySystemErrors',
   ]
   for (const k of keys) {
     if (typeof src[k] === 'boolean') out[k] = src[k] as boolean
@@ -81,6 +181,18 @@ export function getInAppAlertFlagsForNotificationRow(
   if (cat === 'invite') categoryAllowed = prefs.familyInvites
   else if (cat === 'insight' || cat === 'insights') categoryAllowed = prefs.insights
   else if (cat === 'community' || cat === 'forum' || cat === 'blog') categoryAllowed = prefs.community
+  else if (cat === 'admin') {
+    const actionData =
+      row.action_data && typeof row.action_data === 'object' && !Array.isArray(row.action_data)
+        ? (row.action_data as Record<string, unknown>)
+        : null
+    const event = String(
+      actionData?.event ?? (row.metadata as Record<string, unknown> | undefined)?.event ?? '',
+    )
+    categoryAllowed =
+      prefs.adminAlerts !== false &&
+      isAdminEventCategoryEnabled(prefs, event, actionData)
+  }
 
   return {
     sound: categoryAllowed && prefs.inAppSound,

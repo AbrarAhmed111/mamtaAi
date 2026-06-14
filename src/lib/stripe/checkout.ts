@@ -11,6 +11,7 @@ import {
 } from './sync'
 import { getStripePriceIdForPlan, isPaidPlanSlug } from './prices'
 import { supabaseAdmin } from '@/lib/supabase/client'
+import { notifyAdminsOfSubscriptionIssueAsync } from '@/lib/notifications/admin-notifications'
 
 export type CheckoutResult = {
   url: string
@@ -154,6 +155,12 @@ export async function createCheckoutOrUpgrade(params: {
     })
 
     await syncStripeSubscriptionById(subRow.stripe_subscription_id, userId)
+
+    notifyAdminsOfSubscriptionIssueAsync({
+      userId,
+      issueKind: 'plan_upgraded',
+      planSlug,
+    })
 
     return {
       url: `${siteUrl}/billing/success?plan=${planSlug}`,

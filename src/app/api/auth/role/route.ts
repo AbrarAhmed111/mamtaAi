@@ -19,26 +19,44 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
+    const { data: existing } = await supabase
+      .from('profiles')
+      .select('metadata')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    const baseMeta =
+      existing?.metadata && typeof existing.metadata === 'object' && !Array.isArray(existing.metadata)
+        ? { ...(existing.metadata as Record<string, unknown>) }
+        : {}
+
+    if (role === 'expert') {
+      baseMeta.expert_application_intent = true
+    } else {
+      delete baseMeta.expert_application_intent
+    }
+
+    // Expert applicants stay on parent dashboard until admin approval (Expert Flow plan).
     const { error } = await supabase
       .from('profiles')
       .update({
-        role,
-        is_verified: role === 'parent' ? true : false,
+        role: 'parent',
+        is_expert: false,
+        is_verified: true,
+        metadata: baseMeta as never,
         updated_at: new Date().toISOString(),
-      } as any)
+      } as never)
       .eq('id', user.id)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    return NextResponse.json({ ok: true })
-  } catch (e: any) {
+    return NextResponse.json({ ok: true, nextPath: role === 'expert' ? '/auth/expert-application' : '/dashboard' })
+  } catch (e: unknown) {
     return NextResponse.json(
-      { error: e?.message || 'Unknown error' },
+      { error: e instanceof Error ? e.message : 'Unknown error' },
       { status: 500 },
     )
   }
 }
-
-

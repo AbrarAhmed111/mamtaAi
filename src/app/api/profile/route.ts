@@ -1,49 +1,30 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { requireActiveProfile } from '@/lib/session/server'
 import {
   mergeNotificationPreferencesIntoMetadata,
   sanitizeNotificationPreferencesPatch,
 } from '@/lib/notification-preferences'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
-    const supabase = await createServerClient()
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+    const auth = await requireActiveProfile()
+    if (!auth.ok) return auth.response
 
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-    }
-
-    return NextResponse.json({ profile })
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
+    return NextResponse.json({ profile: auth.profile })
+  } catch (e: unknown) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : 'Unknown error' },
+      { status: 500 },
+    )
   }
 }
 
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+    const auth = await requireActiveProfile()
+    if (!auth.ok) return auth.response
 
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, profile, supabase } = auth
 
     const body = await request.json()
     const { full_name, phone_number, avatar_url, notification_preferences } = body

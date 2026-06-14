@@ -39,7 +39,12 @@ export async function GET(request: NextRequest) {
         author:profiles!blog_posts_author_id_fkey (
           id,
           full_name,
-          avatar_url
+          avatar_url,
+          role,
+          is_expert,
+          is_verified,
+          verification_data,
+          created_at
         )
       `)
       .eq('status', 'published')

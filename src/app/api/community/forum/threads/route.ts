@@ -40,12 +40,22 @@ export async function GET(request: NextRequest) {
         author:profiles!forum_threads_author_id_fkey (
           id,
           full_name,
-          avatar_url
+          avatar_url,
+          role,
+          is_expert,
+          is_verified,
+          verification_data,
+          created_at
         ),
         last_reply_author:profiles!forum_threads_last_reply_by_fkey (
           id,
           full_name,
-          avatar_url
+          avatar_url,
+          role,
+          is_expert,
+          is_verified,
+          verification_data,
+          created_at
         )
       `)
       .order('is_pinned', { ascending: false })

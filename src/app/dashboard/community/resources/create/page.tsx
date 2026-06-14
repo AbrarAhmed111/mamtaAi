@@ -3,8 +3,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { FaArrowLeft, FaTag, FaUpload, FaFile } from 'react-icons/fa'
+import Select from '@/components/ui/select'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { usePlanLimit } from '@/hooks/useSubscription'
 
 const resourceTypes = [
   { value: 'guide', label: 'Guide' },
@@ -40,6 +42,7 @@ const ageGroups = [
 
 export default function CreateResourcePage() {
   const router = useRouter()
+  const handlePlanLimit = usePlanLimit()
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [formData, setFormData] = useState({
@@ -200,8 +203,10 @@ export default function CreateResourcePage() {
       if (res.ok) {
         toast.success('Resource shared successfully!')
         router.push(`/dashboard/community/resources/${data.resource.id}`)
+      } else if (handlePlanLimit(data)) {
+        return
       } else {
-        toast.error(data.error || 'Failed to share resource')
+        toast.error(data.message || data.error || 'Failed to share resource')
       }
     } catch (error) {
       toast.error('Failed to share resource')
@@ -307,38 +312,32 @@ export default function CreateResourcePage() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Resource Type <span className="text-red-500">*</span>
               </label>
-              <select
+              <Select
                 value={formData.resource_type}
-                onChange={(e) => setFormData({ ...formData, resource_type: e.target.value })}
-                className="w-full px-4 py-2 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                onChange={resource_type => setFormData({ ...formData, resource_type })}
                 required
-              >
-                <option value="">Select type</option>
-                {resourceTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: 'Select type' },
+                  ...resourceTypes.map(type => ({ value: type.value, label: type.label })),
+                ]}
+                aria-label="Resource type"
+              />
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Category <span className="text-red-500">*</span>
               </label>
-              <select
+              <Select
                 value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-4 py-2 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                onChange={category => setFormData({ ...formData, category })}
                 required
-              >
-                <option value="">Select category</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: 'Select category' },
+                  ...categories.map(cat => ({ value: cat, label: cat })),
+                ]}
+                aria-label="Category"
+              />
             </div>
           </div>
 
@@ -361,17 +360,12 @@ export default function CreateResourcePage() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Age Group
               </label>
-              <select
+              <Select
                 value={formData.age_group}
-                onChange={(e) => setFormData({ ...formData, age_group: e.target.value })}
-                className="w-full px-4 py-2 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-              >
-                {ageGroups.map((age) => (
-                  <option key={age.value} value={age.value}>
-                    {age.label}
-                  </option>
-                ))}
-              </select>
+                onChange={age_group => setFormData({ ...formData, age_group })}
+                options={ageGroups.map(age => ({ value: age.value, label: age.label }))}
+                aria-label="Age group"
+              />
             </div>
           </div>
 

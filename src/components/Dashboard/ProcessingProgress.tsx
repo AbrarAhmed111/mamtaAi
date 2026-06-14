@@ -7,6 +7,7 @@ import Spinner from '@/components/ui/spinner';
 import { FaCheck, FaTimes } from 'react-icons/fa';
 import { deriveUrgencyFromCryAndConfidence } from '@/lib/cry-urgency';
 import { formatCryTypeLabel, getCryTypeGuidance } from '@/lib/cry-type-guidance';
+import { usePlanLimit } from '@/hooks/useSubscription';
 
 interface ProgressStep {
   step: string;
@@ -142,6 +143,7 @@ export default function ProcessingProgress({
   babyId,
   babyName
 }: ProcessingProgressProps) {
+  const handlePlanLimit = usePlanLimit();
   const [currentStep, setCurrentStep] = useState<string>('');
   const [steps, setSteps] = useState<ProgressStep[]>([]);
   const [result, setResult] = useState<any>(null);
@@ -312,9 +314,7 @@ export default function ProcessingProgress({
                             ? errorData.message
                             : errorData.error || errorData.message || 'Failed to save cleaned audio';
                         setError(msg);
-                        if (errorData.error === 'PLAN_LIMIT_REACHED' && typeof window !== 'undefined') {
-                          toast.error(msg);
-                        }
+                        if (handlePlanLimit(errorData)) return;
                       } else {
                         // Verify save was successful
                         const saveResult = await saveResponse.json();

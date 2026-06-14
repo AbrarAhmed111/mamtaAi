@@ -7,9 +7,11 @@ import { useRouter } from 'next/navigation';
 import Spinner from '@/components/ui/spinner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/sonner';
+import Select from '@/components/ui/select';
 import { FaPlay, FaStop, FaTrash, FaBaby, FaFilter, FaSearch, FaCalendarAlt, FaClock, FaTimes, FaUser } from 'react-icons/fa';
 import BabySelectionModal from '@/components/Dashboard/BabySelectionModal';
 import RecordingSection from '@/components/Dashboard/RecordingSection';
+import { usePlanLimit } from '@/hooks/useSubscription';
 
 interface Recording {
   id: string;
@@ -63,6 +65,7 @@ function formatDateLabel(dateString: string) {
 }
 
 export default function RecordingsPage() {
+  const handlePlanLimit = usePlanLimit();
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState(true);
   const [filteredRecordings, setFilteredRecordings] = useState<Recording[]>([]);
@@ -292,18 +295,16 @@ export default function RecordingsPage() {
           <div className="sm:w-48">
             <div className="relative">
               <FaFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <select
+              <Select
                 value={selectedBabyFilter}
-                onChange={(e) => setSelectedBabyFilter(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-xl border border-pink-200 bg-pink-50/50 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-pink-300 transition-all appearance-none"
-              >
-                <option value="all">All Babies</option>
-                {babies.map((baby) => (
-                  <option key={baby.id} value={baby.id}>
-                    {baby.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedBabyFilter}
+                triggerClassName="pl-10 bg-pink-50/50"
+                options={[
+                  { value: 'all', label: 'All Babies' },
+                  ...babies.map(baby => ({ value: baby.id, label: baby.name })),
+                ]}
+                aria-label="Filter by baby"
+              />
             </div>
           </div>
         </div>
@@ -555,7 +556,8 @@ export default function RecordingsPage() {
                     const res = await fetch('/api/recordings', { method: 'POST', body: fd });
                     const json = await res.json().catch(() => ({}));
                     if (!res.ok) {
-                      toast.error(json?.error || 'Failed to save recording');
+                      if (handlePlanLimit(json)) return;
+                      toast.error(json?.message || json?.error || 'Failed to save recording');
                       return;
                     }
                     toast.success('Recording saved successfully');

@@ -75,13 +75,17 @@ export async function signUpWithEmail(data: SignupData): Promise<{ user: AuthUse
     }
 
     // Create user profile
+    const signupRole = data.role === 'admin' ? 'admin' : 'parent'
+    const expertSignupIntent = data.role === 'expert'
+
     const profileData: ProfileInsert = {
       id: authData.user.id,
       full_name: `${data.firstName} ${data.lastName}`,
       phone_number: data.phone,
-      role: data.role,
-      is_verified: data.role === 'parent', // Parents are auto-verified
-      verification_data: data.role === 'expert' ? {
+      role: signupRole,
+      is_expert: false,
+      is_verified: true,
+      verification_data: expertSignupIntent ? {
         professionalTitle: data.professionalTitle,
         licenseNumber: data.licenseNumber,
         yearsOfExperience: data.yearsOfExperience,
@@ -91,7 +95,8 @@ export async function signUpWithEmail(data: SignupData): Promise<{ user: AuthUse
       metadata: {
         firstName: data.firstName,
         lastName: data.lastName,
-        signupMethod: 'email'
+        signupMethod: 'email',
+        ...(expertSignupIntent ? { expert_application_intent: true } : {}),
       }
     };
 
@@ -113,6 +118,15 @@ export async function signUpWithEmail(data: SignupData): Promise<{ user: AuthUse
     } catch {
       // non-fatal
     }
+
+    const { notifyAdminsOfUserSignup } = await import('@/lib/notifications/admin-notifications')
+    notifyAdminsOfUserSignup({
+      userId: authData.user.id,
+      fullName: profileData.full_name,
+      role: expertSignupIntent ? 'expert_application' : signupRole,
+      email: authData.user.email,
+      professionalTitle: expertSignupIntent ? data.professionalTitle ?? null : null,
+    })
 
     return {
       user: {
@@ -329,7 +343,7 @@ export async function checkUserVerification(userId: string): Promise<{ isVerifie
     const supabase = await createServerClient()
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('is_verified, role')
+      .select('is_verified, is_expert, role')
       .eq('id', userId)
       .single();
 
@@ -337,8 +351,11 @@ export async function checkUserVerification(userId: string): Promise<{ isVerifie
       return { isVerified: false, error: { message: error.message, code: error.code } };
     }
 
-    // Parents are always considered "verified"
-    const isVerified = profile.role === 'parent' || (profile.is_verified || false);
+    const isVerified =
+      profile.role === 'parent' ||
+      profile.role === 'admin' ||
+      profile.is_expert === true ||
+      (profile.is_verified || false);
 
     return { isVerified, error: null };
   } catch (error) {

@@ -13,12 +13,21 @@ import {
   FaCog,
   FaCrown,
   FaGem,
+  FaUserShield,
+  FaUserCheck,
+  FaCreditCard,
+  FaTicketAlt,
+  FaFlag,
+  FaClipboardList,
+  FaIdCard,
+  FaBookOpen,
 } from 'react-icons/fa';
 import { MdDashboard } from 'react-icons/md';
 import logo from '@/assets/img/smallLogo.png';
 import { useSubscription } from '@/hooks/useSubscription';
 import { PLAN_DEFINITIONS } from '@/lib/subscription/plans';
 import type { PlanSlug } from '@/lib/subscription/types';
+import type { DashboardActiveView } from '@/lib/expert/constants';
 
 interface SidebarProps {
   currentPath?: string;
@@ -27,11 +36,12 @@ interface SidebarProps {
     role: string;
     avatar?: string;
   };
+  activeView?: DashboardActiveView;
   isOpen?: boolean;
   onToggle?: () => void;
 }
 
-const NAV_ITEMS = [
+const PARENT_NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: MdDashboard, match: (p: string) => p === '/dashboard' },
   { href: '/dashboard/babies', label: 'My Babies', icon: FaBaby, match: (p: string) => p.startsWith('/dashboard/babies') },
   { href: '/dashboard/recordings', label: 'Recordings', icon: FaMicrophone, match: (p: string) => p.startsWith('/dashboard/recordings') },
@@ -41,6 +51,25 @@ const NAV_ITEMS = [
   { href: '/dashboard/settings', label: 'Settings', icon: FaCog, match: (p: string) => p.startsWith('/dashboard/settings') },
 ] as const;
 
+const EXPERT_NAV_ITEMS = [
+  { href: '/dashboard', label: 'Overview', icon: MdDashboard, match: (p: string) => p === '/dashboard' },
+  { href: '/dashboard/expert/profile', label: 'My Profile', icon: FaIdCard, match: (p: string) => p.startsWith('/dashboard/expert/profile') },
+  { href: '/dashboard/expert/articles', label: 'Articles', icon: FaBookOpen, match: (p: string) => p.startsWith('/dashboard/expert/articles') },
+  { href: '/dashboard/community', label: 'Community', icon: FaUsers, match: (p: string) => p.startsWith('/dashboard/community') },
+  { href: '/dashboard/insights', label: 'Insights', icon: FaChartLine, match: (p: string) => p.startsWith('/dashboard/insights') },
+  { href: '/dashboard/settings', label: 'Settings', icon: FaCog, match: (p: string) => p.startsWith('/dashboard/settings') },
+] as const;
+
+const ADMIN_NAV_ITEMS = [
+  { href: '/dashboard', label: 'Overview', icon: MdDashboard, match: (p: string) => p === '/dashboard' },
+  { href: '/dashboard/admin/users', label: 'Users', icon: FaUserShield, match: (p: string) => p.startsWith('/dashboard/admin/users') },
+  { href: '/dashboard/admin/experts', label: 'Expert Verification', icon: FaUserCheck, match: (p: string) => p.startsWith('/dashboard/admin/experts') },
+  { href: '/dashboard/admin/subscriptions', label: 'Subscriptions', icon: FaCreditCard, match: (p: string) => p.startsWith('/dashboard/admin/subscriptions') },
+  { href: '/dashboard/admin/coupons', label: 'Coupons', icon: FaTicketAlt, match: (p: string) => p.startsWith('/dashboard/admin/coupons') },
+  { href: '/dashboard/admin/moderation', label: 'Moderation', icon: FaFlag, match: (p: string) => p.startsWith('/dashboard/admin/moderation') },
+  { href: '/dashboard/admin/logs', label: 'System Logs', icon: FaClipboardList, match: (p: string) => p.startsWith('/dashboard/admin/logs') },
+  { href: '/dashboard/settings', label: 'Settings', icon: FaCog, match: (p: string) => p.startsWith('/dashboard/settings') },
+] as const;
 const SIDEBAR_CARD =
   'flex h-full min-h-0 flex-col rounded-[28px] border border-pink-100/90 bg-white p-5 shadow-[0_8px_30px_rgba(236,72,153,0.12)]';
 
@@ -104,13 +133,24 @@ function SidebarPanel({
   onNavigate,
   showClose,
   onClose,
+  userRole,
+  activeView = 'parent',
 }: {
   currentPath: string;
   onNavigate?: () => void;
   showClose?: boolean;
   onClose?: () => void;
+  userRole?: string;
+  activeView?: DashboardActiveView;
 }) {
   const { slug, loading } = useSubscription();
+  const isAdminRole = userRole === 'admin';
+  const showAdminNav = isAdminRole && activeView === 'admin';
+  const navItems = showAdminNav
+    ? ADMIN_NAV_ITEMS
+    : activeView === 'expert'
+      ? EXPERT_NAV_ITEMS
+      : PARENT_NAV_ITEMS;
 
   return (
     <>
@@ -152,7 +192,7 @@ function SidebarPanel({
       </div>
 
       <nav className="mt-6 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto no-scroll py-1">
-        {NAV_ITEMS.map(item => {
+        {navItems.map(item => {
           const Icon = item.icon;
           const active = item.match(currentPath);
           return (
@@ -173,17 +213,22 @@ function SidebarPanel({
         })}
       </nav>
 
-      {!loading && <PlanPromoCard slug={slug} onNavigate={onNavigate} />}
+      {!loading && !showAdminNav && activeView !== 'expert' && (
+        <PlanPromoCard slug={slug} onNavigate={onNavigate} />
+      )}
     </>
   );
 }
 
 export default function Sidebar({
   currentPath = '/dashboard',
+  user,
+  activeView = 'parent',
   isOpen = false,
   onToggle,
 }: SidebarProps) {
   const path = currentPath || '/dashboard';
+  const userRole = user?.role?.toLowerCase();
 
   const closeOnNavigate = () => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
@@ -214,6 +259,8 @@ export default function Sidebar({
             onNavigate={closeOnNavigate}
             showClose
             onClose={onToggle}
+            userRole={userRole}
+            activeView={activeView}
           />
         </div>
       </aside>
@@ -221,7 +268,7 @@ export default function Sidebar({
       {/* Desktop — full height of dashboard row, no gap below */}
       <aside className="hidden h-full w-[272px] shrink-0 lg:block">
         <div className={SIDEBAR_CARD}>
-          <SidebarPanel currentPath={path} />
+          <SidebarPanel currentPath={path} userRole={userRole} activeView={activeView} />
         </div>
       </aside>
     </>

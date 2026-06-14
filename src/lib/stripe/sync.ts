@@ -3,7 +3,14 @@ import { getFreePlanId } from '@/lib/subscription/service'
 import type { PlanSlug } from '@/lib/subscription/types'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { getStripe } from './client'
-import { getPlanIdBySlug, getPlanSlugByStripePriceId } from './prices'
+import { getPlanIdBySlug, getPlanSlugByStripePriceId, getPlanSlugByPlanId } from './prices'
+import {
+  notifyAdminsOfSubscriptionIssueAsync,
+} from '@/lib/notifications/admin-notifications'
+import {
+  recordCouponRedemptionsFromCheckoutSession,
+  recordCouponRedemptionsFromInvoice,
+} from './coupons'
 
 type SubscriptionRow = {
   id: string
@@ -82,6 +89,13 @@ export async function setPendingPlanChange(
     .from('user_subscriptions')
     .update({ metadata, updated_at: new Date().toISOString() })
     .eq('id', row.id)
+
+  notifyAdminsOfSubscriptionIssueAsync({
+    userId,
+    issueKind: 'scheduled_downgrade',
+    planSlug: pending.plan_slug,
+    detail: `Effective ${new Date(pending.effective_at).toLocaleDateString()}.`,
+  })
 }
 
 export async function clearPendingPlanChange(userId: string): Promise<void> {
@@ -221,6 +235,7 @@ export async function downgradeUserToFree(userId: string): Promise<void> {
 export async function syncStripeSubscriptionById(
   stripeSubscriptionId: string,
   fallbackUserId?: string,
+  options?: { detectPlanChange?: boolean },
 ): Promise<void> {
   const stripe = getStripe()
   const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId, {
@@ -244,6 +259,14 @@ export async function syncStripeSubscriptionById(
     throw new Error(`No user_id for Stripe subscription ${stripeSubscriptionId}`)
   }
 
+  let beforeSlug: PlanSlug | null = null
+  if (options?.detectPlanChange) {
+    const rowBefore = await getUserSubscriptionRow(userId)
+    if (rowBefore?.plan_id) {
+      beforeSlug = await getPlanSlugByPlanId(rowBefore.plan_id)
+    }
+  }
+
   if (subscription.status === 'canceled' || subscription.status === 'incomplete_expired') {
     await downgradeUserToFree(userId)
     return
@@ -251,6 +274,23 @@ export async function syncStripeSubscriptionById(
 
   const slug = await resolvePlanSlugFromSubscription(subscription)
   await applyPaidPlanFromStripeSubscription(userId, subscription, slug)
+
+  if (options?.detectPlanChange && beforeSlug && slug && beforeSlug !== slug) {
+    if (beforeSlug === 'free' && slug !== 'free') {
+      notifyAdminsOfSubscriptionIssueAsync({
+        userId,
+        issueKind: 'new_paid_subscription',
+        planSlug: slug,
+      })
+    } else {
+      notifyAdminsOfSubscriptionIssueAsync({
+        userId,
+        issueKind: 'plan_changed',
+        planSlug: slug,
+        detail: `Changed from ${beforeSlug} to ${slug}.`,
+      })
+    }
+  }
 }
 
 export async function handleCheckoutSessionCompleted(
@@ -290,6 +330,16 @@ export async function handleCheckoutSessionCompleted(
     subscription,
     planSlug && planSlug !== 'free' ? planSlug : null,
   )
+
+  if (planSlug && planSlug !== 'free') {
+    notifyAdminsOfSubscriptionIssueAsync({
+      userId,
+      issueKind: 'new_paid_subscription',
+      planSlug,
+    })
+  }
+
+  await recordCouponRedemptionsFromCheckoutSession(session, userId, planSlug ?? null)
 }
 
 function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
@@ -351,6 +401,65 @@ export async function recordInvoicePayment(invoice: Stripe.Invoice): Promise<voi
     receipt_url: invoice.invoice_pdf ?? null,
     metadata: { stripe_invoice_id: invoice.id },
   })
+
+  if (invoice.status === 'paid') {
+    await recordCouponRedemptionsFromInvoice(invoice, resolvedUserId)
+  }
+}
+
+async function resolveUserIdFromStripeSubscription(
+  subscription: Stripe.Subscription,
+  fallbackUserId?: string,
+): Promise<string | null> {
+  let userId = fallbackUserId || subscription.metadata?.user_id || null
+  if (!userId && typeof subscription.customer === 'string') {
+    const customer = await getStripe().customers.retrieve(subscription.customer)
+    if (!customer.deleted) {
+      userId = customer.metadata?.user_id ?? null
+    }
+  } else if (!userId && subscription.customer && typeof subscription.customer === 'object') {
+    const customer = subscription.customer
+    if (!('deleted' in customer && customer.deleted)) {
+      userId = customer.metadata?.user_id ?? null
+    }
+  }
+  if (!userId) {
+    const { data } = await (supabaseAdmin as any)
+      .from('user_subscriptions')
+      .select('user_id')
+      .eq('stripe_subscription_id', subscription.id)
+      .maybeSingle()
+    userId = data?.user_id ?? null
+  }
+  return userId
+}
+
+async function notifySubscriptionWebhookSideEffects(
+  subscription: Stripe.Subscription,
+  fallbackUserId?: string,
+): Promise<void> {
+  const userId = await resolveUserIdFromStripeSubscription(subscription, fallbackUserId)
+  if (!userId) return
+
+  const planSlug = await resolvePlanSlugFromSubscription(subscription)
+
+  if (subscription.status === 'past_due' || subscription.status === 'unpaid') {
+    notifyAdminsOfSubscriptionIssueAsync({
+      userId,
+      issueKind: 'payment_failed',
+      planSlug,
+      detail: `Stripe status: ${subscription.status}.`,
+    })
+    return
+  }
+
+  if (subscription.cancel_at_period_end) {
+    notifyAdminsOfSubscriptionIssueAsync({
+      userId,
+      issueKind: 'cancel_scheduled',
+      planSlug,
+    })
+  }
 }
 
 export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<void> {
@@ -362,10 +471,18 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
       }
       break
     }
-    case 'customer.subscription.created':
-    case 'customer.subscription.updated': {
+    case 'customer.subscription.created': {
       const subscription = event.data.object as Stripe.Subscription
       await syncStripeSubscriptionById(subscription.id, subscription.metadata?.user_id)
+      await notifySubscriptionWebhookSideEffects(subscription, subscription.metadata?.user_id)
+      break
+    }
+    case 'customer.subscription.updated': {
+      const subscription = event.data.object as Stripe.Subscription
+      await syncStripeSubscriptionById(subscription.id, subscription.metadata?.user_id, {
+        detectPlanChange: true,
+      })
+      await notifySubscriptionWebhookSideEffects(subscription, subscription.metadata?.user_id)
       break
     }
     case 'customer.subscription.deleted': {
@@ -373,13 +490,25 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
       const userId = subscription.metadata?.user_id
       if (userId) {
         await downgradeUserToFree(userId)
+        notifyAdminsOfSubscriptionIssueAsync({
+          userId,
+          issueKind: 'subscription_cancelled',
+          planSlug: await resolvePlanSlugFromSubscription(subscription),
+        })
       } else {
         const { data } = await (supabaseAdmin as any)
           .from('user_subscriptions')
           .select('user_id')
           .eq('stripe_subscription_id', subscription.id)
           .maybeSingle()
-        if (data?.user_id) await downgradeUserToFree(data.user_id)
+        if (data?.user_id) {
+          await downgradeUserToFree(data.user_id)
+          notifyAdminsOfSubscriptionIssueAsync({
+            userId: data.user_id,
+            issueKind: 'subscription_cancelled',
+            planSlug: await resolvePlanSlugFromSubscription(subscription),
+          })
+        }
       }
       break
     }
@@ -390,6 +519,15 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
     case 'invoice.payment_failed': {
       const invoice = event.data.object as Stripe.Invoice
       const subscriptionId = getInvoiceSubscriptionId(invoice)
+      let resolvedUserId = invoice.metadata?.user_id ?? null
+      if (!resolvedUserId && subscriptionId) {
+        const { data } = await (supabaseAdmin as any)
+          .from('user_subscriptions')
+          .select('user_id')
+          .eq('stripe_subscription_id', subscriptionId)
+          .maybeSingle()
+        resolvedUserId = data?.user_id ?? null
+      }
       if (subscriptionId) {
         const { data } = await (supabaseAdmin as any)
           .from('user_subscriptions')
@@ -402,6 +540,15 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
             .update({ status: 'payment_failed', updated_at: new Date().toISOString() })
             .eq('id', data.id)
         }
+      }
+      if (resolvedUserId) {
+        notifyAdminsOfSubscriptionIssueAsync({
+          userId: resolvedUserId,
+          issueKind: 'payment_failed',
+          detail: invoice.amount_due
+            ? `Amount due: ${(invoice.amount_due / 100).toFixed(2)} ${(invoice.currency || 'usd').toUpperCase()}.`
+            : null,
+        })
       }
       break
     }
