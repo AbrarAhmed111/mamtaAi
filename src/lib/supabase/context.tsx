@@ -19,7 +19,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = useCallback(async (): Promise<AuthUser | null> => {
     try {
-      const res = await fetch('/api/auth/me', { cache: 'no-store' });
+      const { dashboardFetch } = await import('@/lib/session/client')
+      const res = await dashboardFetch('/api/auth/me', { cache: 'no-store' });
       if (!res.ok) {
         setUser(null);
         return null;

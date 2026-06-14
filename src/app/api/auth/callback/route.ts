@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { resolveOAuthPostLoginPath } from '@/lib/expert/oauth-routing'
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
@@ -98,19 +99,13 @@ export async function GET(request: NextRequest) {
       if (user?.id) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role, is_verified')
+          .select('role, is_verified, metadata')
           .eq('id', user.id)
           .single()
 
-        // If role not chosen yet, take user to role selection
-        if (!profile?.role) {
-          return NextResponse.redirect(new URL('/auth/role', request.url))
-        }
-        // If expert and not verified, go to onboarding pending
-        if (profile.role === 'expert' && !profile.is_verified) {
-          return NextResponse.redirect(
-            new URL('/onboarding?status=pending', request.url),
-          )
+        const flowPath = await resolveOAuthPostLoginPath(user.id, profile)
+        if (flowPath) {
+          return NextResponse.redirect(new URL(flowPath, request.url))
         }
       }
     } catch {

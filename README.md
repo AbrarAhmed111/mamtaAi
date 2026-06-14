@@ -2,6 +2,8 @@
 
 MamtaAI is an AI-powered baby care platform that helps families track activities, manage caregiver access, receive notifications, and analyze baby cries to support day-to-day parenting decisions.
 
+**Built by [Abrar Ahmed](https://www.abrarahmed.pro/)** — Full Stack Engineer ([GitHub](https://github.com/AbrarAhmed111) · [Portfolio](https://www.abrarahmed.pro/))
+
 This repository is **not** a Next.js-only app. MamtaAI is built as a **multi-service system**:
 
 | Service | Stack | Role |
@@ -48,6 +50,9 @@ The FastAPI project is maintained as a **sibling codebase** (often cloned as `ma
 - In-app notifications with sound/highlight preferences.
 - **Subscription plans (Free, Plus, Pro)** with server-side usage limits.
 - **Stripe Checkout & Customer Portal** for upgrades and billing management.
+- **Expert flow** — healthcare professionals apply, get admin-verified, and switch between Parent and Expert dashboard views.
+- **Admin panel** — user management, expert verification queue, moderation, subscriptions, coupons, and system logs.
+- **Mid-session authorization** — live profile/subscription reconcile when roles, suspension, or plans change while logged in.
 - Secure auth and profile management using Supabase.
 
 ## Tech stack
@@ -92,10 +97,18 @@ Create `.env.local` in the project root:
 
 ### 3. Supabase setup
 
-Run in the Supabase SQL Editor (first-time):
+Run in the Supabase SQL Editor (first-time and when upgrading):
 
-- `supabase/subscription_setup.sql` — Free / Plus / Pro plans and RLS
-- `supabase/stripe_link_prices.sql` — link Stripe test Price IDs to Plus and Pro
+| Script | Purpose |
+|--------|---------|
+| `supabase/subscription_setup.sql` | Free / Plus / Pro plans and RLS |
+| `supabase/stripe_link_prices.sql` | Link Stripe test Price IDs to Plus and Pro |
+| `supabase/admin_setup.sql` | Admin tables: `content_reports`, `audit_logs`, `error_logs`, `discount_coupons` |
+| `supabase/expert_flow.sql` | `expert_applications`, `profiles.active_view` |
+| `supabase/profiles_is_expert.sql` | `is_expert` flag; restrict `role` to `parent` \| `admin` |
+| `supabase/profiles_last_active_at.sql` | Track user last activity |
+| `supabase/discount_coupons.sql` | Coupon schema helpers |
+| `supabase/content_reports_blog_comment.sql` | Blog comment reporting |
 
 Add your local and production URLs to **Authentication → Redirect URLs**.
 
@@ -187,6 +200,66 @@ src/app/api/audio/process/     # Recording upload + FastAPI coordination
 - [Database setup & Stripe operations](docs/SUBSCRIPTION_DATABASE_AND_STRIPE.md)
 - [Full architecture & roadmap](docs/PROJECT_PLANNING_DOCUMENT.md)
 
+## Expert flow
+
+Healthcare professionals join as **Parent + Expert** accounts after admin approval.
+
+| Concept | Detail |
+|---------|--------|
+| Account types | **Parent** (`role=parent`, `is_expert=false`), **Parent + Expert** (`role=parent`, `is_expert=true`), **Admin** (`role=admin`) |
+| Application | `/auth/expert-application` or `/dashboard/expert-application` → `POST /api/experts/apply` |
+| While pending | User stays on parent dashboard; request status card + optional `/onboarding?status=pending` |
+| After approval | Admin sets `is_expert=true`; user toggles Parent ↔ Expert via header switcher |
+| Public directory | `/dashboard/experts` — verified experts and their blog articles |
+
+**Key routes**
+
+| Route | Purpose |
+|-------|---------|
+| `/dashboard/expert/profile` | Edit public expert listing |
+| `/dashboard/expert/articles` | Expert content entry (community blog) |
+| `/api/experts/apply` | Submit / check application status |
+| `/api/admin/experts` | Admin verification queue |
+
+**SQL:** `supabase/expert_flow.sql`, `supabase/profiles_is_expert.sql`
+
+**Code:** `src/lib/expert/`, `src/components/Dashboard/Expert/`
+
+## Admin panel
+
+Users with `profiles.role = admin` access the admin dashboard and can preview the parent experience.
+
+| Route | Purpose |
+|-------|---------|
+| `/dashboard/admin/users` | Search users (Parent, Parent + Expert, Admin) |
+| `/dashboard/admin/users/[id]` | Edit user, suspend, toggle expert, delete |
+| `/dashboard/admin/experts` | Approve/reject expert applications |
+| `/dashboard/admin/moderation` | Content reports queue |
+| `/dashboard/admin/subscriptions` | Subscription overview |
+| `/dashboard/admin/coupons` | Discount coupons |
+| `/dashboard/admin/logs` | System error logs |
+
+Admin APIs live under `/api/admin/*` (protected by `requireAdminApi()`).
+
+Suspending a user or revoking expert/admin access triggers a **global session sign-out** so changes take effect immediately.
+
+**SQL:** `supabase/admin_setup.sql`  
+**Code:** `src/lib/admin/`, `src/components/Dashboard/Admin/`
+
+## Session & authorization
+
+The Supabase JWT can remain valid after the database changes underneath (role demotion, suspension, deletion, plan change). MamtaAI reconciles live state:
+
+| Piece | Purpose |
+|-------|---------|
+| `GET /api/session/status` | Live snapshot: role, expert flag, suspension, plan slug |
+| `requireActiveProfile()` | Server guard on key routes (`/api/auth/me`, `/api/profile`, `/api/subscription`) |
+| Middleware | Blocks suspended/deleted profiles on `/api/*` (except auth/webhooks) |
+| `dashboardFetch()` | Client wrapper — detects `x-session-invalid` header |
+| `useSessionReconcile` | Polls every 90s + on window focus inside dashboard layout |
+
+Invalid session codes: `account_deleted`, `account_suspended`, `unauthenticated`.
+
 ## Deploying to Vercel
 
 - Deploy **this repo** to Vercel (Next.js only).
@@ -212,28 +285,45 @@ src/app/api/audio/process/     # Recording upload + FastAPI coordination
 src/
   app/
     (auth)/                    # Sign in, sign up, password flows
+    auth/                        # Role choice, expert application (OAuth path)
     api/
-      audio/process/           # Recording upload; coordinates with FastAPI
-      billing/                 # Stripe checkout, portal, history, confirm
-      webhooks/stripe/         # Stripe webhooks
-      subscription/            # Plan + usage API
-      recordings/              # Recording metadata & predictions
-    dashboard/                 # Main product UI
-    pricing/                   # Public pricing page
+      admin/                     # Admin panel APIs
+      experts/                   # Expert application & profile APIs
+      session/status/            # Mid-session reconcile endpoint
+      audio/process/             # Recording upload; coordinates with FastAPI
+      billing/                   # Stripe checkout, portal, history, confirm
+      webhooks/stripe/           # Stripe webhooks
+      subscription/              # Plan + usage API
+      recordings/                # Recording metadata & predictions
+    dashboard/
+      admin/                     # Admin panel UI
+      expert/                    # Expert profile & articles
+      expert-application/        # In-app expert apply form
+    pricing/                     # Public pricing page
   components/
-    Dashboard/                 # Dashboard UI (incl. ProcessingProgress → FastAPI)
+    Dashboard/                   # Dashboard UI (incl. ProcessingProgress → FastAPI)
+    Dashboard/Admin/             # Admin tables, queues, overview
+    Dashboard/Expert/            # Expert overview, switcher, request status
     pricing/
     subscription/
   lib/
-    subscription/              # Plan definitions, limits, usage
+    admin/                       # Admin auth, audit, user options
+    expert/                      # Applications, active view, is_expert helpers
+    session/                     # requireActiveProfile, dashboardFetch
+    subscription/                # Plan definitions, limits, usage
     stripe/
     supabase/
   hooks/
     useSubscription.tsx
+    useSessionReconcile.ts       # Mid-session profile/plan sync
     useBilling.ts
 supabase/
+  admin_setup.sql
+  expert_flow.sql
+  profiles_is_expert.sql
   subscription_setup.sql
   stripe_link_prices.sql
+  ...
 docs/                          # Planning & subscription docs
 ```
 
@@ -250,14 +340,27 @@ docs/                          # Planning & subscription docs
 | Subscriptions & billing | `src/app/api/subscription`, `src/app/api/billing`, Stripe webhooks |
 | Community | `src/app/dashboard/community`, community API routes |
 | Insights | `src/app/api/insights` |
+| Expert flow | `src/app/api/experts`, `src/lib/expert/`, `src/components/Dashboard/Expert/` |
+| Admin panel | `src/app/api/admin/*`, `src/app/dashboard/admin/*` |
+| Session reconcile | `src/app/api/session/status`, `src/lib/session/`, `useSessionReconcile` |
 
 ## Notes
 
 - Primary parent permissions are enforced on family-management and invite APIs.
+- Expert applicants remain **parents** in the database until admin approval sets `is_expert = true`.
+- Admin accounts use `role = admin`; assign via Supabase or admin user detail UI.
 - Keep secrets out of source control (`.env.local` is git-ignored).
 - **`NEXT_PUBLIC_BACKEND_URL`** must point at a running **Python (FastAPI)** instance for cry analysis.
 - Subscription limits are enforced in **Next.js API routes**; UI mirrors them for messaging only.
 - Stripe defaults to **test mode**; switch to live keys and webhooks for production billing.
+
+## Author
+
+MamtaAI was designed and built by **Abrar Ahmed** (Full Stack Engineer, [NizamLLC](https://github.com/AbrarAhmed111)).
+
+- Portfolio: [abrarahmed.pro](https://www.abrarahmed.pro/)
+- GitHub: [github.com/AbrarAhmed111](https://github.com/AbrarAhmed111)
+- Related repos: [mamtaai_python_backend](https://github.com/AbrarAhmed111/mamtaai_python_backend) (FastAPI ML service)
 
 ## Contributing
 

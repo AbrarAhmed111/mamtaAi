@@ -5,6 +5,7 @@ import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaUser, FaPhone, FaCheck, FaGoog
 import Link from 'next/link';
 import Image from 'next/image';
 import { signUpWithEmail, type SignupData as SupabaseSignupData } from '@/lib/supabase/actions';
+import Select from '@/components/ui/select';
 
 type SignupStep = 'account' | 'personal' | 'role' | 'verification' | 'onboarding';
 type UserRole = 'parent' | 'expert' | 'admin';
@@ -636,18 +637,21 @@ export default function SignupForm({ onStepChange, onComplete }: SignupFormProps
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Years of Experience
                       </label>
-                      <select
+                      <Select
                         name="yearsOfExperience"
                         value={formData.yearsOfExperience}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      >
-                        <option value="">Select experience</option>
-                        <option value="1-2">1-2 years</option>
-                        <option value="3-5">3-5 years</option>
-                        <option value="6-10">6-10 years</option>
-                        <option value="10+">10+ years</option>
-                      </select>
+                        onChange={yearsOfExperience =>
+                          setFormData(prev => ({ ...prev, yearsOfExperience }))
+                        }
+                        options={[
+                          { value: '', label: 'Select experience' },
+                          { value: '1-2', label: '1-2 years' },
+                          { value: '3-5', label: '3-5 years' },
+                          { value: '6-10', label: '6-10 years' },
+                          { value: '10+', label: '10+ years' },
+                        ]}
+                        aria-label="Years of experience"
+                      />
                     </div>
 
                     <div>

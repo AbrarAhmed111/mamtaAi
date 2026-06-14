@@ -11,7 +11,24 @@ import {
   getInAppAlertFlagsForNotificationRow,
   parseNotificationPreferences,
 } from '@/lib/notification-preferences'
+import {
+  hasUnreadStickyExpertReviewNotifications,
+  isStickyExpertReviewNotification,
+} from '@/lib/notifications/sticky-expert-notifications'
 import { SubscriptionProvider } from '@/hooks/useSubscription'
+import {
+  getActiveView,
+  getAdminDashboardViewPreference,
+  getExpertViewPreference,
+  getSidebarView,
+  isAdminAccount,
+  isVerifiedExpert,
+} from '@/lib/expert/active-view'
+import ExpertViewSwitcher from '@/components/Dashboard/Expert/ExpertViewSwitcher'
+import AdminViewSwitcher from '@/components/Dashboard/Admin/AdminViewSwitcher'
+import ExpertApplicationBanner from '@/components/Dashboard/Expert/ExpertApplicationBanner'
+import DashboardSessionReconcile from '@/components/Dashboard/DashboardSessionReconcile'
+import { dashboardFetch } from '@/lib/session/client'
 
 type PendingInvite = {
   id: string
@@ -77,10 +94,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setNotifications(items as AppNotification[])
     setUnreadCount(u)
     unreadSnapshotRef.current = u
+    if (notificationPrefsRef.current.highlightBell) {
+      setNotificationBlink(
+        u > 0 || hasUnreadStickyExpertReviewNotifications(items as AppNotification[]),
+      )
+    }
   }, [])
 
   const fetchNotifications = useCallback(async (): Promise<number | null> => {
-    const res = await fetch('/api/notifications', { cache: 'no-store' })
+    const res = await dashboardFetch('/api/notifications', { cache: 'no-store' })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) return null
     applyNotificationPayload(data)
@@ -92,6 +114,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     role: (user?.profile?.role as string) || 'parent',
     avatar: user?.profile?.avatar_url || undefined,
   }
+
+  const activeView = getActiveView(user?.profile ?? null)
+  const sidebarView = getSidebarView(user?.profile ?? null, pathname)
+  const verifiedExpert = isVerifiedExpert(user?.profile ?? null)
+  const adminAccount = isAdminAccount(user?.profile ?? null)
+  const expertViewPreference = getExpertViewPreference(user?.profile ?? null)
+  const adminViewPreference = getAdminDashboardViewPreference(user?.profile ?? null)
+  const showParentApplicationBanner =
+    activeView === 'parent' && !adminAccount && displayUser.role !== 'admin'
 
   const getGreeting = () => {
     const hour = new Date().getHours()
@@ -105,7 +136,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const loadPendingInvites = async () => {
       if (!user?.id || loading) return
       try {
-        const res = await fetch('/api/invites/pending', { cache: 'no-store' })
+        const res = await dashboardFetch('/api/invites/pending', { cache: 'no-store' })
         const data = await res.json().catch(() => ({}))
         if (!res.ok) return
         setPendingInvites(Array.isArray(data?.invites) ? data.invites : [])
@@ -141,7 +172,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (typeof document !== 'undefined' && document.hidden) return
       const before = unreadSnapshotRef.current
       try {
-        const res = await fetch('/api/notifications', { cache: 'no-store' })
+        const res = await dashboardFetch('/api/notifications', { cache: 'no-store' })
         const data = await res.json().catch(() => ({}))
         if (!res.ok) return
         const newUnread = Number(data?.unreadCount ?? 0)
@@ -203,7 +234,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleInviteAction = async (token: string, action: 'accept' | 'withdraw') => {
     try {
       setInviteActionLoading(true)
-      const res = await fetch(`/api/invites/${token}`, {
+      const res = await dashboardFetch(`/api/invites/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),
@@ -217,15 +248,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const activeInvite = pendingInvites[0]
 
+  useEffect(() => {
+    if (!adminAccount || !pathname?.startsWith('/dashboard/admin/experts')) return
+    void (async () => {
+      try {
+        await dashboardFetch('/api/notifications', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ expertReviewQueueViewed: true }),
+        })
+        await fetchNotifications()
+      } catch {
+        // ignore
+      }
+    })()
+  }, [adminAccount, pathname, fetchNotifications])
+
   const handleNotificationClick = async () => {
     const next = !notificationsOpen
     setNotificationsOpen(next)
     if (next) {
-      setNotificationBlink(false)
       try {
-        await fetch('/api/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
-        setUnreadCount(0)
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+        await dashboardFetch('/api/notifications', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        })
+        await fetchNotifications()
       } catch {
         // ignore
       }
@@ -236,14 +285,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const token = n?.actionData?.inviteToken
     if (!token) return
     try {
-      await fetch('/api/notifications', {
+      await dashboardFetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notificationId: n.id }),
       })
     } catch {}
     try {
-      const res = await fetch('/api/invites/pending', { cache: 'no-store' })
+      const res = await dashboardFetch('/api/invites/pending', { cache: 'no-store' })
       const data = await res.json().catch(() => ({}))
       const invites = Array.isArray(data?.invites) ? data.invites : []
       setPendingInvites(invites)
@@ -265,20 +314,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       return
     }
     if (n.actionUrl) {
-      try {
-        await fetch('/api/notifications', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ notificationId: n.id }),
-        })
-      } catch {
-        // ignore
+      const isStickyExpert = isStickyExpertReviewNotification(n.actionData)
+      if (!isStickyExpert) {
+        try {
+          await dashboardFetch('/api/notifications', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notificationId: n.id }),
+          })
+        } catch {
+          // ignore
+        }
+        if (!n.isRead) {
+          setUnreadCount(c => Math.max(0, c - 1))
+          unreadSnapshotRef.current = Math.max(0, unreadSnapshotRef.current - 1)
+        }
+        setNotifications(prev => prev.map(x => (x.id === n.id ? { ...x, isRead: true } : x)))
       }
-      if (!n.isRead) {
-        setUnreadCount(c => Math.max(0, c - 1))
-        unreadSnapshotRef.current = Math.max(0, unreadSnapshotRef.current - 1)
-      }
-      setNotifications(prev => prev.map(x => (x.id === n.id ? { ...x, isRead: true } : x)))
       setNotificationsOpen(false)
       const path = n.actionUrl.startsWith('/') ? n.actionUrl : `/${n.actionUrl}`
       router.push(path)
@@ -289,6 +341,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <SubscriptionProvider>
+    <DashboardSessionReconcile />
     <div className="h-[100dvh] overflow-hidden bg-[#fdf4f6] p-3 sm:p-4 lg:p-6">
       <div className="mx-auto flex h-full max-h-full max-w-[1600px] items-stretch gap-3 sm:gap-4 lg:gap-6">
       {activeInvite && (
@@ -322,57 +375,88 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Sidebar
         currentPath={pathname || '/dashboard'}
         user={displayUser}
+        activeView={sidebarView}
         isOpen={isMobileMenuOpen}
         onToggle={toggleMobileMenu}
       />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-pink-100/80 bg-white shadow-lg shadow-pink-100/30">
+        <div className="relative z-40 shrink-0 overflow-visible">
         <DashboardHeader
           greeting={getGreeting()}
           userName={displayUser.name.split(' ')[0]}
           userAvatarUrl={displayUser.avatar}
           isLoading={loading}
+          showPlanBadge={activeView === 'parent'}
+          headerExtra={
+            adminAccount ? (
+              <AdminViewSwitcher activeView={adminViewPreference} />
+            ) : verifiedExpert ? (
+              <ExpertViewSwitcher activeView={expertViewPreference} />
+            ) : null
+          }
           onMenuToggle={toggleMobileMenu}
           unreadNotificationCount={unreadCount}
           notificationBlink={notificationBlink}
           onNotificationClick={handleNotificationClick}
           notificationDropdown={
             notificationsOpen ? (
-              <div className="absolute right-0 top-full z-[65] mt-2 w-[min(92vw,24rem)] rounded-xl border border-pink-100 bg-white shadow-xl">
-                <div className="flex items-center justify-between border-b border-pink-100 p-3">
-                  <p className="text-sm font-semibold text-gray-900">Notifications</p>
-                  <button
-                    type="button"
-                    onClick={() => setNotificationsOpen(false)}
-                    className="rounded border border-gray-200 px-2 py-1 text-xs hover:bg-gray-50"
-                  >
-                    Close
-                  </button>
+              <>
+                <button
+                  type="button"
+                  aria-label="Close notifications"
+                  className="fixed inset-0 z-[64] bg-black/25 sm:hidden"
+                  onClick={() => setNotificationsOpen(false)}
+                />
+                <div className="fixed left-3 right-3 top-24 z-[65] flex max-h-[min(24rem,calc(100dvh-6.5rem))] flex-col overflow-hidden rounded-xl border border-pink-100 bg-white shadow-xl sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[min(92vw,24rem)] sm:max-h-[min(24rem,calc(100vh-7rem))]">
+                  <div className="flex shrink-0 items-center justify-between border-b border-pink-100 p-3">
+                    <p className="text-sm font-semibold text-gray-900">Notifications</p>
+                    <button
+                      type="button"
+                      onClick={() => setNotificationsOpen(false)}
+                      className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs hover:bg-gray-50"
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                    {notifications.length === 0 ? (
+                      <p className="p-4 text-sm text-gray-500">No notifications yet.</p>
+                    ) : (
+                      notifications.map(n => {
+                        const isInvite = Boolean(n?.actionData?.inviteToken)
+                        const isLink = isInvite || Boolean(n.actionUrl)
+                        const isStickyExpert =
+                          !n.isRead && isStickyExpertReviewNotification(n.actionData)
+                        return (
+                          <button
+                            key={n.id}
+                            type="button"
+                            onClick={() => void handleNotificationListItemClick(n)}
+                            className={`w-full border-b border-pink-50 p-3 text-left hover:bg-pink-50/40 ${
+                              isStickyExpert
+                                ? 'bg-pink-50 ring-2 ring-inset ring-pink-300 animate-bell-alert'
+                                : n.isRead
+                                  ? 'bg-white'
+                                  : 'bg-pink-50/50'
+                            } ${isLink ? 'cursor-pointer' : ''}`}
+                          >
+                            <p className="text-sm font-medium text-gray-900 break-words">{n.title}</p>
+                            <p className="mt-1 text-xs text-gray-600 break-words">{n.body}</p>
+                            {isStickyExpert ? (
+                              <p className="mt-1 text-[11px] font-medium text-pink-600">
+                                Review required — open Expert Verification
+                              </p>
+                            ) : null}
+                            <p className="mt-1 text-[11px] text-gray-500">{new Date(n.createdAt).toLocaleString()}</p>
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
                 </div>
-                <div className="max-h-[min(24rem,calc(100vh-7rem))] overflow-y-auto">
-                  {notifications.length === 0 ? (
-                    <p className="p-4 text-sm text-gray-500">No notifications yet.</p>
-                  ) : (
-                    notifications.map(n => {
-                      const isInvite = Boolean(n?.actionData?.inviteToken)
-                      const isLink = isInvite || Boolean(n.actionUrl)
-                      return (
-                        <button
-                          key={n.id}
-                          type="button"
-                          onClick={() => void handleNotificationListItemClick(n)}
-                          className={`w-full border-b border-pink-50 p-3 text-left hover:bg-pink-50/40 ${n.isRead ? 'bg-white' : 'bg-pink-50/50'} ${isLink ? 'cursor-pointer' : ''}`}
-                        >
-                          <p className="text-sm font-medium text-gray-900">{n.title}</p>
-                          <p className="mt-1 text-xs text-gray-600">{n.body}</p>
-                          <p className="mt-1 text-[11px] text-gray-500">{new Date(n.createdAt).toLocaleString()}</p>
-                        </button>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
+              </>
             ) : null
           }
           onSettingsClick={() => {
@@ -386,8 +470,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }
           }}
         />
+        </div>
 
         <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:p-8">
+          {showParentApplicationBanner && pathname !== '/dashboard' ? (
+            <ExpertApplicationBanner />
+          ) : null}
           {children}
         </main>
         </div>

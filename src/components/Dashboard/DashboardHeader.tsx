@@ -21,6 +21,8 @@ interface DashboardHeaderProps {
   isLoading?: boolean;
   unreadNotificationCount?: number;
   notificationBlink?: boolean;
+  showPlanBadge?: boolean;
+  headerExtra?: ReactNode;
 }
 
 export default function DashboardHeader({
@@ -37,6 +39,8 @@ export default function DashboardHeader({
   isLoading = false,
   unreadNotificationCount = 0,
   notificationBlink = false,
+  showPlanBadge = true,
+  headerExtra,
 }: DashboardHeaderProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -70,7 +74,8 @@ export default function DashboardHeader({
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-3" ref={menuRef}>
-          <PlanHeaderBadge />
+          {headerExtra}
+          {showPlanBadge ? <PlanHeaderBadge /> : null}
           {showNotifications && (
             <div className="relative">
               <button
