@@ -25,8 +25,9 @@ export async function POST(request: NextRequest) {
     const { error } = await supabase
       .from('profiles')
       .update({
-        role: 'expert',
-        is_verified: false,
+        role: 'parent',
+        is_expert: false,
+        is_verified: true,
         verification_data: {
           professionalTitle,
           licenseNumber,

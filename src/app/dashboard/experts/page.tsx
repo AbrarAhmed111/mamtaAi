@@ -15,6 +15,7 @@ import {
   FaStethoscope,
 } from 'react-icons/fa'
 import Spinner from '@/components/ui/spinner'
+import { isVerifiedExpert } from '@/lib/expert/active-view'
 
 type Expert = {
   id: string
@@ -24,6 +25,7 @@ type Expert = {
   yearsOfExperience: string | null
   memberSince: string | null
   articleCount: number
+  isNewExpert?: boolean
 }
 
 type ExpertPost = {
@@ -51,6 +53,7 @@ type ExpertsResponse = {
 
 type UserProfile = {
   role?: string
+  is_expert?: boolean
   is_verified?: boolean
 }
 
@@ -115,6 +118,8 @@ export default function ExpertsPage() {
   const [error, setError] = useState('')
   const [data, setData] = useState<ExpertsResponse | null>(null)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [applicationStatus, setApplicationStatus] = useState<'none' | 'pending' | 'approved' | 'rejected'>('none')
+  const [canApplyAsExpert, setCanApplyAsExpert] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [specialtyFilter, setSpecialtyFilter] = useState<string>('all')
   const [selectedExpertId, setSelectedExpertId] = useState<string | null>(null)
@@ -124,9 +129,10 @@ export default function ExpertsPage() {
       try {
         setLoading(true)
         setError('')
-        const [expertsRes, meRes] = await Promise.all([
+        const [expertsRes, meRes, applyRes] = await Promise.all([
           fetch('/api/experts', { cache: 'no-store' }),
           fetch('/api/me', { cache: 'no-store' }),
+          fetch('/api/experts/apply', { cache: 'no-store' }),
         ])
         const expertsJson = await expertsRes.json().catch(() => ({}))
         if (!expertsRes.ok) {
@@ -138,6 +144,11 @@ export default function ExpertsPage() {
         if (meRes.ok) {
           const meJson = await meRes.json().catch(() => ({}))
           setUserProfile(meJson?.profile || null)
+        }
+        if (applyRes.ok) {
+          const applyJson = await applyRes.json().catch(() => ({}))
+          setApplicationStatus(applyJson.status || 'none')
+          setCanApplyAsExpert(Boolean(applyJson.canApply))
         }
       } finally {
         setLoading(false)
@@ -161,8 +172,10 @@ export default function ExpertsPage() {
 
   const selectedExpert = filteredExperts.find(e => e.id === selectedExpertId) || null
 
-  const isExpertPending =
-    userProfile?.role === 'expert' && userProfile?.is_verified === false
+  const userIsVerifiedExpert = isVerifiedExpert(userProfile)
+  const isApplicationPending = applicationStatus === 'pending'
+  const showBecomeExpertCta =
+    !userIsVerifiedExpert && applicationStatus !== 'pending' && canApplyAsExpert
 
   if (loading) {
     return (
@@ -205,9 +218,9 @@ export default function ExpertsPage() {
               <FaBook />
               Expert Articles
             </Link>
-            {userProfile?.role !== 'expert' && (
+            {showBecomeExpertCta && (
               <Link
-                href="/auth/role"
+                href="/dashboard/expert-application"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:from-pink-700 hover:to-rose-700"
               >
                 <FaUserMd />
@@ -218,20 +231,34 @@ export default function ExpertsPage() {
         </div>
       </section>
 
-      {isExpertPending && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+      {isApplicationPending && (
+        <div className="rounded-2xl border border-pink-100/80 bg-gradient-to-r from-pink-50 via-rose-50 to-white p-5 shadow-sm shadow-pink-100/20">
           <div className="flex items-start gap-3">
-            <FaClock className="mt-0.5 shrink-0 text-amber-600" />
+            <FaClock className="mt-0.5 shrink-0 text-pink-600" />
             <div>
-              <p className="font-semibold text-amber-900">Your expert application is under review</p>
-              <p className="mt-1 text-sm text-amber-800">
-                Our team is verifying your credentials. You&apos;ll get full expert access once approved — typically within 1–3 business days.
+              <p className="font-semibold text-gray-900">Your expert documents are under review</p>
+              <p className="mt-1 text-sm text-gray-600">
+                Our team is verifying your credentials. You can keep using your parent dashboard while you wait.
               </p>
-              <Link href="/onboarding?status=pending" className="mt-2 inline-block text-sm font-medium text-amber-900 underline">
-                View application status
-              </Link>
             </div>
           </div>
+        </div>
+      )}
+
+      {!userIsVerifiedExpert && applicationStatus === 'none' && (
+        <div className="rounded-2xl border border-pink-200 bg-gradient-to-r from-pink-50 to-white p-5">
+          <p className="font-semibold text-gray-900">Are you a healthcare professional?</p>
+          <p className="mt-1 text-sm text-gray-600">
+            Apply to join as an expert and share trusted guidance with MamtaAI parents.
+          </p>
+          {showBecomeExpertCta ? (
+            <Link
+              href="/dashboard/expert-application"
+              className="mt-3 inline-flex text-sm font-semibold text-pink-600 hover:text-pink-700"
+            >
+              Apply to join as an expert →
+            </Link>
+          ) : null}
         </div>
       )}
 
@@ -339,6 +366,12 @@ export default function ExpertsPage() {
                           <FaCheckCircle className="text-[10px]" />
                           Verified
                         </span>
+                        {expert.isNewExpert ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                            <FaStar className="text-[10px]" />
+                            Newbie
+                          </span>
+                        ) : null}
                       </div>
                       <p className="mt-1 text-sm font-medium text-pink-700">{expert.professionalTitle}</p>
                       {expert.yearsOfExperience && (
@@ -362,21 +395,13 @@ export default function ExpertsPage() {
                     )}
                   </div>
 
-                  <div className="mt-auto flex flex-col gap-2 sm:flex-row">
+                  <div className="mt-auto">
                     <button
                       type="button"
                       onClick={() => setSelectedExpertId(expert.id)}
-                      className="flex-1 rounded-xl border border-pink-200 px-4 py-2.5 text-sm font-semibold text-pink-700 transition hover:bg-pink-50"
+                      className="w-full rounded-xl border border-pink-200 px-4 py-2.5 text-sm font-semibold text-pink-700 transition hover:bg-pink-50"
                     >
                       View Profile
-                    </button>
-                    <button
-                      type="button"
-                      disabled
-                      title="Consultation booking coming soon"
-                      className="flex-1 cursor-not-allowed rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-400"
-                    >
-                      Book Consult
                     </button>
                   </div>
                 </div>
@@ -443,7 +468,7 @@ export default function ExpertsPage() {
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/auth/expert-onboarding"
+              href="/auth/expert-application"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-bold text-pink-700 shadow-lg transition hover:bg-pink-50"
             >
               <FaCertificate />
@@ -506,7 +531,7 @@ export default function ExpertsPage() {
 
               <p className="text-sm leading-relaxed text-gray-600">
                 {selectedExpert.fullName} is a verified MamtaAI expert providing trusted guidance on infant care,
-                development, and wellbeing. Browse their published articles or check back soon for direct consultations.
+                development, and wellbeing. Browse their published articles in the community blog.
               </p>
 
               <div className="flex flex-col gap-2 sm:flex-row">

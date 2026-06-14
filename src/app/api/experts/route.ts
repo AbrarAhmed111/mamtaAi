@@ -2,12 +2,22 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@/lib/supabase/server'
 
+import { EXPERT_NEW_BADGE_DAYS } from '@/lib/expert/constants'
+
 export const dynamic = 'force-dynamic'
 
 type VerificationData = {
   professionalTitle?: string
   yearsOfExperience?: string | number
   licenseNumber?: string
+  approvedAt?: string
+}
+
+function isNewExpert(verificationData: VerificationData | null, createdAt: string | null): boolean {
+  const approvedAt = verificationData?.approvedAt || createdAt
+  if (!approvedAt) return false
+  const ms = Date.now() - new Date(approvedAt).getTime()
+  return ms >= 0 && ms <= EXPERT_NEW_BADGE_DAYS * 24 * 60 * 60 * 1000
 }
 
 function sanitizeExpert(row: {
@@ -25,6 +35,7 @@ function sanitizeExpert(row: {
     professionalTitle: vd.professionalTitle?.trim() || 'Healthcare Professional',
     yearsOfExperience: vd.yearsOfExperience?.toString() || null,
     memberSince: row.created_at,
+    isNewExpert: isNewExpert(vd, row.created_at),
   }
 }
 
@@ -50,9 +61,8 @@ export async function GET(request: NextRequest) {
 
     const { data: expertRows, error: expertsError } = await admin
       .from('profiles')
-      .select('id, full_name, avatar_url, verification_data, created_at')
-      .eq('role', 'expert')
-      .eq('is_verified', true)
+      .select('id, full_name, avatar_url, verification_data, created_at, is_expert, role, is_verified')
+      .or('is_expert.eq.true,and(role.eq.expert,is_verified.eq.true)')
       .order('full_name', { ascending: true })
 
     if (expertsError) {
