@@ -9,14 +9,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 import type { AuthUser } from '@/lib/supabase/actions'
 import { useAuth } from '@/lib/supabase/context'
 
-type ActivePage = 'home' | 'pricing'
+type ActivePage = 'home' | 'pricing' | 'oximeter'
 
 type LandingNavProps = {
   activePage?: ActivePage
 }
 
 function hashHref(hash: string, activePage?: ActivePage) {
-  return activePage === 'pricing' ? `/${hash}` : hash
+  return activePage === 'home' ? hash : `/${hash}`
 }
 
 function navLinkClass(isActive: boolean, isHomeActive?: boolean) {
@@ -170,6 +170,14 @@ export default function LandingNav({ activePage = 'home' }: LandingNavProps) {
                 Features
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300" />
               </a>
+              <Link href="/oximeter" className={navLinkClass(activePage === 'oximeter')}>
+                Oximeter
+                <span
+                  className={`absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 transition-all duration-300 ${
+                    activePage === 'oximeter' ? 'w-full' : 'w-0 group-hover:w-full'
+                  }`}
+                />
+              </Link>
               <Link href="/pricing" className={navLinkClass(activePage === 'pricing')}>
                 Pricing
                 <span
@@ -238,6 +246,9 @@ export default function LandingNav({ activePage = 'home' }: LandingNavProps) {
             >
               Features
             </a>
+            <Link href="/oximeter" className={mobileLinkClass(activePage === 'oximeter')} onClick={closeMenu}>
+              Oximeter
+            </Link>
             <Link href="/pricing" className={mobileLinkClass(activePage === 'pricing')} onClick={closeMenu}>
               Pricing
             </Link>

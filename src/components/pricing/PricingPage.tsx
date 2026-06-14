@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import LandingNav from '@/components/marketing/LandingNav'
+import SiteFooter from '@/components/marketing/SiteFooter'
 import { useBilling } from '@/hooks/useBilling'
 import {
   FaArrowRight,
@@ -510,12 +511,7 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-pink-100 bg-white/80 py-8 px-4 text-center text-sm text-gray-500">
-        <Link href="/" className="text-pink-600 font-medium hover:underline">
-          ← Back to home
-        </Link>
-        <p className="mt-2">© {new Date().getFullYear()} MamtaAI. All rights reserved.</p>
-      </footer>
+      <SiteFooter />
 
       {modalTarget && (
         <PlanChangeModal

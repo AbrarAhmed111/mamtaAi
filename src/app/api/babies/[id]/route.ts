@@ -1,6 +1,13 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/client'
 import { accessBadgeLabel, type BabyMembershipPermissions } from '@/lib/baby-permissions'
+import {
+  mergeOximeterAlertsIntoMetadata,
+  parseBabyOximeterAlerts,
+  sanitizeBabyOximeterAlerts,
+} from '@/lib/oximeter/baby-thresholds'
+import { getOximeterAlertLimitErrors } from '@/lib/oximeter/alert-limits-warnings'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -26,7 +33,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { data: baby, error } = await supabase
       .from('babies')
       .select(`
-        id,name,gender,birth_date,birth_weight_kg,birth_height_cm,blood_type,avatar_url,medical_notes,is_active,
+        id,name,gender,birth_date,birth_weight_kg,birth_height_cm,blood_type,avatar_url,medical_notes,is_active,metadata,
         baby_parents ( parent_id, relationship, access_level, is_primary, can_edit_profile, parent_profile:profiles!baby_parents_parent_id_fkey ( full_name, id ) )
       `)
       .eq('id', id)
@@ -43,6 +50,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json({
       baby,
+      oximeterAlerts: parseBabyOximeterAlerts((baby as { metadata?: unknown }).metadata),
       currentUserRelationship,
       currentUserMembership,
       currentAccessBadge,
@@ -115,10 +123,54 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       updates.medical_notes = body.medical_notes || null
     }
 
-    const { error: updateError } = await supabase.from('babies').update(updates).eq('id', id)
-    if (updateError) return NextResponse.json({ error: updateError.message }, { status: 400 })
+    if (body.oximeter_alerts !== undefined) {
+      const raw = body.oximeter_alerts as Record<string, unknown>
+      const draft = {
+        enabled: raw.enabled !== false,
+        spo2Min: Number(raw.spo2Min),
+        spo2Max: Number(raw.spo2Max),
+        pulseMin: Number(raw.pulseMin),
+        pulseMax: Number(raw.pulseMax),
+      }
+      const limitErrors = getOximeterAlertLimitErrors(draft)
+      if (limitErrors.length > 0) {
+        return NextResponse.json({ error: limitErrors[0] }, { status: 400 })
+      }
 
-    return NextResponse.json({ ok: true })
+      const { data: existingBaby } = await (supabaseAdmin as any)
+        .from('babies')
+        .select('metadata')
+        .eq('id', id)
+        .maybeSingle()
+      const sanitized = sanitizeBabyOximeterAlerts(body.oximeter_alerts)
+      updates.metadata = mergeOximeterAlertsIntoMetadata(existingBaby?.metadata, sanitized)
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+    }
+
+    const { data: updatedBaby, error: updateError } = await (supabaseAdmin as any)
+      .from('babies')
+      .update(updates)
+      .eq('id', id)
+      .select('id, metadata')
+      .maybeSingle()
+
+    if (updateError) return NextResponse.json({ error: updateError.message }, { status: 400 })
+    if (!updatedBaby) {
+      return NextResponse.json({ error: 'Could not update baby profile. Please try again.' }, { status: 403 })
+    }
+
+    return NextResponse.json({
+      ok: true,
+      oximeterAlerts:
+        body.oximeter_alerts !== undefined
+          ? sanitizeBabyOximeterAlerts(
+              parseBabyOximeterAlerts((updatedBaby as { metadata?: unknown }).metadata),
+            )
+          : undefined,
+    })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }

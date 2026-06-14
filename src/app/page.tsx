@@ -23,22 +23,15 @@ import {
   FaCheck,
   FaStar,
   FaPlay,
-  FaDownload,
-  FaEnvelope,
-  FaPhone,
-  FaMapMarkerAlt,
-  FaFacebook,
-  FaTwitter,
-  FaInstagram,
-  FaLinkedin,
   FaClock,
   FaLock,
   FaCheckCircle
 } from 'react-icons/fa';
 import motherAndBaby from '@/assets/img/motherandbaby.png'
-import smallLogo from '@/assets/img/smallLogo.png'
 import Image from 'next/image';
 import LandingNav from '@/components/marketing/LandingNav';
+import OximeterLandingSection from '@/components/marketing/OximeterLandingSection';
+import SiteFooter from '@/components/marketing/SiteFooter';
 
 
 function FAQAccordion() {
@@ -353,6 +346,8 @@ function HomeContent() {
         </div>
       </section>
 
+      <OximeterLandingSection />
+
       {/* Benefits Section */}
       <section className="py-16 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -488,207 +483,7 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* Enhanced Footer */}
-      <footer id="contact" className="relative bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 text-white overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20"></div>
-          <div className="absolute top-20 left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl"></div>
-        </div>
-        
-        <div className="relative z-10">
-          {/* Newsletter Section */}
-          <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-b border-white/10">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-              <div className="text-center">
-                <h3 className="text-2xl font-bold mb-2">Stay Updated with MamtaAI</h3>
-                <p className="text-blue-100 mb-6">Get the latest updates on AI-powered baby care technology</p>
-                <div className="max-w-md mx-auto flex gap-4">
-                  <input
-                    type="email"
-                    placeholder="Enter your email"
-                    className="flex-1 px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <button className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300 font-medium">
-                    Subscribe
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Footer Content */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {/* Company Info */}
-              <div className="lg:col-span-1">
-                <div className="flex items-center mb-6">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur opacity-75"></div>
-                    <div className="relative">
-                      <Image
-                        src={smallLogo}
-                        alt="MamtaAI"
-                        className="h-12 w-12 rounded-full"
-                      />
-                    </div>
-                  </div>
-                  <div className="ml-3">
-                    <span className="text-2xl font-bold bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent">
-                      MamtaAI
-                    </span>
-                    <div className="text-xs text-blue-200 font-medium">AI-Powered Baby Care</div>
-                  </div>
-                </div>
-                <p className="text-blue-100 mb-6 leading-relaxed">
-                  Revolutionary AI-powered baby cry translation system helping parents understand their baby&apos;s needs with precision and care.
-                </p>
-                <div className="flex space-x-4">
-                  <a href="#" className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center hover:bg-blue-500 hover:scale-110 transition-all duration-300 group">
-                    <FaFacebook className="h-5 w-5 text-gray-300 group-hover:text-white" />
-                  </a>
-                  <a href="#" className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center hover:bg-blue-500 hover:scale-110 transition-all duration-300 group">
-                    <FaTwitter className="h-5 w-5 text-gray-300 group-hover:text-white" />
-                  </a>
-                  <a href="#" className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center hover:bg-blue-500 hover:scale-110 transition-all duration-300 group">
-                    <FaInstagram className="h-5 w-5 text-gray-300 group-hover:text-white" />
-                  </a>
-                  <a href="#" className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center hover:bg-blue-500 hover:scale-110 transition-all duration-300 group">
-                    <FaLinkedin className="h-5 w-5 text-gray-300 group-hover:text-white" />
-                  </a>
-                </div>
-              </div>
-
-              {/* Product Links */}
-              <div>
-                <h3 className="text-lg font-semibold mb-6 text-white">Product</h3>
-                <ul className="space-y-3">
-                  <li><a href="#features" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
-                    <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                    Features
-                  </a></li>
-                  <li><a href="#faq" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
-                    <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                    FAQ
-                  </a></li>
-                  <li><Link href="/pricing" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
-                    <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                    Pricing
-                  </Link></li>
-                  {/* <li><a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
-                    <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                    Download App
-                  </a></li> */}
-                  {/* <li><a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
-                    <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                    API Access
-                  </a></li> */}
-                </ul>
-              </div>
-
-              {/* Support Links */}
-              <div>
-                <h3 className="text-lg font-semibold mb-6 text-white">Support</h3>
-                <ul className="space-y-3">
-                  <li><a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
-                    <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                    Help Center
-                  </a></li>
-                  <li><a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
-                    <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                    Community Forum
-                  </a></li>
-                  <li><a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
-                    <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                    Contact Support
-                  </a></li>
-                  <li><a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 flex items-center group">
-                    <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                    Privacy Policy
-                  </a></li>
-                </ul>
-              </div>
-
-              {/* Contact Info */}
-              <div>
-                <h3 className="text-lg font-semibold mb-6 text-white">Get in Touch</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center group">
-                    <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center mr-3 group-hover:bg-blue-500/30 transition-colors duration-200">
-                      <FaEnvelope className="h-4 w-4 text-blue-300" />
-                    </div>
-                    <div>
-                      <p className="text-blue-200 text-sm">Email us</p>
-                      <p className="text-white font-medium">support@mamtaai.com</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center group">
-                    <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center mr-3 group-hover:bg-purple-500/30 transition-colors duration-200">
-                      <FaPhone className="h-4 w-4 text-purple-300" />
-                    </div>
-                    <div>
-                      <p className="text-blue-200 text-sm">Call us</p>
-                      <p className="text-white font-medium">+1 (555) 123-4567</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center group">
-                    <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center mr-3 group-hover:bg-green-500/30 transition-colors duration-200">
-                      <FaMapMarkerAlt className="h-4 w-4 text-green-300" />
-                    </div>
-                    <div>
-                      <p className="text-blue-200 text-sm">Visit us</p>
-                      <p className="text-white font-medium">San Francisco, CA</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Section */}
-            <div className="border-t border-white/10 mt-12 pt-8">
-              <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                <div className="text-blue-200 text-sm mb-4 md:mb-0">
-                  © 2024 MamtaAI. All rights reserved. Made with ❤️ for parents everywhere.
-                </div>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6">
-                  <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
-                    <a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 whitespace-nowrap">Terms of Service</a>
-                    <a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 whitespace-nowrap">Privacy Policy</a>
-                    <a href="#" className="text-blue-200 hover:text-white transition-colors duration-200 whitespace-nowrap">Cookie Policy</a>
-                  </div>
-                  {/* Trustpilot Badge */}
-                  <a 
-                    href="https://www.trustpilot.com" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex flex-col items-center gap-2 bg-white px-4 py-3 rounded-lg hover:shadow-lg transition-all duration-200 whitespace-nowrap"
-                  >
-                    <div className="flex items-center gap-2">
-                      <FaStar className="h-5 w-5 text-[#00b67a]" />
-                      <span className="font-semibold text-gray-900 text-sm">Trustpilot</span>
-                    </div>
-                    {/* Star Rating - 4.5 stars */}
-                    <div className="flex items-center gap-0.5">
-                      {/* 4 full stars */}
-                      {[...Array(4)].map((_, i) => (
-                        <FaStar key={i} className="h-3 w-3 text-[#00b67a]" />
-                      ))}
-                      {/* Half star */}
-                      <div className="relative w-3 h-3">
-                        <FaStar className="absolute inset-0 h-3 w-3 text-gray-300" />
-                        <div className="absolute inset-0 overflow-hidden" style={{ width: '50%' }}>
-                          <FaStar className="h-3 w-3 text-[#00b67a]" />
-                        </div>
-                      </div>
-                    </div>
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

@@ -1,3 +1,14 @@
+let lastOximeterAlertSoundAt = 0
+
+/** Marks that this tab already played alert audio (avoids double-beep from Realtime). */
+export function markOximeterAlertSoundPlayed(): void {
+  lastOximeterAlertSoundAt = Date.now()
+}
+
+export function shouldSkipOximeterRealtimeSound(): boolean {
+  return Date.now() - lastOximeterAlertSoundAt < 3000
+}
+
 /** Short double-beep for new notifications (Web Audio; may stay silent until user gesture on some browsers). */
 export function playNotificationBeep(): void {
   if (typeof window === 'undefined') return;

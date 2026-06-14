@@ -3,6 +3,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { ReactNode } from 'react'
 import Providers from '@/store/Providers'
 import { AuthProvider } from '@/lib/supabase/context'
+import SmoothHashScroll from '@/components/marketing/SmoothHashScroll'
 import { metadata as siteMetadata, viewport as siteViewport } from '@/lib/site-metadata'
 
 export const metadata = siteMetadata
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <AuthProvider>
         <html lang="en" suppressHydrationWarning>
           <body suppressHydrationWarning className="antialiased">
+            <SmoothHashScroll />
             <Toaster position="top-center" />
             {children}
           </body>

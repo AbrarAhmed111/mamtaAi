@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { filterRecordingsByPlanHistory, getPlanLimits } from '@/lib/subscription'
+import {
+  buildOximeterInsights,
+  type OximeterReadingLite,
+} from '@/lib/insights/oximeter-insights'
+
+const EMPTY_OXIMETER = buildOximeterInsights({ readings: [], babyNames: new Map() })
 
 type PredictionLite = {
   recording_id: string
@@ -27,6 +33,7 @@ export async function GET(_req: NextRequest) {
           hourlyTrend: [],
           babyBreakdown: [],
           recentHistory: [],
+          oximeter: EMPTY_OXIMETER,
         },
         { status: 200 },
       )
@@ -61,6 +68,7 @@ export async function GET(_req: NextRequest) {
         hourlyTrend: [],
         babyBreakdown: [],
         recentHistory: [],
+        oximeter: EMPTY_OXIMETER,
       })
     }
 
@@ -200,6 +208,29 @@ export async function GET(_req: NextRequest) {
       ? dailyTrend
       : dailyTrend.slice(-7)
 
+    const babyNameMap = new Map<string, string>()
+    for (const m of memberships || []) {
+      const id = String((m as { baby_id?: string }).baby_id || '')
+      const name = (m as { babies?: { name?: string } }).babies?.name || 'Baby'
+      if (id) babyNameMap.set(id, name)
+    }
+
+    const oxTrendDays = planCtx.limitations.insights_full_charts ? 14 : 7
+    const oxCutoff = new Date(now.getTime() - oxTrendDays * 24 * 60 * 60 * 1000)
+    const { data: oximeterReadings } = await supabase
+      .from('oximeter_readings')
+      .select('baby_id, measured_at, spo2_percentage, pulse_rate_bpm, is_valid, metadata')
+      .in('baby_id', babyIds)
+      .gte('measured_at', oxCutoff.toISOString())
+      .order('measured_at', { ascending: false })
+      .limit(5000)
+
+    const oximeter = buildOximeterInsights({
+      readings: (oximeterReadings || []) as OximeterReadingLite[],
+      babyNames: babyNameMap,
+      trendDays: oxTrendDays,
+    })
+
     return NextResponse.json({
       overview: {
         recordingsToday: todayRecs.length,
@@ -218,6 +249,7 @@ export async function GET(_req: NextRequest) {
       hourlyTrend: planCtx.limitations.insights_full_charts ? hourlyTrend : [],
       babyBreakdown: planCtx.limitations.insights_full_charts ? babyBreakdown : babyBreakdown.slice(0, 3),
       recentHistory,
+      oximeter,
       subscription: {
         slug: planCtx.slug,
         insightsHistoryDays: historyDays,
