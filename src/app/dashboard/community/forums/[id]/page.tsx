@@ -7,6 +7,9 @@ import Image from 'next/image'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase/client'
+import ReportContentButton from '@/components/community/ReportContentButton'
+import CommunityAuthorIdentity from '@/components/community/CommunityAuthorIdentity'
+import { type CommunityAuthorProfile } from '@/lib/expert/community-author'
 
 interface ForumThread {
   id: string
@@ -27,11 +30,7 @@ interface ForumThread {
     icon: string | null
     color_hex: string | null
   } | null
-  author: {
-    id: string
-    full_name: string
-    avatar_url: string | null
-  } | null
+  author: CommunityAuthorProfile | null
 }
 
 interface Reply {
@@ -42,11 +41,7 @@ interface Reply {
   is_edited: boolean | null
   edited_at: string | null
   created_at: string | null
-  author: {
-    id: string
-    full_name: string
-    avatar_url: string | null
-  } | null
+  author: CommunityAuthorProfile | null
   parent_reply_id: string | null
 }
 
@@ -419,30 +414,20 @@ export default function ForumThreadPage() {
               )}
             </div>
 
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-              {thread.title}
-            </h1>
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+                {thread.title}
+              </h1>
+              {user && id ? (
+                <ReportContentButton contentType="forum_thread" contentId={id} />
+              ) : null}
+            </div>
 
             <div className="flex items-center gap-4 text-sm text-gray-600 mb-6 pb-6 border-b border-gray-200">
               {thread.author && (
-                <div className="flex items-center gap-2">
-                  {thread.author.avatar_url ? (
-                    <Image
-                      src={thread.author.avatar_url}
-                      alt={thread.author.full_name}
-                      width={40}
-                      height={40}
-                      className="rounded-full object-cover h-10 w-10"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center">
-                      {thread.author.full_name[0]}
-                    </div>
-                  )}
-                  <div>
-                    <div className="font-semibold">{thread.author.full_name}</div>
-                    <div className="text-xs text-gray-500">{formatDate(thread.created_at)}</div>
-                  </div>
+                <div>
+                  <CommunityAuthorIdentity author={thread.author} avatarSize={40} />
+                  <div className="mt-1 text-xs text-gray-500">{formatDate(thread.created_at)}</div>
                 </div>
               )}
             </div>
@@ -551,39 +536,27 @@ export default function ForumThreadPage() {
                   >
                     <div className="flex items-start gap-4">
                       {reply.author && (
-                        <>
-                          {reply.author.avatar_url ? (
-                            <Image
-                              src={reply.author.avatar_url}
-                              alt={reply.author.full_name}
-                              width={40}
-                              height={40}
-                              className="rounded-full object-cover flex-shrink-0"
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+                            <CommunityAuthorIdentity
+                              author={reply.author}
+                              avatarSize={40}
+                              showSubtitle={false}
                             />
-                          ) : (
-                            <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center flex-shrink-0">
-                              {reply.author.full_name[0]}
-                            </div>
-                          )}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="font-semibold text-gray-900">
-                                {reply.author.full_name}
+                            {reply.is_accepted_answer && (
+                              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded flex items-center gap-1">
+                                <FaCheckCircle /> Accepted Answer
                               </span>
-                              {reply.is_accepted_answer && (
-                                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded flex items-center gap-1">
-                                  <FaCheckCircle /> Accepted Answer
-                                </span>
-                              )}
-                              <span className="text-sm text-gray-500">
-                                {formatDate(reply.created_at)}
+                            )}
+                            <span className="text-sm text-gray-500">
+                              {formatDate(reply.created_at)}
+                            </span>
+                            {reply.is_edited && (
+                              <span className="text-xs text-gray-400 italic">
+                                (edited)
                               </span>
-                              {reply.is_edited && (
-                                <span className="text-xs text-gray-400 italic">
-                                  (edited)
-                                </span>
-                              )}
-                            </div>
+                            )}
+                          </div>
                             {isEditing ? (
                               <div className="mb-4">
                                 <textarea
@@ -610,7 +583,8 @@ export default function ForumThreadPage() {
                             ) : (
                               <p className="text-gray-700 mb-2">{reply.content}</p>
                             )}
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 flex-wrap">
+                              <ReportContentButton contentType="forum_reply" contentId={reply.id} />
                               {user && (
                                 <button 
                                   onClick={() => {
@@ -657,36 +631,24 @@ export default function ForumThreadPage() {
 
                                   return (
                                     <div key={nestedReply.id} className="pb-4 border-b border-gray-100 last:border-0">
-                                      <div className="flex items-start gap-3">
-                                        {nestedReply.author && (
-                                          <>
-                                            {nestedReply.author.avatar_url ? (
-                                              <Image
-                                                src={nestedReply.author.avatar_url}
-                                                alt={nestedReply.author.full_name}
-                                                width={32}
-                                                height={32}
-                                                className="rounded-full object-cover flex-shrink-0"
-                                              />
-                                            ) : (
-                                              <div className="w-8 h-8 bg-pink-200 rounded-full flex items-center justify-center flex-shrink-0 text-xs">
-                                                {nestedReply.author.full_name[0]}
-                                              </div>
+                                      {nestedReply.author && (
+                                        <div className="min-w-0">
+                                          <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                            <CommunityAuthorIdentity
+                                              author={nestedReply.author}
+                                              avatarSize={32}
+                                              nameSize="sm"
+                                              showSubtitle={false}
+                                            />
+                                            <span className="text-xs text-gray-500">
+                                              {formatDate(nestedReply.created_at)}
+                                            </span>
+                                            {nestedReply.is_edited && (
+                                              <span className="text-xs text-gray-400 italic">
+                                                (edited)
+                                              </span>
                                             )}
-                                            <div className="flex-1">
-                                              <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-semibold text-gray-900 text-sm">
-                                                  {nestedReply.author.full_name}
-                                                </span>
-                                                <span className="text-xs text-gray-500">
-                                                  {formatDate(nestedReply.created_at)}
-                                                </span>
-                                                {nestedReply.is_edited && (
-                                                  <span className="text-xs text-gray-400 italic">
-                                                    (edited)
-                                                  </span>
-                                                )}
-                                              </div>
+                                          </div>
                                               {isEditingNested ? (
                                                 <div className="mb-2">
                                                   <textarea
@@ -713,7 +675,12 @@ export default function ForumThreadPage() {
                                               ) : (
                                                 <p className="text-gray-700 text-sm mb-2">{nestedReply.content}</p>
                                               )}
-                                              <div className="flex items-center gap-3">
+                                              <div className="flex items-center gap-3 flex-wrap">
+                                                <ReportContentButton
+                                                  contentType="forum_reply"
+                                                  contentId={nestedReply.id}
+                                                  className="text-xs py-1 px-2"
+                                                />
                                                 {isNestedAuthor && !isEditingNested && (
                                                   <>
                                                     <button 
@@ -733,10 +700,8 @@ export default function ForumThreadPage() {
                                                   </>
                                                 )}
                                               </div>
-                                            </div>
-                                          </>
-                                        )}
-                                      </div>
+                                        </div>
+                                      )}
                                     </div>
                                   )
                                 })}
@@ -776,8 +741,7 @@ export default function ForumThreadPage() {
                                 </form>
                               </div>
                             )}
-                          </div>
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>

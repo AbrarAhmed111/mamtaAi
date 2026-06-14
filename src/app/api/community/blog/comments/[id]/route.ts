@@ -53,7 +53,12 @@ export async function PATCH(
         author:profiles!blog_comments_author_id_fkey (
           id,
           full_name,
-          avatar_url
+          avatar_url,
+          role,
+          is_expert,
+          is_verified,
+          verification_data,
+          created_at
         )
       `)
       .single()

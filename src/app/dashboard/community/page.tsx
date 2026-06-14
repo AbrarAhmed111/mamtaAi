@@ -6,6 +6,9 @@ import { FaBook, FaComments, FaFolderOpen, FaPlus, FaSearch, FaFilter, FaEye, Fa
 import Link from 'next/link'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
+import Select from '@/components/ui/select'
+import CommunityAuthorIdentity, { ExpertContentBadge } from '@/components/community/CommunityAuthorIdentity'
+import { type CommunityAuthorProfile, shouldLabelPostAsExpert } from '@/lib/expert/community-author'
 
 type Tab = 'blog' | 'forums' | 'resources'
 
@@ -22,11 +25,7 @@ interface BlogPost {
   bookmark_count: number | null
   is_expert_content: boolean | null
   published_at: string | null
-  author: {
-    id: string
-    full_name: string
-    avatar_url: string | null
-  } | null
+  author: CommunityAuthorProfile | null
 }
 
 interface ForumThread {
@@ -44,11 +43,7 @@ interface ForumThread {
     icon: string | null
     color_hex: string | null
   } | null
-  author: {
-    id: string
-    full_name: string
-    avatar_url: string | null
-  } | null
+  author: CommunityAuthorProfile | null
 }
 
 interface Resource {
@@ -254,18 +249,15 @@ function CommunityPageContent() {
             />
           </div>
           {activeTab === 'forums' && forumCategories.length > 0 && (
-            <select
+            <Select
               value={selectedCategory || ''}
-              onChange={(e) => setSelectedCategory(e.target.value || null)}
-              className="px-4 py-2 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-            >
-              <option value="">All Categories</option>
-              {forumCategories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+              onChange={v => setSelectedCategory(v || null)}
+              options={[
+                { value: '', label: 'All Categories' },
+                ...forumCategories.map(cat => ({ value: cat.id, label: cat.name })),
+              ]}
+              aria-label="Filter by category"
+            />
           )}
           <div className="flex gap-2">
             <Link
@@ -329,10 +321,8 @@ function CommunityPageContent() {
                           )}
                           <div className="p-6 flex flex-col flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              {post.is_expert_content && (
-                                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded">
-                                  Expert
-                                </span>
+                              {shouldLabelPostAsExpert(post.is_expert_content, post.author) && (
+                                <ExpertContentBadge />
                               )}
                               <span className="px-2 py-1 bg-pink-100 text-pink-700 text-xs font-semibold rounded">
                                 {post.category}
@@ -356,22 +346,12 @@ function CommunityPageContent() {
                                 </span>
                               </div>
                               {post.author && (
-                                <div className="flex items-center gap-2">
-                                  {post.author.avatar_url ? (
-                                    <Image
-                                      src={post.author.avatar_url}
-                                      alt={post.author.full_name}
-                                      width={24}
-                                      height={24}
-                                      className="rounded-full object-cover h-10 w-10"
-                                    />
-                                  ) : (
-                                    <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center text-xs">
-                                      {post.author.full_name[0]}
-                                    </div>
-                                  )}
-                                  <span className="text-xs">{post.author.full_name}</span>
-                                </div>
+                                <CommunityAuthorIdentity
+                                  author={post.author}
+                                  avatarSize={32}
+                                  nameSize="sm"
+                                  showSubtitle={false}
+                                />
                               )}
                             </div>
                           </div>
