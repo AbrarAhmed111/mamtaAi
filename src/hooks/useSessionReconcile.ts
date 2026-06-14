@@ -77,7 +77,7 @@ export function useSessionReconcile({
         router.replace('/dashboard')
         return true
       }
-      if (pathname?.startsWith('/dashboard/expert') && !access.isExpert) {
+      if (pathname?.startsWith('/dashboard/expert/') && !access.isExpert) {
         router.replace('/dashboard')
         return true
       }

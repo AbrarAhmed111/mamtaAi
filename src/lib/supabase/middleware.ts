@@ -139,7 +139,7 @@ export async function updateSession(request: NextRequest) {
       if (currentPath.startsWith('/dashboard/admin') && role !== 'admin') {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
-      if (currentPath.startsWith('/dashboard/expert') && !isExpert) {
+      if (currentPath.startsWith('/dashboard/expert/') && !isExpert) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
     }
