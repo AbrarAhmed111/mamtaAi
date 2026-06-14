@@ -18,6 +18,11 @@ body{
 
 html {
     scrollbar-gutter: stable;
+    scroll-behavior: smooth;
+}
+
+[id] {
+    scroll-margin-top: 5.5rem;
 }
 
 * {
@@ -109,4 +114,30 @@ html {
 
 .animate-fade-in-delay-450 {
     animation: fade-in 0.8s ease-out 0.45s both;
+}
+
+@keyframes oxi-heart {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.12);
+    }
+}
+
+@keyframes oxi-value-flash {
+    0% {
+        transform: scale(1);
+    }
+    40% {
+        transform: scale(1.025);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.oxi-value-flash {
+    animation: oxi-value-flash 0.45s ease-out;
 }

@@ -6,7 +6,7 @@ import Sidebar from '@/components/Dashboard/Sidebar'
 import DashboardHeader from '@/components/Dashboard/DashboardHeader'
 import { useAuth } from '@/lib/supabase/context'
 import { supabase } from '@/lib/supabase/client'
-import { playNotificationBeep } from '@/lib/notification-feedback'
+import { playNotificationBeep, shouldSkipOximeterRealtimeSound } from '@/lib/notification-feedback'
 import {
   getInAppAlertFlagsForNotificationRow,
   parseNotificationPreferences,
@@ -16,6 +16,9 @@ import {
   isStickyExpertReviewNotification,
 } from '@/lib/notifications/sticky-expert-notifications'
 import { SubscriptionProvider } from '@/hooks/useSubscription'
+import { OximeterProvider } from '@/contexts/OximeterContext'
+import ConnectOximeterModal from '@/components/oximeter/ConnectOximeterModal'
+import OximeterAlertModal from '@/components/oximeter/OximeterAlertModal'
 import {
   getActiveView,
   getAdminDashboardViewPreference,
@@ -216,7 +219,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }
           const flags = getInAppAlertFlagsForNotificationRow(row, notificationPrefsRef.current)
           if (flags.highlight) setNotificationBlink(true)
-          if (flags.sound) playNotificationBeep()
+          const isOximeter = String(row.category || '').toLowerCase() === 'oximeter'
+          if (flags.sound && !(isOximeter && shouldSkipOximeterRealtimeSound())) {
+            playNotificationBeep()
+          }
           void fetchNotifications()
         },
       )
@@ -341,6 +347,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <SubscriptionProvider>
+    <OximeterProvider>
+    <ConnectOximeterModal />
+    <OximeterAlertModal />
     <DashboardSessionReconcile />
     <div className="h-[100dvh] overflow-hidden bg-[#fdf4f6] p-3 sm:p-4 lg:p-6">
       <div className="mx-auto flex h-full max-h-full max-w-[1600px] items-stretch gap-3 sm:gap-4 lg:gap-6">
@@ -482,6 +491,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
       </div>
     </div>
+    </OximeterProvider>
     </SubscriptionProvider>
   )
 }

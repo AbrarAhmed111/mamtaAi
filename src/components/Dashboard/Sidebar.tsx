@@ -21,6 +21,7 @@ import {
   FaClipboardList,
   FaIdCard,
   FaBookOpen,
+  FaHeartbeat,
 } from 'react-icons/fa';
 import { MdDashboard } from 'react-icons/md';
 import logo from '@/assets/img/smallLogo.png';
@@ -46,6 +47,7 @@ const PARENT_NAV_ITEMS = [
   { href: '/dashboard/babies', label: 'My Babies', icon: FaBaby, match: (p: string) => p.startsWith('/dashboard/babies') },
   { href: '/dashboard/recordings', label: 'Recordings', icon: FaMicrophone, match: (p: string) => p.startsWith('/dashboard/recordings') },
   { href: '/dashboard/insights', label: 'Insights', icon: FaChartLine, match: (p: string) => p.startsWith('/dashboard/insights') },
+  { href: '/dashboard/oximeter', label: 'Oximeter', icon: FaHeartbeat, match: (p: string) => p.startsWith('/dashboard/oximeter') },
   { href: '/dashboard/community', label: 'Community', icon: FaUsers, match: (p: string) => p.startsWith('/dashboard/community') },
   { href: '/dashboard/experts', label: 'Experts', icon: FaUserMd, match: (p: string) => p.startsWith('/dashboard/experts') },
   { href: '/dashboard/settings', label: 'Settings', icon: FaCog, match: (p: string) => p.startsWith('/dashboard/settings') },
