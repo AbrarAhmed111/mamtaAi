@@ -4,7 +4,7 @@
 
 import { useState, useRef, useEffect, Suspense } from 'react'
 import { checkEmailAndRedirect } from '@/lib/actions/auth'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getBaseUrl, AUTH_CONSTANTS } from '@/lib/constants'
 import { validateEmail, validateEmailLive } from '@/lib/supabase/validations'
 import { useReturnUrl } from '@/hooks/useReturnUrl'
@@ -19,6 +19,8 @@ function WelcomeContent() {
   const [emailError, setEmailError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const accountRemoved = searchParams.get('reason') === 'account_deleted'
   const emailInputRef = useRef<HTMLInputElement>(null)
   const returnUrl = useReturnUrl()
 
@@ -105,6 +107,11 @@ function WelcomeContent() {
 
   return (
     <div className="px-[24px] py-[10px] md:px-0 md:py-0">
+      {accountRemoved ? (
+        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          This account is no longer available. Sign in with a different email or create a new account.
+        </div>
+      ) : null}
       <AuthHeader
         title="Enter your email"
         backHref={getBaseUrl()}
