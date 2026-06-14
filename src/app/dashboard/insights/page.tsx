@@ -302,7 +302,7 @@ function InsightsPageContent() {
                 const url = URL.createObjectURL(blob)
                 const a = document.createElement('a')
                 a.href = url
-                a.download = `mamtaai-insights-${new Date().toISOString().slice(0, 10)}.csv`
+                a.download = `MamtaAI-insights-${new Date().toISOString().slice(0, 10)}.csv`
                 a.click()
                 URL.revokeObjectURL(url)
                 toast.success('Export downloaded')

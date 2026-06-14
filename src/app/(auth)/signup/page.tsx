@@ -440,7 +440,7 @@ function SignUpContent() {
                   <div className="py-4">
                     <p className="text-[#AAADB1] text-xs sm:text-sm">
                       By tapping &quot;Create Account&quot;, you agree to the
-                      MamtaAi Terms of Use.
+                      MamtaAI Terms of Use.
                     </p>
                     <button className="text-pink-600 hover:text-pink-700 font-bold text-xs sm:text-sm transition-colors">
                       Terms of Use
@@ -448,8 +448,8 @@ function SignUpContent() {
                   </div>
                   <div className="pb-4">
                     <p className="text-[#AAADB1] text-xs sm:text-sm">
-                      To learn more about how MamtaAi collects, uses, shares, and
-                      protects your personal data, please see the MamtaAi Privacy.
+                      To learn more about how MamtaAI collects, uses, shares, and
+                      protects your personal data, please see the MamtaAI Privacy.
                     </p>
                     <button className="text-pink-600 hover:text-pink-700 font-bold text-xs sm:text-sm transition-colors">
                       Privacy Policy
