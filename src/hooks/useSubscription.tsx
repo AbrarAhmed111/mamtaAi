@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { dashboardFetch } from '@/lib/session/client'
 import type { PlanLimitations, PlanSlug, UsageStats } from '@/lib/subscription/types'
+import type { SubscriptionSnapshot } from '@/lib/subscription/snapshot-types'
 import PlanLimitModal from '@/components/subscription/PlanLimitModal'
 import { registerPlanLimitHandler } from '@/lib/subscription/plan-limit-client'
 
@@ -32,40 +33,53 @@ export type SubscriptionState = {
 
 const SubscriptionContext = createContext<SubscriptionState | null>(null)
 
-export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
-  const [loading, setLoading] = useState(true)
-  const [slug, setSlug] = useState<PlanSlug>('free')
-  const [planName, setPlanName] = useState('Free')
-  const [limitations, setLimitations] = useState<PlanLimitations>({} as PlanLimitations)
-  const [usage, setUsage] = useState<UsageStats>({ period: '' })
-  const [showUpsellBanners, setShowUpsellBanners] = useState(true)
+type SubscriptionProviderProps = {
+  children: React.ReactNode
+  initialState?: SubscriptionSnapshot | null
+}
+
+export function SubscriptionProvider({ children, initialState = null }: SubscriptionProviderProps) {
+  const [loading, setLoading] = useState(!initialState)
+  const [slug, setSlug] = useState<PlanSlug>(initialState?.plan.slug ?? 'free')
+  const [planName, setPlanName] = useState(initialState?.plan.name ?? 'Free')
+  const [limitations, setLimitations] = useState<PlanLimitations>(
+    initialState?.plan.limitations ?? ({} as PlanLimitations),
+  )
+  const [usage, setUsage] = useState<UsageStats>(initialState?.usage ?? { period: '' })
+  const [showUpsellBanners, setShowUpsellBanners] = useState(
+    initialState?.plan.showUpsellBanners ?? true,
+  )
   const [meters, setMeters] = useState<SubscriptionState['meters']>({
-    recordings: null,
-    activities: null,
-    exports: null,
+    recordings: initialState?.meters.recordings ?? null,
+    activities: initialState?.meters.activities ?? null,
+    exports: initialState?.meters.exports ?? null,
   })
   const [planLimitPayload, setPlanLimitPayload] = useState<PlanLimitApiError | null>(null)
   const [planLimitOpen, setPlanLimitOpen] = useState(false)
+
+  const applySnapshot = useCallback((data: Partial<SubscriptionSnapshot>) => {
+    setSlug((data?.plan?.slug as PlanSlug) || 'free')
+    setPlanName(data?.plan?.name || 'Free')
+    setLimitations(data?.plan?.limitations || ({} as PlanLimitations))
+    setUsage(data?.usage || { period: '' })
+    setShowUpsellBanners(data?.plan?.showUpsellBanners ?? true)
+    setMeters({
+      recordings: data?.meters?.recordings ?? null,
+      activities: data?.meters?.activities ?? null,
+      exports: data?.meters?.exports ?? null,
+    })
+  }, [])
 
   const refresh = useCallback(async () => {
     try {
       const res = await dashboardFetch('/api/subscription', { cache: 'no-store' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) return
-      setSlug((data?.plan?.slug as PlanSlug) || 'free')
-      setPlanName(data?.plan?.name || 'Free')
-      setLimitations(data?.plan?.limitations || {})
-      setUsage(data?.usage || { period: '' })
-      setShowUpsellBanners(Boolean(data?.plan?.showUpsellBanners))
-      setMeters({
-        recordings: data?.meters?.recordings ?? null,
-        activities: data?.meters?.activities ?? null,
-        exports: data?.meters?.exports ?? null,
-      })
+      applySnapshot(data)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [applySnapshot])
 
   useEffect(() => {
     void refresh()

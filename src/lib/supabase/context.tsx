@@ -13,9 +13,15 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+type AuthProviderProps = {
+  children: React.ReactNode;
+  initialUser?: AuthUser | null;
+};
+
+export function AuthProvider({ children, initialUser }: AuthProviderProps) {
+  const hasInitialUserSnapshot = initialUser !== undefined;
+  const [user, setUser] = useState<AuthUser | null>(initialUser ?? null);
+  const [loading, setLoading] = useState(!hasInitialUserSnapshot);
 
   const refreshUser = useCallback(async (): Promise<AuthUser | null> => {
     try {
@@ -56,7 +62,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    let authReady = false;
+    let authReady = hasInitialUserSnapshot;
+
+    if (hasInitialUserSnapshot) {
+      setLoading(false);
+    }
 
     const finishLoading = () => {
       if (mounted && !authReady) {
@@ -66,6 +76,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const resolveInitialAuth = async (session: { user: unknown } | null) => {
+      if (hasInitialUserSnapshot) {
+        if (session?.user) {
+          void refreshUser();
+        }
+        return;
+      }
+
       if (session?.user) {
         let profile = await refreshUser();
         if (!profile) {
@@ -112,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
       clearTimeout(fallbackTimer);
     };
-  }, [refreshUser]);
+  }, [refreshUser, hasInitialUserSnapshot]);
 
   return (
     <AuthContext.Provider value={{ user, loading, signOut, refreshUser }}>
