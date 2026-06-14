@@ -37,8 +37,11 @@ next-env.d.ts
 previousProject/
 
 # project docs (local only)
-/docs/
-
+/docs/PROJECT_PLANNING_DOCUMENT.md
+/docs
 # python backend (separate project)
 /mamtaai_python_backend
+
+# Supabase CLI local cache (created by link/login)
+supabase/.temp/
 

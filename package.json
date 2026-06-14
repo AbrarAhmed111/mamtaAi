@@ -36,6 +36,7 @@
     "react-toastify": "^11.0.5",
     "recharts": "^3.8.1",
     "stripe": "^22.2.0",
+    "supabase": "^2.106.0",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7"
   },
