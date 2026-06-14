@@ -7,7 +7,7 @@ import Link from 'next/link';
 import Spinner from '@/components/ui/spinner';
 import Select from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FaBaby, FaCamera, FaUsers, FaPlay, FaStop, FaUser, FaMicrophone, FaClock, FaShieldAlt, FaBell } from 'react-icons/fa';
+import { FaBaby, FaCamera, FaPlay, FaStop, FaUser, FaMicrophone, FaClock, FaShieldAlt, FaBell } from 'react-icons/fa';
 import WelcomeChecklist from './WelcomeChecklist';
 import RecordingSection from './RecordingSection';
 import BabyProfiles from './BabyProfiles';
@@ -19,6 +19,7 @@ import ExpertRequestStatusCard, {
   type ExpertApplicationSummary,
 } from './Expert/ExpertRequestStatusCard';
 import { usePlanLimit } from '@/hooks/useSubscription';
+import OximeterOverviewCard from '@/components/oximeter/OximeterOverviewCard';
 
 interface ChecklistItem {
   id: string;
@@ -80,14 +81,6 @@ export default function Dashboard({
       completed: false,
       icon: FaCamera,
       action: 'Record Cry'
-    },
-    {
-      id: 'join-community',
-      title: 'Join Community',
-      description: 'Connect with other parents and get expert advice',
-      completed: false,
-      icon: FaUsers,
-      action: 'Join Now'
     }
   ]);
 
@@ -123,7 +116,6 @@ export default function Dashboard({
   const [statsLoading, setStatsLoading] = useState(true);
   const [hasBaby, setHasBaby] = useState(false);
   const [hasRecording, setHasRecording] = useState(false);
-  const [hasCommunity, setHasCommunity] = useState(false);
   const [recentRecs, setRecentRecs] = useState<Array<{ id: string; fileUrl: string; durationSeconds: number | null; recordedAt: string; babyId: string; babyName: string; babyAvatar?: string | null; babyGender?: string | null }>>([]);
   const [recentLoading, setRecentLoading] = useState(false);
   const [playingRecordingId, setPlayingRecordingId] = useState<string | null>(null);
@@ -225,7 +217,6 @@ export default function Dashboard({
         const json = await res.json().catch(() => ({}));
         setHasBaby(Boolean(json?.hasBaby));
         setHasRecording(Boolean(json?.hasRecording));
-        setHasCommunity(Boolean(json?.hasCommunity));
       } finally {
         setStatsLoading(false);
       }
@@ -255,11 +246,10 @@ export default function Dashboard({
       prev.map(item => {
         if (item.id === 'add-baby') return { ...item, completed: hasBaby, loading: statsLoading };
         if (item.id === 'first-cry') return { ...item, completed: hasRecording, loading: statsLoading };
-        if (item.id === 'join-community') return { ...item, completed: hasCommunity, loading: statsLoading };
         return { ...item, loading: statsLoading };
       }),
     );
-  }, [hasBaby, hasRecording, hasCommunity, statsLoading]);
+  }, [hasBaby, hasRecording, statsLoading]);
 
   const loadRecentRecordings = async () => {
     try {
@@ -607,7 +597,11 @@ export default function Dashboard({
             </div>
           </div>
         </section>
-        
+
+        <section className="mb-6">
+          <OximeterOverviewCard />
+        </section>
+
         <BabySelectionModal
           isOpen={showSelectBaby}
           babies={babies}

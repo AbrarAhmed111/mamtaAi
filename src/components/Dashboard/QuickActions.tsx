@@ -1,43 +1,43 @@
 'use client';
 
-import { FaUsers, FaChartLine, FaCog, FaChevronRight } from 'react-icons/fa';
+import { FaChartLine, FaCog, FaChevronRight, FaUsers } from 'react-icons/fa';
 import Link from 'next/link';
 
 interface QuickActionsProps {
   onActionClick?: (action: string) => void;
 }
 
-export default function QuickActions({ onActionClick }: QuickActionsProps) {
-  const actions = [
-    {
-      href: '/dashboard/community',
-      label: 'Join Community',
-      icon: FaUsers,
-      iconBg: 'bg-pink-50',
-      iconColor: 'text-pink-500',
-    },
-    {
-      href: '/dashboard/insights',
-      label: 'View Insights',
-      icon: FaChartLine,
-      iconBg: 'bg-purple-50',
-      iconColor: 'text-purple-500',
-    },
-    {
-      href: '/dashboard/settings',
-      label: 'Settings',
-      icon: FaCog,
-      iconBg: 'bg-gray-50',
-      iconColor: 'text-gray-500',
-    },
-  ];
+const linkActions = [
+  {
+    href: '/dashboard/community',
+    label: 'Join Community',
+    icon: FaUsers,
+    iconBg: 'bg-pink-50',
+    iconColor: 'text-pink-500',
+  },
+  {
+    href: '/dashboard/insights',
+    label: 'View Insights',
+    icon: FaChartLine,
+    iconBg: 'bg-purple-50',
+    iconColor: 'text-purple-500',
+  },
+  {
+    href: '/dashboard/settings',
+    label: 'Settings',
+    icon: FaCog,
+    iconBg: 'bg-gray-50',
+    iconColor: 'text-gray-500',
+  },
+];
 
+export default function QuickActions({ onActionClick }: QuickActionsProps) {
   return (
     <div className="rounded-3xl border border-pink-100/80 bg-white p-5 shadow-md shadow-pink-100/20">
       <h3 className="mb-4 text-lg font-bold text-gray-900">Quick Actions</h3>
 
       <div className="space-y-2">
-        {actions.map(action => {
+        {linkActions.map(action => {
           const Icon = action.icon;
           return (
             <Link
