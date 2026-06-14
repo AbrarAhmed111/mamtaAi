@@ -1,0 +1,511 @@
+MamtaAI Oximeter Integration Plan
+1. Goal
+Add a pulse oximeter module to MamtaAI that allows parents to:
+Search for nearby supported oximeters
+Pair and connect a device
+View live oxygen saturation and pulse rate
+Store readings against a selected baby
+View minimum, maximum, and average readings
+Receive warnings for abnormal readings
+Reconnect previously paired devices
+2. Recommended Architecture
+Pulse Oximeter
+      ↓ Bluetooth Low Energy
+Mobile App / Bluetooth Bridge
+      ↓
+Next.js API Route
+      ↓
+Supabase Database
+      ↓ Supabase Realtime
+MamtaAI Dashboard
+3. Main User Flow
+Step 1: Overview page
+Add an oximeter card to the dashboard overview.
+Disconnected state
+Show:
+Oximeter icon
+Status: Not Connected
+Short message:
+“Connect an oximeter to monitor your baby's oxygen level and pulse.”
+Button:
+Connect Oximeter
+Example:
+Oximeter Monitoring
+No oximeter connected.
+[ Connect Oximeter ]
+Connected state
+Show:
+Oximeter icon with Bluetooth signal animation
+Device name
+Status: Connected
+Current SpO₂
+Current pulse
+Button:
+View Live Readings
+Example:
+PC-60FW
+Connected
+SpO₂: 98%
+Pulse: 112 BPM
+[ View Live Readings ]
+4. Connection Modal UX
+Clicking Connect Oximeter opens a centered modal.
+Modal Stage 1: Searching
+Show:
+Oximeter illustration
+Red or gray disconnected X icon
+Animated Bluetooth waves
+Loading spinner
+Text:
+Searching for nearby oximeters...
+Secondary text:
+Make sure the oximeter is turned on and actively measuring.
+Actions:
+Cancel
+Search Again
+Modal Stage 2: Device list
+Display discovered devices as cards.
+Each device card should contain:
+Device name
+Model, when available
+Bluetooth icon
+Signal strength
+Connection state
+Connect button
+Example:
+PC-60FW
+Strong signal
+Not paired
+[ Connect ]
+Unknown Bluetooth devices should appear as:
+Unknown Oximeter
+Device ID: A4:C1:38:XX
+[ Connect ]
+Do not automatically connect to an unknown device unless its Bluetooth service or protocol is recognized.
+Modal Stage 3: Connecting
+After clicking Connect:
+Disable other Connect buttons.
+Show Connecting...
+Display a progress animation.
+Keep the modal open.
+Allow the user to cancel.
+Connection steps:
+Finding device
+Connecting through Bluetooth
+Checking device compatibility
+Starting live readings
+Modal Stage 4: Connected
+After successful connection:
+Replace the disconnected illustration with a connected oximeter image.
+Change the modal background or status area to green.
+Show a check icon.
+Show:
+Oximeter Connected
+Device name
+Baby name
+Start a three-second success countdown.
+Close the modal automatically after three seconds.
+Example:
+✓ Oximeter Connected
+PC-60FW is now connected to Ahmed.
+Opening live monitoring...
+The overview button should immediately change to:
+Oximeter Connected
+It should include an animated Bluetooth signal indicator.
+5. Baby Selection
+Before starting live monitoring, the reading must be linked to a baby.
+For one baby
+Automatically select the baby.
+For multiple babies
+Show a baby selector during connection:
+Who is using the oximeter?
+Ahmed
+Sara
+The selected baby_id must be included with every stored reading.
+Do not allow readings to be stored without a selected baby.
+6. Oximeter Page
+Create:
+/dashboard/oximeter
+Add Oximeter to the dashboard sidebar.
+Connected page layout
+Header
+Show:
+Page title: Oximeter Monitoring
+Selected baby
+Device name
+Connection status
+Battery percentage, when available
+Disconnect button
+Example:
+Oximeter Monitoring
+Ahmed · PC-60FW
+● Live and Connected
+[ Disconnect ]
+Live SpO₂ card
+Show:
+Large SpO₂ value
+Percentage symbol
+Circular progress animation
+Status label
+Last updated time
+Example:
+98%
+Oxygen Saturation
+Normal
+Updated just now
+Suggested status ranges should be configurable rather than permanently hard-coded into the UI.
+Possible visual states:
+Normal
+Attention
+Critical
+No reliable reading
+Do not show a medical diagnosis. Display safety-oriented guidance such as:
+This reading may require attention. Check the sensor placement and contact a healthcare professional when necessary.
+Live pulse card
+Show:
+Large BPM value
+Animated heart icon
+Pulsing progress ring
+Small live waveform or recent-value line
+Minimum and maximum pulse
+Example:
+112 BPM
+Heart Rate
+● Live
+The heart animation speed can follow the current BPM.
+For example:
+animationDuration = 60 / pulseRate
+For 120 BPM:
+60 / 120 = 0.5 seconds per pulse
+Limit the visual animation speed to a safe UI range so unusually high or invalid readings do not create extreme animation.
+7. Statistics
+Display statistics for the current monitoring session.
+Required statistics
+Current SpO₂
+Current pulse
+Minimum SpO₂
+Maximum SpO₂
+Average SpO₂
+Minimum pulse
+Maximum pulse
+Average pulse
+Session duration
+Number of readings
+Last updated time
+Example:
+Session Statistics
+Minimum SpO₂      95%
+Maximum SpO₂      99%
+Average SpO₂      97%
+Minimum Pulse     102 BPM
+Maximum Pulse     126 BPM
+Average Pulse     114 BPM
+Live history chart
+Add a real-time chart containing:
+SpO₂ over time
+Pulse over time
+Last 1 minute
+Last 5 minutes
+Current session
+For performance, keep only a limited number of points in frontend memory.
+Example:
+Latest 60–300 readings
+Historical data can be fetched separately from Supabase.
+8. Disconnected Oximeter Page
+When the user opens /dashboard/oximeter without a connected device, show an empty state.
+Example:
+No Oximeter Connected
+Connect an oximeter to monitor oxygen saturation and pulse rate in real time.
+[ Connect Oximeter ]
+Also show:
+Supported device message
+Bluetooth requirement
+Instructions:
+Turn on the oximeter.
+Place it on the finger.
+Keep it near the phone.
+Click Connect Oximeter.
+Use the same connection modal from the overview page.
+Do not create two different connection implementations.
+9. Connection States
+Use a single connection-state model.
+type OximeterConnectionStatus =
+  | "idle"
+  | "permission_required"
+  | "searching"
+  | "device_found"
+  | "pairing"
+  | "connecting"
+  | "connected"
+  | "reconnecting"
+  | "disconnected"
+  | "unsupported"
+  | "error";
+Recommended global connection object:
+interface OximeterConnection {
+  status: OximeterConnectionStatus;
+  deviceId: string | null;
+  deviceName: string | null;
+  babyId: string | null;
+  signalStrength?: number;
+  batteryLevel?: number;
+  lastReadingAt?: string;
+  error?: string | null;
+}
+Use React Context, Zustand, or Redux Toolkit for this module.
+Because the connection status is needed on the overview page, sidebar, modal, and full oximeter page, local component state alone is not enough.
+10. Database Design
+oximeter_devices
+Stores paired and registered devices.
+create table oximeter_devices (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  baby_id uuid references babies(id) on delete set null,
+  device_identifier text not null,
+  device_name text,
+  device_model text,
+  manufacturer text,
+  connection_status text default 'disconnected',
+  is_active boolean default true,
+  is_trusted boolean default false,
+  firmware_version text,
+  battery_level integer,
+  last_connected_at timestamptz,
+  last_reading_at timestamptz,
+  metadata jsonb default '{}'::jsonb,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(user_id, device_identifier)
+);
+Do not rely only on the Bluetooth MAC address because some platforms may expose changing or private identifiers.
+oximeter_readings
+Stores individual readings.
+create table oximeter_readings (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  baby_id uuid not null references babies(id) on delete cascade,
+  device_id uuid references oximeter_devices(id) on delete set null,
+  session_id uuid not null,
+  spo2 integer,
+  pulse_rate integer,
+  perfusion_index numeric,
+  signal_quality integer,
+  is_valid boolean default true,
+  alarm_type text,
+  measured_at timestamptz not null,
+  received_at timestamptz default now(),
+  raw_payload jsonb,
+  metadata jsonb default '{}'::jsonb
+);
+Recommended indexes:
+create index idx_oximeter_readings_baby_time
+on oximeter_readings(baby_id, measured_at desc);
+create index idx_oximeter_readings_session
+on oximeter_readings(session_id, measured_at);
+create index idx_oximeter_devices_user
+on oximeter_devices(user_id);
+oximeter_sessions
+A separate sessions table is recommended.
+create table oximeter_sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  baby_id uuid not null references babies(id) on delete cascade,
+  device_id uuid references oximeter_devices(id) on delete set null,
+  started_at timestamptz default now(),
+  ended_at timestamptz,
+  min_spo2 integer,
+  max_spo2 integer,
+  avg_spo2 numeric,
+  min_pulse integer,
+  max_pulse integer,
+  avg_pulse numeric,
+  reading_count integer default 0,
+  status text default 'active',
+  metadata jsonb default '{}'::jsonb
+);
+The session table makes statistics and history pages much easier to load.
+11. 
+12. API Routes
+Create the following Next.js routes.
+Devices
+GET    /api/oximeter/devices
+POST   /api/oximeter/devices
+PATCH  /api/oximeter/devices/[id]
+DELETE /api/oximeter/devices/[id]
+Responsibilities:
+Register paired device
+List saved devices
+Update connection status
+Save last connected time
+Remove device
+Sessions
+POST   /api/oximeter/sessions
+GET    /api/oximeter/sessions
+GET    /api/oximeter/sessions/[id]
+PATCH  /api/oximeter/sessions/[id]
+Session start request:
+{
+  "babyId": "baby-uuid",
+  "deviceId": "device-uuid"
+}
+Session end request:
+{
+  "status": "completed"
+}
+Readings
+POST /api/oximeter/readings
+GET  /api/oximeter/readings
+GET  /api/oximeter/readings/latest
+Example reading payload:
+{
+  "babyId": "baby-uuid",
+  "deviceId": "device-uuid",
+  "sessionId": "session-uuid",
+  "spo2": 98,
+  "pulseRate": 112,
+  "perfusionIndex": 2.4,
+  "signalQuality": 90,
+  "measuredAt": "2026-06-14T10:20:30.000Z"
+}
+The server must validate:
+Authenticated user
+Baby access
+Device ownership
+Session status
+SpO₂ and pulse numeric ranges
+Timestamp validity
+Duplicate readings
+Reading frequency limits
+13. Real-Time Updates
+Use two different real-time channels.
+Bluetooth real time
+Bluetooth events update the local application immediately.
+Oximeter packet
+→ Bluetooth listener
+→ local state
+→ animated UI
+This gives the fastest visual update.
+Supabase real time
+Readings are stored in Supabase and broadcast to other logged-in devices.
+Reading inserted
+→ Supabase Realtime
+→ dashboard subscription
+→ remote dashboard update
+Example subscription:
+const channel = supabase
+  .channel(`oximeter:${babyId}`)
+  .on(
+    "postgres_changes",
+    {
+      event: "INSERT",
+      schema: "public",
+      table: "oximeter_readings",
+      filter: `baby_id=eq.${babyId}`,
+    },
+    (payload) => {
+      updateReading(payload.new);
+    }
+  )
+  .subscribe();
+A custom WebSocket server or FastAPI WebSocket is not required for this flow.
+14. Reading Storage Strategy
+Do not insert every Bluetooth packet individually when the device sends many packets per second.
+Recommended strategy:
+Update the local screen immediately for every valid packet.
+Save one normalized reading every 1–5 seconds.
+Save immediately when:
+An alert condition occurs
+SpO₂ changes significantly
+Pulse changes significantly
+Monitoring starts or stops
+Example:
+Bluetooth UI frequency: near real time
+Database frequency: one reading every 2 seconds
+This reduces:
+Database usage
+Realtime traffic
+Chart rendering load
+Duplicate records
+15. Reconnection Logic
+When the connection is lost:
+Change state to reconnecting.
+Keep the latest values visible but mark them as stale.
+Show:
+Connection lost. Reconnecting...
+Attempt reconnection several times.
+Stop the session after a configured timeout.
+Save the session end reason.
+Suggested timings:
+First retry: immediately
+Second retry: after 2 seconds
+Third retry: after 5 seconds
+Further retries: every 10 seconds
+Session timeout: configurable
+Do not continue showing old values as if they are live.
+Show:
+Last reading received 18 seconds ago
+16. Error States
+The UI should support:
+Bluetooth permission denied
+Bluetooth permission is required to connect the oximeter.
+[ Open Settings ]
+Bluetooth turned off
+Bluetooth is turned off.
+Turn on Bluetooth and search again.
+No devices found
+No supported oximeter was found.
+Make sure the device is turned on, close other oximeter apps, and try again.
+Device already connected elsewhere
+This oximeter may already be connected to another app or phone.
+Close the other app and try again.
+Unsupported device
+This Bluetooth device was found, but its oximeter protocol is not currently supported.
+Poor signal quality
+Reading is unstable.
+Check finger placement and keep the baby still.
+Device disconnected
+Oximeter disconnected.
+[ Reconnect ]
+17. Alerts and Safety
+Possible alert types:
+type OximeterAlarmType =
+  | "low_spo2"
+  | "high_pulse"
+  | "low_pulse"
+  | "poor_signal"
+  | "sensor_removed"
+  | "device_disconnected";
+Alerts should:
+Appear inside the monitoring page
+Be recorded in the database
+Optionally create an in-app notification
+Avoid claiming a diagnosis
+Mention that device readings can be affected by motion, fit, placement, and signal quality
+Thresholds should be configurable by:
+Baby age
+Healthcare guidance
+Device quality
+Platform safety policy
+For the first release, alerts should be informational rather than diagnostic.
+24. Acceptance Criteria
+The module is complete when:
+A parent can open the connection modal from the overview page.
+The app displays the searching state.
+Supported devices appear in a device list.
+The user can select a baby and connect a device.
+The modal changes to the green connected state.
+The modal closes after three seconds.
+The overview page displays the connected state.
+The oximeter page shows live SpO₂ and pulse.
+The heart animation responds to the current pulse.
+The page calculates min, max, and average readings.
+Readings are linked to the correct baby.
+Readings are securely stored in Supabase.
+Another dashboard session receives updates through Supabase Realtime.
+Disconnection is clearly shown.
+Old readings are never displayed as live readings.
+Users without baby access cannot read the data.
+Invalid or poor-quality readings are marked rather than treated as reliable.
+The user can reconnect or disconnect the device.
+The app provides an empty state when no device is connected.
+The same connection modal works from both the overview and oximeter pages.
