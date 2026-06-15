@@ -41,7 +41,7 @@ previousProject/
 /docs
 # python backend (separate project)
 /mamtaai_python_backend
-
+/mamtaai-mobile-app
 # Supabase CLI local cache (created by link/login)
 supabase/.temp/
 

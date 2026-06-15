@@ -1,15 +1,18 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { FaExchangeAlt, FaUserShield } from 'react-icons/fa'
+import { FaChevronDown, FaUserShield } from 'react-icons/fa'
 import { toast } from '@/components/ui/sonner'
+import ViewSwitcherDropdown from '@/components/Dashboard/ViewSwitcherDropdown'
 import type { AdminDashboardView } from '@/lib/expert/constants'
 import { switchAdminDashboardView } from '@/lib/expert/switch-dashboard-view'
 
 export default function AdminViewSwitcher({
   activeView,
+  placement = 'header',
 }: {
   activeView: AdminDashboardView
+  placement?: 'header' | 'panel'
 }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const [busy, setBusy] = useState(false)
@@ -55,44 +58,50 @@ export default function AdminViewSwitcher({
 
   const otherView: AdminDashboardView = activeView === 'admin' ? 'parent' : 'admin'
   const label = activeView === 'admin' ? 'Admin' : 'User'
+  const isPanel = placement === 'panel'
 
   return (
-    <div className="relative" ref={rootRef}>
+    <div className={`relative shrink-0 ${isPanel ? 'w-full' : ''}`} ref={rootRef}>
       <button
         type="button"
         disabled={busy}
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen(v => !v)}
-        className="inline-flex items-center gap-2 rounded-full border border-purple-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-purple-800 shadow-sm hover:bg-purple-50 disabled:opacity-60 sm:px-3 sm:text-xs"
+        className={
+          isPanel
+            ? 'inline-flex w-full items-center justify-between gap-2 rounded-xl border border-purple-200 bg-white px-3 py-2.5 text-xs font-semibold text-purple-800 shadow-sm hover:bg-purple-50 disabled:opacity-60'
+            : 'inline-flex max-w-[7.5rem] items-center gap-1 rounded-full border border-purple-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-purple-800 shadow-sm hover:bg-purple-50 disabled:opacity-60 sm:max-w-none sm:gap-1.5 sm:px-3 sm:text-xs'
+        }
       >
-        <FaExchangeAlt className="hidden text-[10px] sm:inline" />
-        <FaUserShield className="text-[10px] sm:hidden" />
-        <span className="hidden sm:inline">Viewing as: {label}</span>
-        <span className="sm:hidden">{label}</span>
+        <span className="inline-flex min-w-0 items-center gap-1.5">
+          <FaUserShield className="shrink-0 text-[10px]" aria-hidden />
+          <span className="truncate">Viewing as: {label}</span>
+        </span>
+        <FaChevronDown
+          className={`h-2.5 w-2.5 shrink-0 text-purple-500 transition-transform ${open ? 'rotate-180' : ''}`}
+          aria-hidden
+        />
       </button>
-      {open ? (
-        <div
-          role="menu"
-          className="absolute right-0 z-[100] mt-2 w-56 overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-lg shadow-purple-100/40"
+
+      <ViewSwitcherDropdown
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Dashboard view"
+        theme="purple"
+        placement={placement}
+        footer="User view previews the parent dashboard. Admin API access is unchanged."
+      >
+        <button
+          type="button"
+          role="menuitem"
+          disabled={busy}
+          onClick={() => void switchTo(otherView)}
+          className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-purple-50 disabled:opacity-60 sm:py-2.5"
         >
-          <p className="border-b border-purple-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-            Dashboard view
-          </p>
-          <button
-            type="button"
-            role="menuitem"
-            disabled={busy}
-            onClick={() => void switchTo(otherView)}
-            className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-purple-50 disabled:opacity-60"
-          >
-            Switch to {otherView === 'admin' ? 'Admin panel' : 'User (parent) view'}
-          </button>
-          <p className="border-t border-purple-50 px-4 py-2 text-[11px] leading-snug text-gray-500">
-            User view previews the parent dashboard. Admin API access is unchanged.
-          </p>
-        </div>
-      ) : null}
+          Switch to {otherView === 'admin' ? 'Admin panel' : 'User (parent) view'}
+        </button>
+      </ViewSwitcherDropdown>
     </div>
   )
 }

@@ -28,7 +28,8 @@ import logo from '@/assets/img/smallLogo.png';
 import { useSubscription } from '@/hooks/useSubscription';
 import { PLAN_DEFINITIONS } from '@/lib/subscription/plans';
 import type { PlanSlug } from '@/lib/subscription/types';
-import type { DashboardActiveView } from '@/lib/expert/constants';
+import type { DashboardActiveView, ActiveViewPreference, AdminDashboardView } from '@/lib/expert/constants';
+import SidebarHeaderChrome from '@/components/Dashboard/SidebarHeaderChrome';
 
 interface SidebarProps {
   currentPath?: string;
@@ -40,6 +41,12 @@ interface SidebarProps {
   activeView?: DashboardActiveView;
   isOpen?: boolean;
   onToggle?: () => void;
+  showPlanBadge?: boolean;
+  showAdminBadge?: boolean;
+  adminAccount?: boolean;
+  verifiedExpert?: boolean;
+  adminViewPreference?: AdminDashboardView;
+  expertViewPreference?: ActiveViewPreference;
 }
 
 const PARENT_NAV_ITEMS = [
@@ -137,6 +144,12 @@ function SidebarPanel({
   onClose,
   userRole,
   activeView = 'parent',
+  showPlanBadge = false,
+  showAdminBadge = false,
+  adminAccount = false,
+  verifiedExpert = false,
+  adminViewPreference = 'admin',
+  expertViewPreference = 'parent',
 }: {
   currentPath: string;
   onNavigate?: () => void;
@@ -144,6 +157,12 @@ function SidebarPanel({
   onClose?: () => void;
   userRole?: string;
   activeView?: DashboardActiveView;
+  showPlanBadge?: boolean;
+  showAdminBadge?: boolean;
+  adminAccount?: boolean;
+  verifiedExpert?: boolean;
+  adminViewPreference?: AdminDashboardView;
+  expertViewPreference?: ActiveViewPreference;
 }) {
   const { slug, loading } = useSubscription();
   const isAdminRole = userRole === 'admin';
@@ -193,6 +212,15 @@ function SidebarPanel({
         </div>
       </div>
 
+      <SidebarHeaderChrome
+        showPlanBadge={showPlanBadge}
+        showAdminBadge={showAdminBadge}
+        adminAccount={adminAccount}
+        verifiedExpert={verifiedExpert}
+        adminViewPreference={adminViewPreference}
+        expertViewPreference={expertViewPreference}
+      />
+
       <nav className="mt-6 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto no-scroll py-1">
         {navItems.map(item => {
           const Icon = item.icon;
@@ -228,6 +256,12 @@ export default function Sidebar({
   activeView = 'parent',
   isOpen = false,
   onToggle,
+  showPlanBadge = false,
+  showAdminBadge = false,
+  adminAccount = false,
+  verifiedExpert = false,
+  adminViewPreference = 'admin',
+  expertViewPreference = 'parent',
 }: SidebarProps) {
   const path = currentPath || '/dashboard';
   const userRole = user?.role?.toLowerCase();
@@ -263,6 +297,12 @@ export default function Sidebar({
             onClose={onToggle}
             userRole={userRole}
             activeView={activeView}
+            showPlanBadge={showPlanBadge}
+            showAdminBadge={showAdminBadge}
+            adminAccount={adminAccount}
+            verifiedExpert={verifiedExpert}
+            adminViewPreference={adminViewPreference}
+            expertViewPreference={expertViewPreference}
           />
         </div>
       </aside>
@@ -270,7 +310,17 @@ export default function Sidebar({
       {/* Desktop — full height of dashboard row, no gap below */}
       <aside className="hidden h-full w-[272px] shrink-0 lg:block">
         <div className={SIDEBAR_CARD}>
-          <SidebarPanel currentPath={path} userRole={userRole} activeView={activeView} />
+          <SidebarPanel
+            currentPath={path}
+            userRole={userRole}
+            activeView={activeView}
+            showPlanBadge={showPlanBadge}
+            showAdminBadge={showAdminBadge}
+            adminAccount={adminAccount}
+            verifiedExpert={verifiedExpert}
+            adminViewPreference={adminViewPreference}
+            expertViewPreference={expertViewPreference}
+          />
         </div>
       </aside>
     </>

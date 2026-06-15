@@ -102,12 +102,16 @@ export default function DashboardHeader({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-3" ref={menuRef}>
-          {headerExtra}
+        <div className="flex min-w-0 shrink items-center gap-1 sm:gap-3" ref={menuRef}>
+          {headerExtra ? <div className="hidden lg:contents">{headerExtra}</div> : null}
           {showAdminBadge ? (
-            <AdminHeaderBadge />
+            <div className="hidden lg:block">
+              <AdminHeaderBadge />
+            </div>
           ) : showPlanBadge ? (
-            <PlanHeaderBadge />
+            <div className="hidden lg:block">
+              <PlanHeaderBadge />
+            </div>
           ) : null}
           {showNotifications && (
             <>

@@ -401,6 +401,12 @@ export default function DashboardClientLayout({
         activeView={sidebarView}
         isOpen={isMobileMenuOpen}
         onToggle={toggleMobileMenu}
+        showPlanBadge={activeView === 'parent' && !adminAccount}
+        showAdminBadge={adminAccount}
+        adminAccount={adminAccount}
+        verifiedExpert={verifiedExpert}
+        adminViewPreference={adminViewPreference}
+        expertViewPreference={expertViewPreference}
       />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
