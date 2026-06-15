@@ -1,9 +1,24 @@
 'use client'
 
-import Link from 'next/link'
+import { useState } from 'react'
 import { FaUserShield } from 'react-icons/fa'
+import { toast } from '@/components/ui/sonner'
+import { openAdminOverview } from '@/lib/expert/switch-dashboard-view'
 
 export default function AdminHeaderBadge() {
+  const [busy, setBusy] = useState(false)
+
+  const handleOpenOverview = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      await openAdminOverview()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Failed to open admin overview')
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="relative shrink-0 group">
       <div
@@ -30,12 +45,14 @@ export default function AdminHeaderBadge() {
             Full platform access including user management, moderation, and admin overview.
           </p>
           <p className="mt-3 text-xs">
-            <Link
-              href="/dashboard/admin"
-              className="font-semibold text-purple-700 hover:underline"
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void handleOpenOverview()}
+              className="font-semibold text-purple-700 hover:underline disabled:opacity-60"
             >
-              Open admin overview →
-            </Link>
+              {busy ? 'Switching…' : 'Open admin overview →'}
+            </button>
           </p>
         </div>
       </div>

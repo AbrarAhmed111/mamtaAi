@@ -1253,7 +1253,7 @@ export default function SettingsPage() {
             </div>
             <div className="mt-6 border-t border-pink-100 pt-4">
               <Link
-                href="/dashboard"
+                href="/dashboard/admin"
                 className="text-sm font-medium text-pink-600 hover:text-pink-700 hover:underline"
               >
                 → Admin overview dashboard

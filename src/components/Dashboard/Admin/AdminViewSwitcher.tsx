@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { FaExchangeAlt, FaUserShield } from 'react-icons/fa'
 import { toast } from '@/components/ui/sonner'
 import type { AdminDashboardView } from '@/lib/expert/constants'
+import { switchAdminDashboardView } from '@/lib/expert/switch-dashboard-view'
 
 export default function AdminViewSwitcher({
   activeView,
@@ -39,13 +40,7 @@ export default function AdminViewSwitcher({
     if (view === activeView || busy) return
     setBusy(true)
     try {
-      const res = await fetch('/api/profile/active-view', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dashboard_view: view }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Failed to switch view')
+      await switchAdminDashboardView(view)
       toast.success(
         view === 'admin' ? 'Switched to Admin view' : 'Switched to User (parent) view',
       )
