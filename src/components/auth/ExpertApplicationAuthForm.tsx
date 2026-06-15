@@ -159,7 +159,7 @@ export default function ExpertApplicationAuthForm({
   if (blocked?.reason) {
     const countdown = blocked.reapplyAt ? formatReapplyCountdown(blocked.reapplyAt) : null
     return (
-      <div className="px-[24px] py-[10px]">
+      <div className="w-full min-w-0 py-2">
         <AuthHeader
           title="Application not available"
           label="EXPERT"
@@ -177,7 +177,7 @@ export default function ExpertApplicationAuthForm({
   }
 
   return (
-    <div className="px-[24px] py-[10px] max-w-full lg:max-w-[500px]">
+    <div className="w-full min-w-0 py-2">
       <AuthHeader
         title="Expert verification"
         subtitle="Submit your credentials and a verification document. You keep full parent dashboard access while we review your application."
@@ -191,7 +191,7 @@ export default function ExpertApplicationAuthForm({
         </p>
       ) : null}
 
-      <form onSubmit={submit} className="mt-6 space-y-4">
+      <form onSubmit={submit} className="mt-5 space-y-4 sm:mt-6">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-gray-700">Specialization</label>
           <select

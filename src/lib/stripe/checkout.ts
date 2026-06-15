@@ -10,6 +10,7 @@ import {
   syncStripeSubscriptionById,
 } from './sync'
 import { getStripePriceIdForPlan, isPaidPlanSlug } from './prices'
+import { validateCouponForCheckout } from './coupons'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { notifyAdminsOfSubscriptionIssueAsync } from '@/lib/notifications/admin-notifications'
 
@@ -52,6 +53,7 @@ export async function createCheckoutOrUpgrade(params: {
   userId: string
   email: string
   planSlug: 'plus' | 'pro'
+  couponCode?: string | null
 }): Promise<CheckoutResult> {
   const { userId, email, planSlug } = params
   if (!isPaidPlanSlug(planSlug)) {
@@ -60,6 +62,15 @@ export async function createCheckoutOrUpgrade(params: {
 
   const priceId = await getStripePriceIdForPlan(planSlug)
   const siteUrl = getSiteUrl()
+  const couponCode = params.couponCode?.trim()
+  const couponValidation = couponCode
+    ? await validateCouponForCheckout({ code: couponCode, planSlug, userId })
+    : null
+
+  if (couponValidation && !couponValidation.ok) {
+    throw new Error(couponValidation.error)
+  }
+  const promotionCodeId = couponValidation?.ok ? couponValidation.promotionCodeId : null
 
   const { data: subRow } = await (supabaseAdmin as any)
     .from('user_subscriptions')
@@ -152,6 +163,9 @@ export async function createCheckoutOrUpgrade(params: {
       items: [{ id: itemId, price: priceId }],
       proration_behavior: 'create_prorations',
       metadata: { user_id: userId, plan_slug: planSlug },
+      ...(promotionCodeId
+        ? ({ discounts: [{ promotion_code: promotionCodeId }] } as unknown as Partial<Stripe.SubscriptionUpdateParams>)
+        : {}),
     })
 
     await syncStripeSubscriptionById(subRow.stripe_subscription_id, userId)
@@ -189,8 +203,10 @@ export async function createCheckoutOrUpgrade(params: {
         user_id: userId,
         plan_slug: planSlug,
       },
+      ...(promotionCodeId ? { discounts: [{ promotion_code: promotionCodeId }] } : {}),
     },
-    allow_promotion_codes: true,
+    allow_promotion_codes: !promotionCodeId,
+    ...(promotionCodeId ? { discounts: [{ promotion_code: promotionCodeId }] } : {}),
   })
 
   if (!session.url) {
