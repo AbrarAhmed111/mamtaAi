@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}))
     const planSlug = String(body?.planSlug || body?.plan_slug || '').toLowerCase()
+    const couponCode = String(body?.couponCode || body?.coupon_code || '').trim()
 
     if (!isPaidPlanSlug(planSlug)) {
       return NextResponse.json(
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       email: user.email,
       planSlug,
+      couponCode: couponCode || null,
     })
 
     return NextResponse.json({ url, outcome })

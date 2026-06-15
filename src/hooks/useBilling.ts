@@ -7,13 +7,13 @@ export function useBilling() {
   const [loadingPlan, setLoadingPlan] = useState<PlanSlug | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
 
-  const startCheckout = useCallback(async (planSlug: 'plus' | 'pro') => {
+  const startCheckout = useCallback(async (planSlug: 'plus' | 'pro', couponCode?: string | null) => {
     setLoadingPlan(planSlug)
     try {
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planSlug }),
+        body: JSON.stringify({ planSlug, couponCode: couponCode?.trim() || undefined }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {

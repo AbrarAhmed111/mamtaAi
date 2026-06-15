@@ -37,7 +37,7 @@ export default function RoleSelectionPage() {
   }
 
   return (
-    <div className="px-[24px] py-[10px] max-w-full lg:max-w-[500px]">
+    <div className="w-full min-w-0 py-2">
       <AuthHeader
         title="Tell us about you"
         subtitle="Choose the role that best describes you. Healthcare professionals must submit credentials and a verification document."

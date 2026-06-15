@@ -54,7 +54,7 @@ function OnboardingContent() {
   }, [isPending, countdown, router])
 
   return (
-    <div className="px-[24px] py-[10px] max-w-full lg:max-w-[500px]">
+    <div className="w-full min-w-0 py-2">
       <div className="text-center">
         <AuthHeader
           title={isPending ? 'Your application is under review' : 'Complete your onboarding'}

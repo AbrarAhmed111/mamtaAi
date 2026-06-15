@@ -22,6 +22,7 @@ import {
   FaIdCard,
   FaBookOpen,
   FaHeartbeat,
+  FaBullhorn,
 } from 'react-icons/fa';
 import { MdDashboard } from 'react-icons/md';
 import logo from '@/assets/img/smallLogo.png';
@@ -75,6 +76,7 @@ const ADMIN_NAV_ITEMS = [
   { href: '/dashboard/admin/experts', label: 'Expert Verification', icon: FaUserCheck, match: (p: string) => p.startsWith('/dashboard/admin/experts') },
   { href: '/dashboard/admin/subscriptions', label: 'Subscriptions', icon: FaCreditCard, match: (p: string) => p.startsWith('/dashboard/admin/subscriptions') },
   { href: '/dashboard/admin/coupons', label: 'Coupons', icon: FaTicketAlt, match: (p: string) => p.startsWith('/dashboard/admin/coupons') },
+  { href: '/dashboard/admin/promotions', label: 'Promotions', icon: FaBullhorn, match: (p: string) => p.startsWith('/dashboard/admin/promotions') },
   { href: '/dashboard/admin/moderation', label: 'Moderation', icon: FaFlag, match: (p: string) => p.startsWith('/dashboard/admin/moderation') },
   { href: '/dashboard/admin/logs', label: 'System Logs', icon: FaClipboardList, match: (p: string) => p.startsWith('/dashboard/admin/logs') },
   { href: '/dashboard/settings', label: 'Settings', icon: FaCog, match: (p: string) => p.startsWith('/dashboard/settings') },

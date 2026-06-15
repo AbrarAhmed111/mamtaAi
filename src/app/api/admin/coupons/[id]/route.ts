@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminApi, getAdminDb, writeAuditLog } from '@/lib/admin'
+import { ensureStripePromotionCodeForCoupon, setStripePromotionCodeActive } from '@/lib/stripe/coupons'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,6 +33,9 @@ export async function PATCH(request: NextRequest, { params }: RouteCtx) {
     ['validUntil', 'valid_until'],
     ['maxUses', 'max_uses'],
     ['maxUsesPerUser', 'max_uses_per_user'],
+    ['applicablePlans', 'applicable_plans'],
+    ['minimumPurchaseAmount', 'minimum_purchase_amount'],
+    ['firstTimeUsersOnly', 'first_time_users_only'],
     ['isActive', 'is_active'],
   ] as const
 
@@ -51,6 +55,19 @@ export async function PATCH(request: NextRequest, { params }: RouteCtx) {
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 })
+  }
+
+  try {
+    if (body.isActive !== undefined || body.is_active !== undefined) {
+      await setStripePromotionCodeActive(updated, Boolean(updates.is_active))
+    } else if (!updated.stripe_promotion_code_id) {
+      await ensureStripePromotionCodeForCoupon(updated)
+    }
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? `Stripe coupon sync failed: ${e.message}` : 'Stripe coupon sync failed' },
+      { status: 500 },
+    )
   }
 
   await writeAuditLog({

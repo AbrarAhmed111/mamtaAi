@@ -403,7 +403,7 @@ export async function recordInvoicePayment(invoice: Stripe.Invoice): Promise<voi
   })
 
   if (invoice.status === 'paid') {
-    await recordCouponRedemptionsFromInvoice(invoice, resolvedUserId)
+    await recordCouponRedemptionsFromInvoice(invoice, resolvedUserId, subscriptionId)
   }
 }
 

@@ -20,8 +20,6 @@ import {
 } from 'react-icons/fa'
 import { PLAN_DEFINITIONS, planRank } from '@/lib/subscription/plans'
 import PlanChangeModal from '@/components/subscription/PlanChangeModal'
-
-const PLAN_CARD_ANIMATION = ['animate-fade-in', 'animate-fade-in-delay-150', 'animate-fade-in-delay-300'] as const
 import type { PlanSlug } from '@/lib/subscription/types'
 import { useAuth } from '@/lib/supabase/context'
 import {
@@ -30,6 +28,9 @@ import {
   PLAN_UI,
   PRICING_FAQ,
 } from './pricing-data'
+
+const PLAN_CARD_ANIMATION = ['animate-fade-in', 'animate-fade-in-delay-150', 'animate-fade-in-delay-300'] as const
+const ORDERED_PLAN_SLUGS: PlanSlug[] = ['free', 'plus', 'pro']
 
 type ApiPlan = {
   slug: string
@@ -164,10 +165,8 @@ export default function PricingPage() {
     })()
   }, [])
 
-  const orderedSlugs: PlanSlug[] = ['free', 'plus', 'pro']
-
   const plans = useMemo(() => {
-    return orderedSlugs.map(slug => {
+    return ORDERED_PLAN_SLUGS.map(slug => {
       const def = PLAN_DEFINITIONS[slug]
       const api = apiPlans.find(p => p.slug === slug)
       const ui = PLAN_UI[slug]
