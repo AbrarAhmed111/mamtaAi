@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { FaArrowRight, FaClock, FaExclamationTriangle, FaTimes } from 'react-icons/fa'
+import { FaArrowRight, FaClock, FaExclamationTriangle, FaTag, FaTimes } from 'react-icons/fa'
 import { PLAN_DEFINITIONS, planRank } from '@/lib/subscription/plans'
 import type { PlanSlug } from '@/lib/subscription/types'
 
@@ -113,6 +113,15 @@ export default function PlanChangeModal({
               <span>
                 Some {currentPlanName} features and higher limits will no longer be available after
                 the switch takes effect.
+              </span>
+            </div>
+          )}
+
+          {!isDowngrade && (
+            <div className="mt-5 flex items-start gap-2 rounded-xl border border-pink-100 bg-pink-50/50 px-3 py-2.5 text-xs text-pink-800">
+              <FaTag className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                Have a coupon? You can add it on the secure Stripe checkout page before paying.
               </span>
             </div>
           )}

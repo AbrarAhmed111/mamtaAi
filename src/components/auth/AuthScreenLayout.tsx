@@ -27,20 +27,25 @@ export default function AuthScreenLayout({ children }: { children: ReactNode }) 
   }, [])
 
   return (
-    <div className="flex h-screen w-full bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50">
-      <Image
-        src={logo}
-        alt="Logo"
-        width={128}
-        height={32}
-        className="absolute left-4 top-4 z-10 hidden w-20 rounded-3xl shadow-lg md:block"
-      />
+    <div className="flex h-dvh min-h-screen w-full overflow-hidden bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-white/50 backdrop-blur-sm md:w-1/2 md:flex-none">
+        <div className="flex shrink-0 items-center px-4 pb-1 pt-4 sm:px-6 md:px-8">
+          <Image
+            src={logo}
+            alt="MamtaAI"
+            width={128}
+            height={32}
+            className="h-9 w-auto rounded-2xl shadow-md sm:h-10"
+            priority
+          />
+        </div>
 
-      <div className="flex max-h-screen w-full items-center justify-center overflow-y-auto bg-white/50 py-8 backdrop-blur-sm md:w-1/2">
-        <div className="w-full max-w-[500px] px-4 md:px-8 xl:px-0">{children}</div>
+        <div className="flex min-h-0 flex-1 justify-center overflow-x-hidden overflow-y-auto px-4 pb-8 pt-2 sm:px-6 md:px-8">
+          <div className="w-full min-w-0 max-w-[500px]">{children}</div>
+        </div>
       </div>
 
-      <div className="relative hidden h-full w-full overflow-hidden md:block md:w-1/2">
+      <div className="relative hidden min-h-0 min-w-0 overflow-hidden md:block md:w-1/2">
         <div className="absolute inset-0 z-10 bg-gradient-to-br from-pink-500/10 via-rose-500/10 to-purple-500/10" />
         <div className="relative h-full w-full">
           {authImages.map((image, index) => (

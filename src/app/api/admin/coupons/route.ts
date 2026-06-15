@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminApi, getAdminDb, writeAuditLog } from '@/lib/admin'
+import { ensureStripePromotionCodeForCoupon } from '@/lib/stripe/coupons'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,13 +66,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
 
+  let syncedCoupon = data
+  try {
+    await ensureStripePromotionCodeForCoupon(data)
+    const { data: refreshed } = await (db as any)
+      .from('discount_coupons')
+      .select('*')
+      .eq('id', data.id)
+      .single()
+    syncedCoupon = refreshed ?? data
+  } catch (e) {
+    await (db as any).from('discount_coupons').delete().eq('id', data.id)
+    return NextResponse.json(
+      {
+        error:
+          e instanceof Error
+            ? `Coupon was not created because Stripe sync failed: ${e.message}`
+            : 'Coupon was not created because Stripe sync failed',
+      },
+      { status: 500 },
+    )
+  }
+
   await writeAuditLog({
     adminId: auth.admin.id,
     action: 'coupon_create',
     entityType: 'discount_coupon',
-    entityId: data.id,
-    newValues: data,
+    entityId: syncedCoupon.id,
+    newValues: syncedCoupon,
   })
 
-  return NextResponse.json({ coupon: data }, { status: 201 })
+  return NextResponse.json({ coupon: syncedCoupon }, { status: 201 })
 }
