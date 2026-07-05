@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
 
   // Accept links that only include the authorization code
   if (code) {
-    let response = NextResponse.next()
+    // Collect the session cookies Supabase wants to set, with their real options
+    // (path, maxAge, httpOnly, secure, sameSite) so the recovery session persists.
+    const pendingCookies: { name: string; value: string; options: any }[] = []
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,7 +33,7 @@ export async function GET(request: NextRequest) {
           getAll: () => request.cookies.getAll(),
           setAll: cookiesToSet => {
             cookiesToSet.forEach(({ name, value, options }) => {
-              response.cookies.set(name, value, options)
+              pendingCookies.push({ name, value, options })
             })
           },
         },
@@ -58,20 +60,16 @@ export async function GET(request: NextRequest) {
     const isLocalhost =
       successUrl.origin.startsWith('http://localhost') ||
       successUrl.origin.startsWith('http://127.0.0.1')
-    response.cookies.getAll().forEach(cookie => {
-      // Ensure localhost can receive cookies by disabling "secure" and domain pinning
-      const opts = {
-        ...cookie,
-        // name/value are spread too; NextResponse.cookies.set(name, value, options) expects options only
-      } as any
-      const { name, value } = cookie as any
-      const options = { ...(cookie as any).options }
+
+    pendingCookies.forEach(({ name, value, options }) => {
+      const opts = { ...options }
       if (isLocalhost) {
-        options.secure = false
-        options.domain = undefined
-        options.sameSite = 'lax'
+        // Localhost is http, so a "secure" cookie would be dropped by the browser
+        opts.secure = false
+        opts.domain = undefined
+        opts.sameSite = 'lax'
       }
-      redirectResponse.cookies.set(name, value, options)
+      redirectResponse.cookies.set(name, value, opts)
     })
     return redirectResponse
   }
