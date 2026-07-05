@@ -43,7 +43,12 @@ export function readAdminDashboardView(profile: ProfileLike): AdminDashboardView
 export function getActiveView(profile: ProfileLike | null | undefined): DashboardActiveView {
   if (!profile) return 'parent'
   if (isAdminAccount(profile)) {
-    return readAdminDashboardView(profile) === 'parent' ? 'parent' : 'admin'
+    const adminView = readAdminDashboardView(profile)
+    if (adminView === 'admin') return 'admin'
+    if (isVerifiedExpert(profile)) {
+      return readActiveViewPreference(profile) === 'parent' ? 'parent' : 'expert'
+    }
+    return 'parent'
   }
   if (isVerifiedExpert(profile)) {
     return readActiveViewPreference(profile) === 'parent' ? 'parent' : 'expert'

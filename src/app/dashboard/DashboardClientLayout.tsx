@@ -420,7 +420,14 @@ export default function DashboardClientLayout({
           showPlanBadge={activeView === 'parent' && !adminAccount}
           showAdminBadge={adminAccount}
           headerExtra={
-            adminAccount ? (
+            adminAccount && verifiedExpert ? (
+              <div className="flex items-center gap-2">
+                <AdminViewSwitcher activeView={adminViewPreference} />
+                {adminViewPreference === 'parent' ? (
+                  <ExpertViewSwitcher activeView={expertViewPreference} />
+                ) : null}
+              </div>
+            ) : adminAccount ? (
               <AdminViewSwitcher activeView={adminViewPreference} />
             ) : verifiedExpert ? (
               <ExpertViewSwitcher activeView={expertViewPreference} />

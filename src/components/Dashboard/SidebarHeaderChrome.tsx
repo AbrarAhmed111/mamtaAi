@@ -35,7 +35,14 @@ export default function SidebarHeaderChrome({
           {showPlanBadge ? <PlanHeaderBadge /> : null}
         </div>
       )}
-      {adminAccount ? (
+      {adminAccount && verifiedExpert ? (
+        <>
+          <AdminViewSwitcher activeView={adminViewPreference} placement="panel" />
+          {adminViewPreference === 'parent' ? (
+            <ExpertViewSwitcher activeView={expertViewPreference} placement="panel" />
+          ) : null}
+        </>
+      ) : adminAccount ? (
         <AdminViewSwitcher activeView={adminViewPreference} placement="panel" />
       ) : verifiedExpert ? (
         <ExpertViewSwitcher activeView={expertViewPreference} placement="panel" />

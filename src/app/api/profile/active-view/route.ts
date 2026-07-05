@@ -40,15 +40,41 @@ export async function PATCH(request: NextRequest) {
         : {}
 
     if (isAdminAccount(profile)) {
-      const view = (dashboardView ?? activeView) as AdminDashboardView | undefined
-      if (view !== 'admin' && view !== 'parent') {
+      const adminView = dashboardView as AdminDashboardView | undefined
+      const expertView = activeView as ActiveViewPreference | undefined
+
+      if (adminView === undefined && expertView === undefined) {
         return NextResponse.json(
-          { error: 'dashboard_view must be admin or parent for admin accounts' },
+          { error: 'dashboard_view or active_view is required for admin accounts' },
           { status: 400 },
         )
       }
 
-      baseMeta.admin_dashboard_view = view
+      if (adminView !== undefined) {
+        if (adminView !== 'admin' && adminView !== 'parent') {
+          return NextResponse.json(
+            { error: 'dashboard_view must be admin or parent for admin accounts' },
+            { status: 400 },
+          )
+        }
+        baseMeta.admin_dashboard_view = adminView
+      }
+
+      if (expertView !== undefined) {
+        if (expertView !== 'parent' && expertView !== 'expert') {
+          return NextResponse.json(
+            { error: 'active_view must be parent or expert' },
+            { status: 400 },
+          )
+        }
+        if (!isVerifiedExpert(profile) && expertView !== 'parent') {
+          return NextResponse.json(
+            { error: 'Only verified experts can switch to expert view' },
+            { status: 403 },
+          )
+        }
+        baseMeta.active_view = expertView
+      }
 
       const { data: updated, error: updateError } = await supabase
         .from('profiles')
