@@ -30,32 +30,14 @@ export async function GET(request: NextRequest) {
         tags,
         last_activity_at,
         created_at,
+        author_id,
+        last_reply_by,
         category:forum_categories!forum_threads_category_id_fkey (
           id,
           name,
           slug,
           icon,
           color_hex
-        ),
-        author:profiles!forum_threads_author_id_fkey (
-          id,
-          full_name,
-          avatar_url,
-          role,
-          is_expert,
-          is_verified,
-          verification_data,
-          created_at
-        ),
-        last_reply_author:profiles!forum_threads_last_reply_by_fkey (
-          id,
-          full_name,
-          avatar_url,
-          role,
-          is_expert,
-          is_verified,
-          verification_data,
-          created_at
         )
       `)
       .order('is_pinned', { ascending: false })
@@ -72,7 +54,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ threads: data || [] })
+    const rows = (data as any[]) || []
+    const authorIds = Array.from(
+      new Set(rows.flatMap(t => [t.author_id, t.last_reply_by]).filter(Boolean)),
+    ) as string[]
+    let authors: any[] = []
+    if (authorIds.length > 0) {
+      const { data: authorData, error: authorError } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, role, is_expert, is_verified, verification_data, created_at')
+        .in('id', authorIds)
+      if (!authorError && Array.isArray(authorData)) authors = authorData
+    }
+    const authorMap = new Map(authors.map(a => [a.id, a]))
+    const threads = rows.map(t => ({
+      ...t,
+      author: authorMap.get(t.author_id) ?? null,
+      last_reply_author: t.last_reply_by ? authorMap.get(t.last_reply_by) ?? null : null,
+    }))
+
+    return NextResponse.json({ threads })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }
@@ -179,11 +180,6 @@ export async function POST(request: NextRequest) {
           slug,
           icon,
           color_hex
-        ),
-        author:profiles!forum_threads_author_id_fkey (
-          id,
-          full_name,
-          avatar_url
         )
       `)
       .single()
@@ -191,6 +187,13 @@ export async function POST(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    const { data: authorProfile } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .eq('id', user.id)
+      .maybeSingle()
+    const thread = { ...(data as any), author: authorProfile ?? null }
 
     await incrementUsage(user.id, 'forum_threads_count', 1, timezone)
     await incrementUsage(user.id, 'forum_threads_week_count', 1, timezone)
@@ -209,7 +212,7 @@ export async function POST(request: NextRequest) {
         .eq('id', category_id)
     }
 
-    return NextResponse.json({ thread: data }, { status: 201 })
+    return NextResponse.json({ thread }, { status: 201 })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }

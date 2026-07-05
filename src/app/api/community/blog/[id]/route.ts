@@ -82,30 +82,31 @@ export async function GET(
       }
     }
 
-    const { data, error } = await supabase
+    const { data: postData, error } = await supabase
       .from('blog_posts')
       .select(`
         *,
-        author:profiles!blog_posts_author_id_fkey (
-          id,
-          full_name,
-          avatar_url,
-          role,
-          is_expert,
-          is_verified,
-          verification_data,
-          created_at
-        )
+        author_id
       `)
       .eq('id', id)
       .eq('status', 'published')
       .single()
 
-    if (error || !data) {
+    if (error || !postData) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 })
     }
 
-    const response = NextResponse.json({ post: data })
+    let author = null
+    if (postData.author_id) {
+      const { data: authorData } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, role, is_expert, is_verified, verification_data, created_at')
+        .eq('id', postData.author_id)
+        .maybeSingle()
+      author = authorData ?? null
+    }
+
+    const response = NextResponse.json({ post: { ...postData, author } })
     
     // Set cookie to prevent duplicate views (works for both logged-in and anonymous users)
     if (shouldIncrementView) {

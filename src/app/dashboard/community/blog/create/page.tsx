@@ -7,6 +7,7 @@ import Select from '@/components/ui/select'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { usePlanLimit } from '@/hooks/useSubscription'
+import { useAuth } from '@/lib/supabase/context'
 
 const categories = [
   'Feeding',
@@ -32,6 +33,8 @@ const ageGroups = [
 export default function CreateBlogPostPage() {
   const router = useRouter()
   const handlePlanLimit = usePlanLimit()
+  const { user } = useAuth()
+  const isExpert = Boolean(user?.profile?.is_expert)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
@@ -417,7 +420,8 @@ export default function CreateBlogPostPage() {
             <p className="text-xs text-gray-500 mt-1">Must be a valid image URL (jpg, jpeg, png, gif, webp)</p>
           </div>
 
-          {/* Expert Content */}
+          {/* Expert Content — only shown to verified experts */}
+          {isExpert && (
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -430,8 +434,9 @@ export default function CreateBlogPostPage() {
               This is expert content (I&apos;m a healthcare professional or certified expert)
             </label>
           </div>
+          )}
 
-          {formData.is_expert_content && (
+          {isExpert && formData.is_expert_content && (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Your Credentials <span className="text-red-500">*</span>

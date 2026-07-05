@@ -12,19 +12,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('forum_replies')
-      .select(`
-        *,
-        author:profiles!forum_replies_author_id_fkey (
-          id,
-          full_name,
-          avatar_url,
-          role,
-          is_expert,
-          is_verified,
-          verification_data,
-          created_at
-        )
-      `)
+      .select('*')
       .eq('thread_id', id)
       .eq('is_hidden', false)
       .order('created_at', { ascending: true })
@@ -34,7 +22,22 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ replies: data || [] })
+    const rows = (data as any[]) || []
+    const authorIds = Array.from(
+      new Set(rows.map(r => r.author_id).filter(Boolean)),
+    ) as string[]
+    let authors: any[] = []
+    if (authorIds.length > 0) {
+      const { data: authorData, error: authorError } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, role, is_expert, is_verified, verification_data, created_at')
+        .in('id', authorIds)
+      if (!authorError && Array.isArray(authorData)) authors = authorData
+    }
+    const authorMap = new Map(authors.map(a => [a.id, a]))
+    const replies = rows.map(r => ({ ...r, author: authorMap.get(r.author_id) ?? null }))
+
+    return NextResponse.json({ replies })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }
@@ -82,24 +85,19 @@ export async function POST(
         content,
         parent_reply_id: parent_reply_id || null,
       })
-      .select(`
-        *,
-        author:profiles!forum_replies_author_id_fkey (
-          id,
-          full_name,
-          avatar_url,
-          role,
-          is_expert,
-          is_verified,
-          verification_data,
-          created_at
-        )
-      `)
+      .select('*')
       .single()
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    const { data: replyAuthor } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url, role, is_expert, is_verified, verification_data, created_at')
+      .eq('id', user.id)
+      .maybeSingle()
+    const reply = { ...(data as any), author: replyAuthor ?? null }
 
     // Increment reply count on thread
     const { data: currentThread } = await supabase
@@ -132,8 +130,8 @@ export async function POST(
     }
 
     const replierName =
-      typeof (data as { author?: { full_name?: string } })?.author?.full_name === 'string'
-        ? String((data as { author?: { full_name?: string } }).author?.full_name).trim() || 'Someone'
+      typeof reply?.author?.full_name === 'string'
+        ? String(reply.author.full_name).trim() || 'Someone'
         : 'Someone'
 
     if (threadMeta?.author_id) {
@@ -143,14 +141,14 @@ export async function POST(
         threadAuthorId: String((threadMeta as { author_id: string }).author_id),
         replierId: user.id,
         replierName,
-        replyId: String((data as { id: string }).id),
+        replyId: String(reply.id),
         content: String(content),
         parentReplyId: parent_reply_id ? String(parent_reply_id) : null,
         parentAuthorId,
       })
     }
 
-    return NextResponse.json({ reply: data }, { status: 201 })
+    return NextResponse.json({ reply }, { status: 201 })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }

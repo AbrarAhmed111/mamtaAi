@@ -12,19 +12,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('blog_comments')
-      .select(`
-        *,
-        author:profiles!blog_comments_author_id_fkey (
-          id,
-          full_name,
-          avatar_url,
-          role,
-          is_expert,
-          is_verified,
-          verification_data,
-          created_at
-        )
-      `)
+      .select('*')
       .eq('post_id', id)
       .eq('is_hidden', false)
       .order('created_at', { ascending: true })
@@ -34,7 +22,22 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ comments: data || [] })
+    const rows = (data as any[]) || []
+    const authorIds = Array.from(
+      new Set(rows.map(c => c.author_id).filter(Boolean)),
+    ) as string[]
+    let authors: any[] = []
+    if (authorIds.length > 0) {
+      const { data: authorData, error: authorError } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, role, is_expert, is_verified, verification_data, created_at')
+        .in('id', authorIds)
+      if (!authorError && Array.isArray(authorData)) authors = authorData
+    }
+    const authorMap = new Map(authors.map(a => [a.id, a]))
+    const comments = rows.map(c => ({ ...c, author: authorMap.get(c.author_id) ?? null }))
+
+    return NextResponse.json({ comments })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }
@@ -71,24 +74,19 @@ export async function POST(
         content,
         parent_comment_id: parent_comment_id || null,
       })
-      .select(`
-        *,
-        author:profiles!blog_comments_author_id_fkey (
-          id,
-          full_name,
-          avatar_url,
-          role,
-          is_expert,
-          is_verified,
-          verification_data,
-          created_at
-        )
-      `)
+      .select('*')
       .single()
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    const { data: commentAuthor } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url, role, is_expert, is_verified, verification_data, created_at')
+      .eq('id', user.id)
+      .maybeSingle()
+    const comment = { ...(data as any), author: commentAuthor ?? null }
 
     // Increment comment count on post
     const { data: currentPost } = await supabase
@@ -121,8 +119,8 @@ export async function POST(
     }
 
     const commenterName =
-      typeof (data as { author?: { full_name?: string } })?.author?.full_name === 'string'
-        ? String((data as { author?: { full_name?: string } }).author?.full_name).trim() || 'Someone'
+      typeof comment?.author?.full_name === 'string'
+        ? String(comment.author.full_name).trim() || 'Someone'
         : 'Someone'
 
     if (postMeta?.author_id) {
@@ -132,14 +130,14 @@ export async function POST(
         postAuthorId: String((postMeta as { author_id: string }).author_id),
         commenterId: user.id,
         commenterName,
-        commentId: String((data as { id: string }).id),
+        commentId: String(comment.id),
         content: String(content),
         parentCommentId: parent_comment_id ? String(parent_comment_id) : null,
         parentAuthorId,
       })
     }
 
-    return NextResponse.json({ comment: data }, { status: 201 })
+    return NextResponse.json({ comment }, { status: 201 })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }

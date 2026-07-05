@@ -48,26 +48,21 @@ export async function PATCH(
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
-      .select(`
-        *,
-        author:profiles!blog_comments_author_id_fkey (
-          id,
-          full_name,
-          avatar_url,
-          role,
-          is_expert,
-          is_verified,
-          verification_data,
-          created_at
-        )
-      `)
+      .select('*')
       .single()
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ comment: data })
+    const { data: commentAuthor } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url, role, is_expert, is_verified, verification_data, created_at')
+      .eq('id', (data as any).author_id)
+      .maybeSingle()
+    const updatedComment = { ...(data as any), author: commentAuthor ?? null }
+
+    return NextResponse.json({ comment: updatedComment })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }

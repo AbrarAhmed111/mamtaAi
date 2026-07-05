@@ -37,7 +37,7 @@ import {
 } from '@/lib/notification-preferences'
 import { useSubscription } from '@/hooks/useSubscription'
 import { useBilling } from '@/hooks/useBilling'
-import { getActiveView, isVerifiedExpert } from '@/lib/expert/active-view'
+import { getActiveView, isVerifiedExpert, isAdminAccount } from '@/lib/expert/active-view'
 interface Profile {
   id: string
   full_name: string
@@ -269,6 +269,7 @@ export default function SettingsPage() {
   const router = useRouter()
   const { user, refreshUser } = useAuth()
   const activeView = getActiveView(user?.profile ?? null)
+  const isAdmin = isAdminAccount(user?.profile ?? null)
   const settingsTabs = useMemo(
     () => (activeView === 'admin' ? ADMIN_SETTINGS_TABS : PARENT_SETTINGS_TABS),
     [activeView],

@@ -33,16 +33,6 @@ export async function GET(
           slug,
           icon,
           color_hex
-        ),
-        author:profiles!forum_threads_author_id_fkey (
-          id,
-          full_name,
-          avatar_url,
-          role,
-          is_expert,
-          is_verified,
-          verification_data,
-          created_at
         )
       `)
       .eq('id', id)
@@ -52,7 +42,14 @@ export async function GET(
       return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ thread: data })
+    const { data: authorProfile } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url, role, is_expert, is_verified, verification_data, created_at')
+      .eq('id', (data as any).author_id)
+      .maybeSingle()
+    const thread = { ...(data as any), author: authorProfile ?? null }
+
+    return NextResponse.json({ thread })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }
