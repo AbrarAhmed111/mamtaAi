@@ -177,7 +177,7 @@ export default function LoginForm({ onLogin, onError }: LoginFormProps) {
           <FaBaby className="text-white text-xl sm:text-2xl" />
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-        <p className="text-sm sm:text-base text-gray-600">Sign in to continue your journey with MamtaAI</p>
+        <p className="text-sm sm:text-base text-gray-600">Sign in to continue your journey with MumtaAI</p>
       </div>
 
       {/* Social Login Options */}

@@ -71,7 +71,7 @@ export async function notifyUserExpertApplicationApproved(userId: string): Promi
     sent_at: new Date().toISOString(),
   })
 
-  void sendUserEmail(userId, `[MamtaAI] ${title}`, title, body, '/dashboard')
+  void sendUserEmail(userId, `[MumtaAI] ${title}`, title, body, '/dashboard')
 }
 
 export async function notifyUserExpertApplicationRejected(
@@ -102,7 +102,7 @@ export async function notifyUserExpertApplicationRejected(
 
   void sendUserEmail(
     userId,
-    `[MamtaAI] ${title}`,
+    `[MumtaAI] ${title}`,
     title,
     body,
     '/dashboard/settings?tab=professional',

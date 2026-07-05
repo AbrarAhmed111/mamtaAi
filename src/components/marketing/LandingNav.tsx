@@ -138,14 +138,14 @@ export default function LandingNav({ activePage = 'home' }: LandingNavProps) {
               <div className="relative">
                 <Image
                   src={logo}
-                  alt="MamtaAI"
+                  alt="MumtaAI"
                   className="h-16 rounded-full w-16 text-blue-600 group-hover:text-purple-600 transition-colors duration-300"
                 />
               </div>
             </div>
             <div className="ml-3">
               <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 bg-clip-text text-transparent">
-                MamtaAI
+                MumtaAI
               </span>
               <div className="text-xs text-gray-500 font-medium leading-snug max-w-[11rem]">
                 Understanding Your Baby&apos;s Every Cry

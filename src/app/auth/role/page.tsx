@@ -65,7 +65,7 @@ export default function RoleSelectionPage() {
             <div>
               <div className="font-semibold text-gray-900">Parent</div>
               <div className="mt-1 text-sm text-gray-600">
-                Track cries, manage babies, and use MamtaAI as a caregiver.
+                Track cries, manage babies, and use MumtaAI as a caregiver.
               </div>
             </div>
           </div>

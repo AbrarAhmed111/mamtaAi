@@ -12,7 +12,7 @@ export function createForgotPasswordEmailTemplate({
   expiryMinutes = 60,
 }: ForgotPasswordTemplateData = {}): string {
   return createBaseEmailTemplate({
-    preheader: 'Reset your Mamta AI account password.',
+    preheader: 'Reset your Mumta AI account password.',
     heading: 'Reset Your Password',
     subheading: 'A secure link to update your password is ready.',
     bodyHtml: `
@@ -20,7 +20,7 @@ export function createForgotPasswordEmailTemplate({
         Hi ${userName},
       </div>
       <div style="margin-top:12px;font-size:15px;line-height:24px;color:#314067;">
-        We received a request to reset your Mamta AI password. Use the button below to set a new password.
+        We received a request to reset your Mumta AI password. Use the button below to set a new password.
       </div>
       <div style="margin-top:20px;">
         <a href="${resetLink}" style="display:inline-block;background-color:#4f6cff;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;line-height:20px;padding:12px 22px;border-radius:10px;">

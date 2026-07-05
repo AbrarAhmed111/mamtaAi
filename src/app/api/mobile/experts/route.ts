@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     experts: (data || []).map((expert: any) => ({
       id: expert.id,
-      fullName: expert.full_name || 'MamtaAI expert',
+      fullName: expert.full_name || 'MumtaAI expert',
       specialty: expert.verification_data?.specialty || expert.verification_data?.professional_title || null,
       verified: Boolean(expert.is_verified),
     })),

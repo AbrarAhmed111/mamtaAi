@@ -24,8 +24,8 @@ export const PRICING_FAQ = [
     a: 'Plus fits most daily users with up to 3 babies and 2 caregivers. Pro is for larger families, unlimited community publishing, and all-time insights.',
   },
   {
-    q: 'Is MamtaAI medical advice?',
-    a: 'No. MamtaAI offers parenting support and AI-assisted cry insights. Always contact your pediatrician for medical concerns.',
+    q: 'Is MumtaAI medical advice?',
+    a: 'No. MumtaAI offers parenting support and AI-assisted cry insights. Always contact your pediatrician for medical concerns.',
   },
   {
     q: 'Can I cancel anytime?',
@@ -73,7 +73,7 @@ export const PLAN_UI: Record<PlanSlug, PlanUiConfig> = {
     slug: 'free',
     accent: 'slate',
     iconBg: 'bg-slate-100 text-slate-600',
-    idealFor: 'Trying MamtaAI with one baby',
+    idealFor: 'Trying MumtaAI with one baby',
     sections: [
       {
         title: 'Cry intelligence',

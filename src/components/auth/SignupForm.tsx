@@ -217,7 +217,7 @@ export default function SignupForm({ onStepChange, onComplete }: SignupFormProps
           <div className="space-y-6">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Create Your Account</h2>
-              <p className="text-gray-600">Join thousands of parents using MamtaAI</p>
+              <p className="text-gray-600">Join thousands of parents using MumtaAI</p>
             </div>
 
             {/* Social Login Options */}
@@ -459,7 +459,7 @@ export default function SignupForm({ onStepChange, onComplete }: SignupFormProps
           <div className="space-y-6">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Choose Your Role</h2>
-              <p className="text-gray-600">How will you be using MamtaAI?</p>
+              <p className="text-gray-600">How will you be using MumtaAI?</p>
             </div>
 
             <div className="space-y-4">
@@ -584,7 +584,7 @@ export default function SignupForm({ onStepChange, onComplete }: SignupFormProps
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome to MamtaAI!</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome to MumtaAI!</h2>
               <p className="text-gray-600">Let&apos;s get you set up</p>
             </div>
 

@@ -32,7 +32,7 @@ export default function AuthScreenLayout({ children }: { children: ReactNode }) 
         <div className="flex shrink-0 items-center px-4 pb-1 pt-4 sm:px-6 md:px-8">
           <Image
             src={logo}
-            alt="MamtaAI"
+            alt="MumtaAI"
             width={128}
             height={32}
             className="h-9 w-auto rounded-2xl shadow-md sm:h-10"

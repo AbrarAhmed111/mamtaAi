@@ -34,7 +34,7 @@ export function createPromotionalEmailTemplate({
 }) {
   const safeHeading = escapeHtml(heading)
   const safeName = escapeHtml(recipientName || 'there')
-  const safeCtaLabel = escapeHtml(ctaLabel || 'Open MamtaAI')
+  const safeCtaLabel = escapeHtml(ctaLabel || 'Open MumtaAI')
   const safeCtaUrl = escapeHtml(ctaUrl || 'https://mamtaai.com')
   const safeOfferCode = offerCode ? escapeHtml(offerCode.toUpperCase()) : null
 
@@ -43,7 +43,7 @@ export function createPromotionalEmailTemplate({
     logoUrl,
     preheader: safeHeading,
     heading: safeHeading,
-    subheading: 'A note from the MamtaAI team',
+    subheading: 'A note from the MumtaAI team',
     bodyHtml: `
       <p style="margin:0 0 14px;font-size:15px;line-height:24px;color:#4b5563;">Hi ${safeName},</p>
       ${paragraphHtml(message)}
@@ -62,6 +62,6 @@ export function createPromotionalEmailTemplate({
       </div>
     `,
     footerNote:
-      'You are receiving this promotional email because you created a MamtaAI account. You can adjust promotional preferences in Settings.',
+      'You are receiving this promotional email because you created a MumtaAI account. You can adjust promotional preferences in Settings.',
   })
 }

@@ -182,7 +182,7 @@ export default function BabyOximeterThresholdsSection({
           </h2>
           <p className="mt-1 text-sm text-gray-600">
             Set min/max SpO₂ and pulse for this baby. If readings stay outside these limits for 5
-            seconds, MamtaAI alerts you with sound, in-app notification, email, and a modal.
+            seconds, MumtaAI alerts you with sound, in-app notification, email, and a modal.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2.5 rounded-full border border-pink-200 bg-pink-50/60 px-3.5 py-2">

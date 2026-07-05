@@ -115,7 +115,7 @@ async function sendAdminEmail(
 
   const result = await sendEmail({
     to: recipient.email,
-    subject: `[MamtaAI Admin] ${input.title}`,
+    subject: `[MumtaAI Admin] ${input.title}`,
     html,
     attachments,
   })
@@ -290,7 +290,7 @@ export function notifyAdminsOfUserSignup(params: {
     emailHeading: isExpert
       ? 'New expert needs verification'
       : isParent
-        ? 'New parent joined MamtaAI'
+        ? 'New parent joined MumtaAI'
         : 'New platform signup',
     actionData: {
       userId: params.userId,

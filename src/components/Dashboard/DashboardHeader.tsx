@@ -32,7 +32,7 @@ interface DashboardHeaderProps {
 export default function DashboardHeader({
   greeting = 'Good Morning',
   userName = 'Sarah',
-  subtitle = "Welcome to your MamtaAI dashboard. Let's help you understand your baby better.",
+  subtitle = "Welcome to your MumtaAI dashboard. Let's help you understand your baby better.",
   showNotifications = true,
   onNotificationClick,
   notificationDropdown,
@@ -91,7 +91,7 @@ export default function DashboardHeader({
           <SidebarMenuButton onClick={onMenuToggle} />
           <div className="min-w-0">
             <h1 className="truncate text-[21px] font-bold leading-tight bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent sm:hidden">
-              MamtaAI
+              MumtaAI
             </h1>
             <h2 className="hidden truncate text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent sm:block sm:text-2xl">
               {greeting}, {userName}! 👋

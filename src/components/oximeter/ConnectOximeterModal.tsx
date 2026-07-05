@@ -146,7 +146,7 @@ export default function ConnectOximeterModal() {
             {(status === 'pairing' || status === 'connecting') && (
               <div className="mt-6 flex flex-col items-center gap-3 text-center">
                 <Spinner size={28} />
-                <p className="font-medium text-gray-900">Connecting in MamtaAI…</p>
+                <p className="font-medium text-gray-900">Connecting in MumtaAI…</p>
                 <p className="text-sm text-gray-500">
                   Linking GATT service and starting live readings. This usually takes a few seconds.
                 </p>

@@ -18,10 +18,10 @@ export default function PromotionalEmailManager() {
   const [form, setForm] = useState({
     audience: 'free',
     customEmails: '',
-    subject: 'A special MamtaAI offer for your family',
-    heading: 'Unlock more support with MamtaAI',
+    subject: 'A special MumtaAI offer for your family',
+    heading: 'Unlock more support with MumtaAI',
     message:
-      'For a limited time, you can upgrade your MamtaAI plan and get more cry analyses, deeper insights, and family caregiver access.\n\nUse the offer below at checkout and keep building a calmer care routine for your baby.',
+      'For a limited time, you can upgrade your MumtaAI plan and get more cry analyses, deeper insights, and family caregiver access.\n\nUse the offer below at checkout and keep building a calmer care routine for your baby.',
     ctaLabel: 'View plans',
     ctaUrl: '/pricing',
     offerCode: '',
@@ -180,7 +180,7 @@ export default function PromotionalEmailManager() {
             </div>
           )}
           <div className="mt-5 rounded-xl bg-pink-600 px-4 py-3 text-center text-sm font-bold text-white">
-            {form.ctaLabel || 'Open MamtaAI'}
+            {form.ctaLabel || 'Open MumtaAI'}
           </div>
           <p className="mt-4 text-xs text-gray-500">
             Sends only to users who have not disabled promotional/product email preferences.

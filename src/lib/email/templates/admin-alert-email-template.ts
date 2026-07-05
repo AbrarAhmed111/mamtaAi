@@ -31,7 +31,7 @@ export function createAdminAlertEmailTemplate({
     logoUrl,
     preheader: body.slice(0, 120),
     heading: safeHeading,
-    subheading: 'Administrator alert from MamtaAI',
+    subheading: 'Administrator alert from MumtaAI',
     bodyHtml: `
       <div style="font-size:15px;line-height:24px;color:#4b5563;">
         Hi ${safeName},
@@ -48,6 +48,6 @@ export function createAdminAlertEmailTemplate({
         Or copy this link: <a href="${safeUrl}" style="color:#db2777;word-break:break-word;">${safeUrl}</a>
       </div>
     `,
-    footerNote: 'You receive this because you are an administrator on MamtaAI. Update alert settings in Settings → Notifications.',
+    footerNote: 'You receive this because you are an administrator on MumtaAI. Update alert settings in Settings → Notifications.',
   })
 }

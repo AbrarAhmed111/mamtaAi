@@ -41,7 +41,7 @@ export default function ExpertApplicationBanner() {
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-gray-900">Your expert documents are under review</p>
             <p className="mt-1 text-sm text-gray-600">
-              Our team is reviewing your application. You can continue using MamtaAI as a parent while you
+              Our team is reviewing your application. You can continue using MumtaAI as a parent while you
               wait — we&apos;ll notify you by email and in-app when a decision is made.
             </p>
           </div>

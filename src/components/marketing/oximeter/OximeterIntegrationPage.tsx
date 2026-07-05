@@ -64,13 +64,13 @@ const connectSteps = [
   },
   {
     step: 2,
-    title: 'Open MamtaAI',
-    text: 'Sign in to MamtaAI, select the correct baby profile, and open the Oximeter page from the dashboard.',
+    title: 'Open MumtaAI',
+    text: 'Sign in to MumtaAI, select the correct baby profile, and open the Oximeter page from the dashboard.',
   },
   {
     step: 3,
     title: 'Start Device Search',
-    text: 'Press “Connect Oximeter.” MamtaAI will open the connection window and search for nearby supported Bluetooth devices.',
+    text: 'Press “Connect Oximeter.” MumtaAI will open the connection window and search for nearby supported Bluetooth devices.',
     hints: ['Searching for nearby devices...', 'Bluetooth must be enabled', 'Keep the oximeter nearby'],
   },
   {
@@ -101,19 +101,19 @@ export default function OximeterIntegrationPage() {
       <section className="pt-32 pb-16 lg:pb-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 lg:items-center">
           <div className="space-y-6 animate-fade-in lg:py-2">
-            <SectionBadge>MamtaAI Oximeter Integration</SectionBadge>
+            <SectionBadge>MumtaAI Oximeter Integration</SectionBadge>
             <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-bold text-gray-900 leading-tight">
               Real-Time Oxygen and Pulse Monitoring,{' '}
               <span className="bg-gradient-to-r from-pink-500 via-rose-500 to-purple-500 bg-clip-text text-transparent">
-                Connected to MamtaAI
+                Connected to MumtaAI
               </span>
             </h1>
             <p className="text-lg text-gray-600 leading-relaxed">
-              Connect a supported Bluetooth pulse oximeter to MamtaAI and view your baby&apos;s oxygen
+              Connect a supported Bluetooth pulse oximeter to MumtaAI and view your baby&apos;s oxygen
               saturation, pulse rate, and other available measurements in real time.
             </p>
             <p className="text-base text-gray-600 leading-relaxed">
-              MamtaAI turns incoming device readings into a clear monitoring experience, helping parents
+              MumtaAI turns incoming device readings into a clear monitoring experience, helping parents
               follow live measurements, review session statistics, and keep health records linked to the
               correct baby profile.
             </p>
@@ -144,7 +144,7 @@ export default function OximeterIntegrationPage() {
               <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-pink-300/25 ring-1 ring-pink-100/70">
                 <Image
                   src={heroImage}
-                  alt="MamtaAI oximeter integration overview"
+                  alt="MumtaAI oximeter integration overview"
                   className="w-full h-auto block"
                   sizes="(max-width: 640px) 220px, 260px"
                   priority
@@ -161,7 +161,7 @@ export default function OximeterIntegrationPage() {
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Understand the Readings That Matter</h2>
             <p className="mt-4 text-lg text-gray-600">
-              MamtaAI presents the measurements received from the connected oximeter in a clear and
+              MumtaAI presents the measurements received from the connected oximeter in a clear and
               easy-to-read format.
             </p>
           </div>
@@ -225,7 +225,7 @@ export default function OximeterIntegrationPage() {
               A Clear Real-Time Monitoring Experience
             </h2>
             <p className="mt-4 text-lg text-gray-600">
-              After the oximeter is connected, MamtaAI continuously updates the monitoring screen as
+              After the oximeter is connected, MumtaAI continuously updates the monitoring screen as
               Bluetooth readings arrive.
             </p>
             <ul className="mt-8 space-y-5">
@@ -263,7 +263,7 @@ export default function OximeterIntegrationPage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900">How to Connect Your Oximeter</h2>
             <p className="mt-4 text-lg text-gray-600">
-              Follow these steps to pair a compatible Bluetooth oximeter with MamtaAI.
+              Follow these steps to pair a compatible Bluetooth oximeter with MumtaAI.
             </p>
           </div>
 
@@ -356,7 +356,7 @@ export default function OximeterIntegrationPage() {
               </div>
               <h3 className="text-xl font-bold text-gray-900 text-center">Connected</h3>
               <p className="mt-3 text-gray-600 text-center text-sm leading-relaxed">
-                The oximeter is connected and MamtaAI is receiving live measurements.
+                The oximeter is connected and MumtaAI is receiving live measurements.
               </p>
               <ul className="mt-5 space-y-2 max-w-xs mx-auto">
                 {['Device active', 'Bluetooth connected', 'Live data available'].map(label => (
@@ -385,7 +385,7 @@ export default function OximeterIntegrationPage() {
             {[
               'Oximeter',
               'Bluetooth Connection',
-              'MamtaAI Interface',
+              'MumtaAI Interface',
               'Session Statistics',
               'Secure Health History',
             ].map((label, i, arr) => (
@@ -406,7 +406,7 @@ export default function OximeterIntegrationPage() {
               {
                 icon: FaBluetooth,
                 title: 'Bluetooth Transfer',
-                text: 'MamtaAI receives supported device packets through a Bluetooth Low Energy connection.',
+                text: 'MumtaAI receives supported device packets through a Bluetooth Low Energy connection.',
               },
               {
                 icon: FaSignal,
@@ -451,7 +451,7 @@ export default function OximeterIntegrationPage() {
               {
                 icon: FaBluetooth,
                 title: 'Bluetooth Requirement',
-                text: 'The oximeter must support Bluetooth Low Energy and expose data that MamtaAI can interpret.',
+                text: 'The oximeter must support Bluetooth Low Energy and expose data that MumtaAI can interpret.',
               },
               {
                 icon: FaWaveSquare,
@@ -493,12 +493,12 @@ export default function OximeterIntegrationPage() {
           </h2>
           <p className="mt-4 text-gray-600 text-center leading-relaxed">
             Oximeter sessions are connected to authenticated users and selected baby profiles. Access to
-            stored readings should follow MamtaAI&apos;s family and caregiver permission rules.
+            stored readings should follow MumtaAI&apos;s family and caregiver permission rules.
           </p>
           <div className="mt-8 rounded-2xl border border-pink-200/80 bg-gradient-to-br from-pink-50 to-rose-50/90 p-5">
             <p className="text-sm text-gray-700 leading-relaxed">
               <span className="font-semibold text-pink-800">Important: </span>
-              MamtaAI is not a medical device and does not provide a diagnosis. Oximeter readings may be
+              MumtaAI is not a medical device and does not provide a diagnosis. Oximeter readings may be
               affected by movement, positioning, circulation, device quality, and other factors. Contact a
               qualified medical professional if you are concerned about a baby&apos;s health or measurements.
             </p>

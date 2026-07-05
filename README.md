@@ -1,10 +1,10 @@
-# MamtaAI
+# MumtaAI
 
-MamtaAI is an AI-powered baby care platform that helps families track activities, manage caregiver access, receive notifications, analyze baby cries, and monitor supported Bluetooth pulse oximeters to support day-to-day parenting decisions.
+MumtaAI is an AI-powered baby care platform that helps families track activities, manage caregiver access, receive notifications, analyze baby cries, and monitor supported Bluetooth pulse oximeters to support day-to-day parenting decisions.
 
 **Built by [Abrar Ahmed](https://www.abrarahmed.pro/)** — Full Stack Engineer ([GitHub](https://github.com/AbrarAhmed111) · [Portfolio](https://www.abrarahmed.pro/))
 
-This repository is **not** a Next.js-only app. MamtaAI is built as a **multi-service system**:
+This repository is **not** a Next.js-only app. MumtaAI is built as a **multi-service system**:
 
 | Service | Stack | Role |
 |---------|--------|------|
@@ -169,7 +169,7 @@ Use the signing secret from the CLI as `STRIPE_WEBHOOK_SECRET` in `.env.local`.
 
 ## Oximeter integration
 
-MamtaAI includes a browser-based pulse oximeter module for supported Bluetooth Low Energy devices. It is implemented in the Next.js app and does **not** require the Python/FastAPI ML backend.
+MumtaAI includes a browser-based pulse oximeter module for supported Bluetooth Low Energy devices. It is implemented in the Next.js app and does **not** require the Python/FastAPI ML backend.
 
 | Surface | Purpose |
 |---------|---------|
@@ -294,7 +294,7 @@ Suspending a user or revoking expert/admin access triggers a **global session si
 
 ## Session & authorization
 
-The Supabase JWT can remain valid after the database changes underneath (role demotion, suspension, deletion, plan change). MamtaAI reconciles live state:
+The Supabase JWT can remain valid after the database changes underneath (role demotion, suspension, deletion, plan change). MumtaAI reconciles live state:
 
 | Piece | Purpose |
 |-------|---------|
@@ -412,7 +412,7 @@ docs/                          # Planning & subscription docs
 
 ## Author
 
-MamtaAI was designed and built by **Abrar Ahmed** (Full Stack Engineer, [NizamLLC](https://github.com/AbrarAhmed111)).
+MumtaAI was designed and built by **Abrar Ahmed** (Full Stack Engineer, [NizamLLC](https://github.com/AbrarAhmed111)).
 
 - Portfolio: [abrarahmed.pro](https://www.abrarahmed.pro/)
 - GitHub: [github.com/AbrarAhmed111](https://github.com/AbrarAhmed111)

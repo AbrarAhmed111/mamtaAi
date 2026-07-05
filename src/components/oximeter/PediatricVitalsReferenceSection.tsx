@@ -41,7 +41,7 @@ export default function PediatricVitalsReferenceSection() {
           </a>
           <a
             href={pdfUrl}
-            download="MamtaAI-Pediatric-Vital-Signs-Reference-Chart.pdf"
+            download="MumtaAI-Pediatric-Vital-Signs-Reference-Chart.pdf"
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-pink-200 bg-white px-4 py-2.5 text-sm font-semibold text-pink-700 transition hover:bg-pink-50"
           >
             <Download className="h-4 w-4" strokeWidth={2.2} />

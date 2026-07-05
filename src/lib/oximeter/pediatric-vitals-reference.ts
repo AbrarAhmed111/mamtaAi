@@ -1,5 +1,5 @@
 export const PEDIATRIC_VITALS_REFERENCE = {
-  title: 'MamtaAI Pediatric Vital Signs Reference Chart',
+  title: 'MumtaAI Pediatric Vital Signs Reference Chart',
   description:
     'Healthy heart rate, SpO₂, and other vital ranges by age—from newborn to adolescent. Use it to set sensible oximeter alert limits.',
   pdfUrl:

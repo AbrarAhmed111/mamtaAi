@@ -42,12 +42,12 @@ export default function SiteFooter() {
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full blur opacity-75" />
                   <div className="relative">
-                    <Image src={smallLogo} alt="MamtaAI" className="h-12 w-12 rounded-full" />
+                    <Image src={smallLogo} alt="MumtaAI" className="h-12 w-12 rounded-full" />
                   </div>
                 </div>
                 <div className="ml-3">
                   <span className="text-2xl font-bold bg-gradient-to-r from-pink-300 to-rose-200 bg-clip-text text-transparent">
-                    MamtaAI
+                    MumtaAI
                   </span>
                   <div className="text-xs text-pink-200/80 font-medium">AI-Powered Baby Care</div>
                 </div>
@@ -161,7 +161,7 @@ export default function SiteFooter() {
           <div className="border-t border-white/10 mt-12 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <p className="text-pink-200/80 text-sm text-center md:text-left">
-                © {year} MamtaAI. All rights reserved. Made with ❤️ for parents everywhere.
+                © {year} MumtaAI. All rights reserved. Made with ❤️ for parents everywhere.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6">
                 <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">

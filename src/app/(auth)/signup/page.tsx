@@ -452,7 +452,7 @@ function SignUpContent() {
                   </div>
                   <div className="pb-4">
                     <p className="text-[#AAADB1] text-xs sm:text-sm">
-                      To learn more about how MamtaAI collects, uses, shares, and protects your
+                      To learn more about how MumtaAI collects, uses, shares, and protects your
                       personal data, please see the{' '}
                       <Link
                         href="/privacy"

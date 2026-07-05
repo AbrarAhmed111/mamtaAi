@@ -27,14 +27,14 @@ const COPY: Record<
   'disable-toggle': {
     title: 'Turn off oximeter alerts?',
     description:
-      'MamtaAI will not sound, email, or show in-app alerts when readings stay outside your limits. You can turn alerts back on anytime.',
+      'MumtaAI will not sound, email, or show in-app alerts when readings stay outside your limits. You can turn alerts back on anytime.',
     confirm: 'Turn off alerts',
     cancel: 'Keep alerts on',
   },
   'save-disabled': {
     title: 'Save with alerts turned off?',
     description:
-      'These limits will be saved, but MamtaAI will not notify you when SpO₂ or pulse goes out of range until you enable alerts again.',
+      'These limits will be saved, but MumtaAI will not notify you when SpO₂ or pulse goes out of range until you enable alerts again.',
     confirm: 'Save anyway',
     cancel: 'Go back',
   },

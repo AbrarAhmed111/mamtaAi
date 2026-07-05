@@ -4,10 +4,10 @@ const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'http://localhost:3000'
 
 export const siteConfig = {
-  name: 'MamtaAI',
+  name: 'MumtaAI',
   tagline: "Understanding Your Baby's Every Cry",
   description:
-    "Understanding your baby's every cry with AI-powered insights. MamtaAI helps families decode cries, track daily care, invite caregivers, and parent with confidence.",
+    "Understanding your baby's every cry with AI-powered insights. MumtaAI helps families decode cries, track daily care, invite caregivers, and parent with confidence.",
   url: siteUrl,
 }
 
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   creator: siteConfig.name,
   publisher: siteConfig.name,
   keywords: [
-    'MamtaAI',
+    'MumtaAI',
     'baby cry analysis',
     'AI parenting',
     'baby care app',

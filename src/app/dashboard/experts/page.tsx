@@ -207,7 +207,7 @@ export default function ExpertsPage() {
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-gray-600 sm:text-base">
               Connect with verified pediatricians, lactation consultants, and child development specialists.
-              Get trusted guidance backed by professional credentials and MamtaAI&apos;s cry insights.
+              Get trusted guidance backed by professional credentials and MumtaAI&apos;s cry insights.
             </p>
           </div>
           <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
@@ -249,7 +249,7 @@ export default function ExpertsPage() {
         <div className="rounded-2xl border border-pink-200 bg-gradient-to-r from-pink-50 to-white p-5">
           <p className="font-semibold text-gray-900">Are you a healthcare professional?</p>
           <p className="mt-1 text-sm text-gray-600">
-            Apply to join as an expert and share trusted guidance with MamtaAI parents.
+            Apply to join as an expert and share trusted guidance with MumtaAI parents.
           </p>
           {showBecomeExpertCta ? (
             <Link
@@ -462,7 +462,7 @@ export default function ExpertsPage() {
           <div className="max-w-xl">
             <h2 className="text-2xl font-bold">Are you a child health professional?</h2>
             <p className="mt-2 text-sm text-pink-100 sm:text-base">
-              Join MamtaAI&apos;s expert network to share evidence-based guidance, publish articles for parents,
+              Join MumtaAI&apos;s expert network to share evidence-based guidance, publish articles for parents,
               and help families understand their baby&apos;s needs with confidence.
             </p>
           </div>
@@ -509,7 +509,7 @@ export default function ExpertsPage() {
                   <p className="text-sm font-medium text-pink-700">{selectedExpert.professionalTitle}</p>
                   <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
                     <FaCheckCircle />
-                    MamtaAI Verified
+                    MumtaAI Verified
                   </span>
                 </div>
               </div>
@@ -530,7 +530,7 @@ export default function ExpertsPage() {
               </div>
 
               <p className="text-sm leading-relaxed text-gray-600">
-                {selectedExpert.fullName} is a verified MamtaAI expert providing trusted guidance on infant care,
+                {selectedExpert.fullName} is a verified MumtaAI expert providing trusted guidance on infant care,
                 development, and wellbeing. Browse their published articles in the community blog.
               </p>
 

@@ -199,7 +199,7 @@ function BillingSuccessContent() {
                   <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                     Welcome to{' '}
                     <span className="bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 bg-clip-text text-transparent">
-                      MamtaAI {planName}
+                      MumtaAI {planName}
                     </span>
                   </h1>
                   <p className="mt-3 text-gray-600 leading-relaxed">

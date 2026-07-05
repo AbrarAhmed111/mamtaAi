@@ -486,7 +486,7 @@ export default function PricingPage() {
         <div className="max-w-4xl mx-auto rounded-3xl bg-gradient-to-r from-pink-500 via-rose-500 to-purple-500 p-10 sm:p-14 text-center text-white shadow-2xl transition-all duration-300 hover:shadow-[0_25px_50px_-12px_rgba(236,72,153,0.45)] hover:-translate-y-0.5">
           <h2 className="text-3xl sm:text-4xl font-bold">Ready to understand every cry?</h2>
           <p className="mt-4 text-pink-50 text-lg max-w-xl mx-auto">
-            Join MamtaAI free today. Upgrade when you need more babies, family access, and deeper insights.
+            Join MumtaAI free today. Upgrade when you need more babies, family access, and deeper insights.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -504,7 +504,7 @@ export default function PricingPage() {
             </Link>
           </div>
           <p className="mt-6 text-xs text-pink-100/90">
-            MamtaAI is not a substitute for professional medical advice. In emergencies, contact your
+            MumtaAI is not a substitute for professional medical advice. In emergencies, contact your
             doctor or local emergency services.
           </p>
         </div>

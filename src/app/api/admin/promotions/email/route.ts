@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     const subject = String(body.subject || '').trim()
     const heading = String(body.heading || subject).trim()
     const message = String(body.message || '').trim()
-    const ctaLabel = String(body.ctaLabel || 'Open MamtaAI').trim()
+    const ctaLabel = String(body.ctaLabel || 'Open MumtaAI').trim()
     const ctaUrl = normalizeCtaUrl(body.ctaUrl)
     const offerCode = body.offerCode ? String(body.offerCode).trim().toUpperCase() : ''
     const customEmails = parseEmails(body.customEmails)

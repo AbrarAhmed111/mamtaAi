@@ -50,7 +50,7 @@ export default function OximeterLandingSection() {
         </h2>
 
         <p className="mt-5 text-lg text-gray-600 leading-relaxed max-w-3xl mx-auto">
-          MamtaAI connects with compatible Bluetooth pulse oximeters to display live oxygen saturation,
+          MumtaAI connects with compatible Bluetooth pulse oximeters to display live oxygen saturation,
           pulse rate, and perfusion index readings. Parents can monitor important health signals from one
           simple and secure dashboard.
         </p>
@@ -64,7 +64,7 @@ export default function OximeterLandingSection() {
           <div className="relative rounded-[1.75rem] sm:rounded-[2rem] overflow-hidden shadow-2xl shadow-pink-300/25 ring-1 ring-pink-100/70">
             <Image
               src={oximeterPromo}
-              alt="MamtaAI dashboard connected to a Bluetooth pulse oximeter"
+              alt="MumtaAI dashboard connected to a Bluetooth pulse oximeter"
               className="w-full h-auto block"
               sizes="(max-width: 1024px) 100vw, 896px"
               priority={false}

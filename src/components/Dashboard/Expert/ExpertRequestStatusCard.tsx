@@ -124,7 +124,7 @@ export default function ExpertRequestStatusCard({
               Your expert documents are under review
             </p>
             <p>
-              Our team is verifying your credentials. You can keep using MamtaAI as a parent while
+              Our team is verifying your credentials. You can keep using MumtaAI as a parent while
               you wait — we&apos;ll notify you by email and in-app when a decision is made.
             </p>
             <p className={`text-xs ${cfg.hint}`}>Typical review time: 1–3 business days.</p>

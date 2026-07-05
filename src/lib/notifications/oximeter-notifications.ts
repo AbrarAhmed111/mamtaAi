@@ -74,15 +74,15 @@ export async function dispatchOximeterAlert(input: DispatchOximeterAlertInput): 
       heading: input.title,
       subheading: `${input.babyName} needs your attention`,
       bodyHtml: `<p style="margin:0 0 16px;line-height:1.6;">${input.body}</p>
-        <p style="margin:0;"><a href="${absoluteActionUrl}" style="color:#db2777;font-weight:600;">Open MamtaAI monitoring</a></p>`,
+        <p style="margin:0;"><a href="${absoluteActionUrl}" style="color:#db2777;font-weight:600;">Open MumtaAI monitoring</a></p>`,
       footerNote:
-        'You receive this because oximeter alerts are enabled for your MamtaAI account. Adjust limits on the baby profile or notification settings.',
+        'You receive this because oximeter alerts are enabled for your MumtaAI account. Adjust limits on the baby profile or notification settings.',
       logoUrl: logoUrl || undefined,
     })
 
     await sendEmail({
       to: email,
-      subject: `[MamtaAI] ${input.title}`,
+      subject: `[MumtaAI] ${input.title}`,
       html,
       attachments,
     })

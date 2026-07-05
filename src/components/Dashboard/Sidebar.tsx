@@ -95,7 +95,7 @@ function planPromoContent(slug: PlanSlug): {
 } {
   if (slug === 'free') {
     return {
-      title: 'MamtaAI Plus',
+      title: 'MumtaAI Plus',
       description: 'Unlock advanced insights and personalized care.',
       Icon: FaGem,
       iconClass: 'text-pink-500',
@@ -103,14 +103,14 @@ function planPromoContent(slug: PlanSlug): {
   }
   if (slug === 'plus') {
     return {
-      title: 'MamtaAI Pro',
+      title: 'MumtaAI Pro',
       description: PLAN_DEFINITIONS.pro.description,
       Icon: FaCrown,
       iconClass: 'text-purple-700',
     };
   }
   return {
-    title: 'MamtaAI Pro',
+    title: 'MumtaAI Pro',
     description: PLAN_DEFINITIONS.pro.description,
     Icon: FaCrown,
     iconClass: 'text-purple-700',
@@ -183,18 +183,18 @@ function SidebarPanel({
             href="/"
             onClick={onNavigate}
             className="flex items-center gap-3 transition-opacity hover:opacity-85"
-            aria-label="MamtaAI home"
+            aria-label="MumtaAI home"
           >
             <Image
               src={logo}
-              alt="MamtaAI"
+              alt="MumtaAI"
               width={56}
               height={56}
               className="h-14 w-14 shrink-0 rounded-full object-cover object-center"
             />
             <div>
               <h1 className="text-[17px] font-bold leading-tight bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
-                MamtaAI
+                MumtaAI
               </h1>
               <p className="mt-0.5 max-w-[9.5rem] text-[10px] font-medium leading-snug text-gray-500">
                 Understanding Your Baby&apos;s Every Cry

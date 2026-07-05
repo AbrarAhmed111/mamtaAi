@@ -195,7 +195,7 @@ function ProfessionalSettingsPanel({ profile }: { profile: Profile | null }) {
         Professional / Expert program
       </h2>
       <p className="text-sm text-gray-600 mb-6">
-        Healthcare professionals can apply to join the MamtaAI expert network, publish guidance, and appear in the
+        Healthcare professionals can apply to join the MumtaAI expert network, publish guidance, and appear in the
         expert directory.
       </p>
 
@@ -224,7 +224,7 @@ function ProfessionalSettingsPanel({ profile }: { profile: Profile | null }) {
         <div className="rounded-xl border border-pink-100/80 bg-gradient-to-br from-pink-50 via-rose-50/90 to-white p-5 shadow-sm shadow-pink-100/20">
           <p className="font-semibold text-gray-900">Application under review</p>
           <p className="mt-2 text-sm text-gray-600">
-            Your documents are being reviewed. You can continue using MamtaAI as a parent while you wait.
+            Your documents are being reviewed. You can continue using MumtaAI as a parent while you wait.
           </p>
         </div>
       ) : status === 'rejected' ? (
@@ -248,7 +248,7 @@ function ProfessionalSettingsPanel({ profile }: { profile: Profile | null }) {
         </div>
       ) : (
         <div className="rounded-xl border border-pink-100 bg-gradient-to-br from-white to-pink-50/30 p-5">
-          <p className="font-semibold text-gray-900">Become an expert on MamtaAI</p>
+          <p className="font-semibold text-gray-900">Become an expert on MumtaAI</p>
           <p className="mt-2 text-sm text-gray-600">
             Submit your credentials and a verification document. Approval typically takes 1–3 business days.
           </p>

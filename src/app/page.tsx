@@ -40,7 +40,7 @@ function FAQAccordion() {
   const faqs = [
     {
       question: "How accurate is the cry translation?",
-      answer: "MamtaAI uses advanced machine learning algorithms trained on thousands of cry samples, achieving over 95% accuracy in identifying common baby needs like hunger, sleep, discomfort, and pain. Our AI continuously learns and improves from user feedback to provide even more accurate results over time."
+      answer: "MumtaAI uses advanced machine learning algorithms trained on thousands of cry samples, achieving over 95% accuracy in identifying common baby needs like hunger, sleep, discomfort, and pain. Our AI continuously learns and improves from user feedback to provide even more accurate results over time."
     },
     {
       question: "Is my baby's data secure?",
@@ -48,7 +48,7 @@ function FAQAccordion() {
     },
     {
       question: "Can I use it for multiple babies?",
-      answer: "Yes! MamtaAI supports multiple baby profiles, allowing you to track and understand each child's unique communication patterns and needs. You can easily switch between profiles and maintain separate records for each baby."
+      answer: "Yes! MumtaAI supports multiple baby profiles, allowing you to track and understand each child's unique communication patterns and needs. You can easily switch between profiles and maintain separate records for each baby."
     },
     {
       question: "Do I need special equipment?",
@@ -56,7 +56,7 @@ function FAQAccordion() {
     },
     {
       question: "Is there a mobile app?",
-      answer: "MamtaAI is fully accessible through your web browser and works seamlessly on mobile devices. Our responsive design ensures a great experience on any device. A dedicated mobile app is coming soon for even better convenience and offline capabilities."
+      answer: "MumtaAI is fully accessible through your web browser and works seamlessly on mobile devices. Our responsive design ensures a great experience on any device. A dedicated mobile app is coming soon for even better convenience and offline capabilities."
     },
     {
       question: "Can I cancel my subscription anytime?",
@@ -64,19 +64,19 @@ function FAQAccordion() {
     },
     {
       question: "How does the AI learn my baby's specific patterns?",
-      answer: "MamtaAI uses a combination of general AI models trained on thousands of cry samples and personalized learning based on your feedback. When you confirm or correct predictions, the system adapts to better understand your baby's unique communication style over time."
+      answer: "MumtaAI uses a combination of general AI models trained on thousands of cry samples and personalized learning based on your feedback. When you confirm or correct predictions, the system adapts to better understand your baby's unique communication style over time."
     },
     {
       question: "What languages are supported?",
-      answer: "Currently, MamtaAI supports English interface with cry analysis that works universally across all languages. We're working on adding multi-language support for the interface in the near future."
+      answer: "Currently, MumtaAI supports English interface with cry analysis that works universally across all languages. We're working on adding multi-language support for the interface in the near future."
     },
     {
-      question: "Can healthcare professionals use MamtaAI?",
-      answer: "Yes! Many pediatricians and healthcare professionals use MamtaAI as a supplementary tool to better understand their young patients. However, it's important to note that MamtaAI is not a replacement for professional medical advice and should be used as a supportive tool."
+      question: "Can healthcare professionals use MumtaAI?",
+      answer: "Yes! Many pediatricians and healthcare professionals use MumtaAI as a supplementary tool to better understand their young patients. However, it's important to note that MumtaAI is not a replacement for professional medical advice and should be used as a supportive tool."
     },
     {
-      question: "What age range does MamtaAI work best for?",
-      answer: "MamtaAI is designed to work with babies from newborn to 24 months old. The AI has been trained on cry samples across this age range and can accurately interpret cries throughout your baby's early development stages."
+      question: "What age range does MumtaAI work best for?",
+      answer: "MumtaAI is designed to work with babies from newborn to 24 months old. The AI has been trained on cry samples across this age range and can accurately interpret cries throughout your baby's early development stages."
     }
   ];
 
@@ -139,7 +139,7 @@ function HomeContent() {
     {
       name: "Sarah Johnson",
       role: "Mother of Twins",
-      content: "MamtaAI has been a lifesaver! Understanding my babies' cries has never been easier.",
+      content: "MumtaAI has been a lifesaver! Understanding my babies' cries has never been easier.",
       rating: 5
     },
     {
@@ -287,7 +287,7 @@ function HomeContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Why Choose MamtaAI?
+              Why Choose MumtaAI?
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Advanced technology meets compassionate care to support parents in their most important journey.
@@ -353,7 +353,7 @@ function HomeContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Why Parents Love MamtaAI
+              Why Parents Love MumtaAI
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Discover the benefits that make parenting easier and more confident
@@ -420,7 +420,7 @@ function HomeContent() {
               Frequently Asked Questions
             </h2>
             <p className="text-xl text-gray-600">
-              Everything you need to know about MamtaAI
+              Everything you need to know about MumtaAI
             </p>
           </div>
 
@@ -436,7 +436,7 @@ function HomeContent() {
               What Parents Say
             </h2>
             <p className="text-xl text-gray-600">
-              Join thousands of parents who trust MamtaAI to understand their baby&apos;s needs.
+              Join thousands of parents who trust MumtaAI to understand their baby&apos;s needs.
             </p>
           </div>
 

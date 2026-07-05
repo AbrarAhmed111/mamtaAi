@@ -18,7 +18,7 @@ export default function AccountSuspendedPage() {
         </div>
         <h1 className="text-2xl font-bold text-gray-900">Account access restricted</h1>
         <p className="mt-3 text-gray-600 leading-relaxed">
-          Contact support — you don&apos;t have access to MamtaAI at this time.
+          Contact support — you don&apos;t have access to MumtaAI at this time.
         </p>
         <div className="mt-5 rounded-xl border border-rose-100 bg-rose-50/80 p-4 text-left text-sm text-gray-700">
           <p className="font-semibold text-gray-900">Details</p>
