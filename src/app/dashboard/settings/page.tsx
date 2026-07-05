@@ -37,7 +37,7 @@ import {
 } from '@/lib/notification-preferences'
 import { useSubscription } from '@/hooks/useSubscription'
 import { useBilling } from '@/hooks/useBilling'
-import { isVerifiedExpert } from '@/lib/expert/active-view'
+import { getActiveView, isVerifiedExpert } from '@/lib/expert/active-view'
 interface Profile {
   id: string
   full_name: string
@@ -268,10 +268,10 @@ function ProfessionalSettingsPanel({ profile }: { profile: Profile | null }) {
 export default function SettingsPage() {
   const router = useRouter()
   const { user, refreshUser } = useAuth()
-  const isAdmin = user?.profile?.role === 'admin'
+  const activeView = getActiveView(user?.profile ?? null)
   const settingsTabs = useMemo(
-    () => (isAdmin ? ADMIN_SETTINGS_TABS : PARENT_SETTINGS_TABS),
-    [isAdmin],
+    () => (activeView === 'admin' ? ADMIN_SETTINGS_TABS : PARENT_SETTINGS_TABS),
+    [activeView],
   )
   const validTabIds = useMemo(() => settingsTabs.map(t => t.id), [settingsTabs])
   const {
@@ -348,7 +348,7 @@ export default function SettingsPage() {
     const tabParam = params.get('tab')
     if (tabParam && validTabIds.includes(tabParam as SettingsTabId)) {
       setActiveTab(tabParam as SettingsTabId)
-    } else if (!isAdmin && (billing || window.location.hash === '#billing')) {
+    } else if (activeView !== 'admin' && (billing || window.location.hash === '#billing')) {
       setActiveTab('billing')
     } else if (tabParam && !validTabIds.includes(tabParam as SettingsTabId)) {
       setActiveTab('profile')
@@ -410,11 +410,11 @@ export default function SettingsPage() {
   }, [])
 
   useEffect(() => {
-    if (profile && !isAdmin) {
+    if (profile && activeView !== 'admin') {
       loadStats()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile, isAdmin])
+  }, [profile, activeView])
 
   useEffect(() => {
     if (!validTabIds.includes(activeTab)) {
@@ -719,7 +719,7 @@ export default function SettingsPage() {
 
       <div ref={tabContentRef} className="space-y-6 scroll-mt-24">
         {/* Billing & plan */}
-        {activeTab === 'billing' && !isAdmin && (
+        {activeTab === 'billing' && activeView !== 'admin' && (
         <>
           <div className="bg-white rounded-xl shadow-lg p-6" id="billing">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Billing & plan</h2>
@@ -1117,12 +1117,12 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {activeTab === 'professional' && !isAdmin && (
+        {activeTab === 'professional' && activeView !== 'admin' && (
           <ProfessionalSettingsPanel profile={profile} />
         )}
 
         {/* Family access — guardians & relatives */}
-        {activeTab === 'family' && !isAdmin && (
+        {activeTab === 'family' && activeView !== 'admin' && (
           familyLoading && familyBabies.length === 0 ? (
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center gap-2 text-sm text-gray-500 py-2">

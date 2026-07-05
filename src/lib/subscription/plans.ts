@@ -80,7 +80,8 @@ export const PLAN_DEFINITIONS: Record<PlanSlug, PlanDefinition> = {
     features: [
       '1 baby profile',
       '7 cry analyses per month',
-      '30-second recordings',
+      '8-second recordings',
+      'Upload audio',
       '7-day insights',
       'Read community content',
     ],
@@ -97,7 +98,8 @@ export const PLAN_DEFINITIONS: Record<PlanSlug, PlanDefinition> = {
     features: [
       'Up to 3 babies',
       '60 cry analyses per month',
-      '2-minute recordings',
+      '8-second recordings',
+      'Upload audio',
       'Invite 2 caregivers',
       '90-day insights & 1 export/month',
       'Community publishing (limited)',
@@ -115,7 +117,8 @@ export const PLAN_DEFINITIONS: Record<PlanSlug, PlanDefinition> = {
     features: [
       'Unlimited babies & caregivers',
       'Unlimited cry analyses (fair use)',
-      '5-minute recordings',
+      '8-second recordings',
+      'Upload audio',
       'All-time insights & exports',
       'Unlimited community publishing',
     ],

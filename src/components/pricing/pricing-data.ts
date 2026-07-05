@@ -80,7 +80,7 @@ export const PLAN_UI: Record<PlanSlug, PlanUiConfig> = {
         items: [
           '7 AI cry analyses per calendar month',
           '8-second recordings for best accuracy',
-          'Live microphone capture only',
+          'Live microphone capture and audio upload',
           'Full AI quality on every analysis',
         ],
       },
