@@ -8,6 +8,7 @@ import { FaCheck, FaTimes } from 'react-icons/fa';
 import { deriveUrgencyFromCryAndConfidence } from '@/lib/cry-urgency';
 import { formatCryTypeLabel, getCryTypeGuidance } from '@/lib/cry-type-guidance';
 import { usePlanLimit } from '@/hooks/useSubscription';
+import PredictionFeedback from '@/components/Dashboard/PredictionFeedback';
 
 // Passing an explicit AbortError reason avoids the runtime falling back to its own
 // "signal is aborted without reason" DOMException when an internal abort listener
@@ -157,6 +158,7 @@ export default function ProcessingProgress({
   const [steps, setSteps] = useState<ProgressStep[]>([]);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [savedRecordingIdState, setSavedRecordingIdState] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const hasProcessedRef = useRef<boolean>(false);
   const onCompleteRef = useRef(onComplete);
@@ -337,6 +339,7 @@ export default function ProcessingProgress({
                         // Verify save was successful
                         const saveResult = await saveResponse.json();
                         savedRecordingId = saveResult.recording_id || null;
+                        if (savedRecordingId) setSavedRecordingIdState(savedRecordingId);
                         savedFileUrl = saveResult.file_url || null;
                         
                         // Update the step message to show verification
@@ -608,7 +611,19 @@ export default function ProcessingProgress({
               {isCompleted && result && (
                 <div className="animate-fade-in">
                   {result.prediction || result.predicted_cry_type ? (
-                    <TranslationOutput result={result} />
+                    <>
+                      <TranslationOutput result={result} />
+                      {savedRecordingIdState && (
+                        <PredictionFeedback
+                          recordingId={savedRecordingIdState}
+                          predictedCryType={
+                            result.predicted_cry_type ||
+                            result.prediction?.predicted_cry_type ||
+                            ''
+                          }
+                        />
+                      )}
+                    </>
                   ) : (
                     <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 text-gray-700">
                       <p className="font-medium">No cry type from the model</p>
