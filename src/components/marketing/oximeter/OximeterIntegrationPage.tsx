@@ -19,7 +19,6 @@ import LandingNav from '@/components/marketing/LandingNav'
 import OximeterLivePreview from '@/components/marketing/oximeter/OximeterLivePreview'
 import SiteFooter from '@/components/marketing/SiteFooter'
 import { useAuth } from '@/lib/supabase/context'
-import heroImage from '@/assets/img/1.png'
 import oximeterConnected from '@/assets/img/oximeter connected.png'
 import oximeterDisconnected from '@/assets/img/oximeter disconnected.png'
 
@@ -99,8 +98,8 @@ export default function OximeterIntegrationPage() {
 
       {/* Hero */}
       <section className="pt-32 pb-16 lg:pb-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 lg:items-center">
-          <div className="space-y-6 animate-fade-in lg:py-2">
+        <div className="max-w-7xl mx-auto">
+          <div className="max-w-3xl space-y-6 animate-fade-in lg:py-2">
             <SectionBadge>MumtaAI Oximeter Integration</SectionBadge>
             <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-bold text-gray-900 leading-tight">
               Real-Time Oxygen and Pulse Monitoring,{' '}
@@ -132,24 +131,6 @@ export default function OximeterIntegrationPage() {
               >
                 How to Connect
               </button>
-            </div>
-          </div>
-
-          <div className="relative flex justify-center lg:justify-end lg:pt-1">
-            <div className="relative w-full max-w-[220px] sm:max-w-[240px] lg:max-w-[260px]">
-              <div
-                className="absolute -inset-3 sm:-inset-4 rounded-2xl bg-gradient-to-br from-pink-300/45 via-rose-300/35 to-purple-300/30 blur-2xl opacity-80 pointer-events-none"
-                aria-hidden
-              />
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-pink-300/25 ring-1 ring-pink-100/70">
-                <Image
-                  src={heroImage}
-                  alt="MumtaAI oximeter integration overview"
-                  className="w-full h-auto block"
-                  sizes="(max-width: 640px) 220px, 260px"
-                  priority
-                />
-              </div>
             </div>
           </div>
         </div>

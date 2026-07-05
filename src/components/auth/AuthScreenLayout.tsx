@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { ReactNode, useState, useEffect } from 'react'
 import motherAndBaby from '@/assets/img/motherandbaby.png'
 import auth1 from '@/assets/img/auth-1.png'
@@ -30,18 +31,20 @@ export default function AuthScreenLayout({ children }: { children: ReactNode }) 
     <div className="flex h-dvh min-h-screen w-full overflow-hidden bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-white/50 backdrop-blur-sm md:w-1/2 md:flex-none">
         <div className="flex shrink-0 items-center px-4 pb-1 pt-4 sm:px-6 md:px-8">
-          <Image
-            src={logo}
-            alt="MumtaAI"
-            width={128}
-            height={32}
-            className="h-9 w-auto rounded-2xl shadow-md sm:h-10"
-            priority
-          />
+          <Link href="/" aria-label="Go to MumtaAI homepage" className="inline-flex">
+            <Image
+              src={logo}
+              alt="MumtaAI"
+              width={160}
+              height={40}
+              className="h-11 w-auto sm:h-12"
+              priority
+            />
+          </Link>
         </div>
 
         <div className="flex min-h-0 flex-1 justify-center overflow-x-hidden overflow-y-auto px-4 pb-8 pt-2 sm:px-6 md:px-8">
-          <div className="w-full min-w-0 max-w-[500px]">{children}</div>
+          <div className="my-auto w-full min-w-0 max-w-[500px]">{children}</div>
         </div>
       </div>
 
