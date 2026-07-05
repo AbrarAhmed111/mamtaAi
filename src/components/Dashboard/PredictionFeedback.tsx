@@ -18,14 +18,14 @@ interface Props {
   predictedCryType: string
 }
 
-type State = 'idle' | 'confirming_yes' | 'selecting' | 'submitting' | 'done'
+type State = 'idle' | 'confirming_yes' | 'confirming_yes_saving' | 'selecting' | 'submitting' | 'done'
 
 export default function PredictionFeedback({ recordingId, predictedCryType }: Props) {
   const [state, setState] = useState<State>('idle')
   const [selected, setSelected] = useState('')
 
-  const submitFeedback = async (correctedCryType: string) => {
-    setState('submitting')
+  const submitFeedback = async (correctedCryType: string, fromYesPath = false) => {
+    if (!fromYesPath) setState('submitting')
     try {
       const res = await fetch(`/api/recordings/${recordingId}/feedback`, {
         method: 'POST',
@@ -76,7 +76,7 @@ export default function PredictionFeedback({ recordingId, predictedCryType }: Pr
       )}
 
       {/* Step 2a — confirm correct prediction */}
-      {state === 'confirming_yes' && (
+      {(state === 'confirming_yes' || state === 'confirming_yes_saving') && (
         <div className="space-y-3">
           <p className="text-sm text-gray-600 font-medium">
             Great! Confirm the prediction was <span className="font-bold text-gray-800 capitalize">{CRY_TYPE_LABELS[predictedCryType] ?? predictedCryType}</span>?
@@ -84,15 +84,17 @@ export default function PredictionFeedback({ recordingId, predictedCryType }: Pr
           <div className="flex gap-2 justify-end">
             <button
               onClick={() => setState('idle')}
+              disabled={state === 'confirming_yes_saving'}
               className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700"
             >
               Cancel
             </button>
             <button
-              onClick={() => submitFeedback(predictedCryType)}
-              className="px-4 py-1.5 rounded-lg bg-green-500 text-white text-sm font-semibold hover:bg-green-600 transition-colors"
+              onClick={() => { setState('confirming_yes_saving'); submitFeedback(predictedCryType, true) }}
+              disabled={state === 'confirming_yes_saving'}
+              className="px-4 py-1.5 rounded-lg bg-green-500 text-white text-sm font-semibold hover:bg-green-600 disabled:opacity-60 transition-colors"
             >
-              Save
+              {state === 'confirming_yes_saving' ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
