@@ -543,16 +543,18 @@ export default function RecordingsPage() {
               <RecordingSection
                 selectedBaby={selectedBabyId ? babiesForModal.find(b => b.id === selectedBabyId) || null : null}
                 babyId={selectedBabyId || undefined}
-                onSave={async (blob, durationSeconds) => {
+                onSave={async (blob, durationSeconds, source) => {
                   if (!selectedBabyId) {
                     toast.error('Please select a baby first');
                     return;
                   }
                   try {
+                    const fileName = (blob as File)?.name || `recording_${Date.now()}.webm`;
                     const fd = new FormData();
-                    fd.append('file', blob, `recording_${Date.now()}.webm`);
+                    fd.append('file', blob, fileName);
                     fd.append('baby_id', selectedBabyId);
                     fd.append('duration_seconds', String(durationSeconds || 0));
+                    fd.append('source', source || 'live');
                     const res = await fetch('/api/recordings', { method: 'POST', body: fd });
                     const json = await res.json().catch(() => ({}));
                     if (!res.ok) {

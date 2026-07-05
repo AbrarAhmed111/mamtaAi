@@ -120,8 +120,10 @@ export default function Dashboard({
 
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [pendingAction, setPendingAction] = useState<'record' | 'upload'>('record');
+  const [uploadTrigger, setUploadTrigger] = useState(0);
   const [showProcessingProgress, setShowProcessingProgress] = useState(false);
-  const [processingAudio, setProcessingAudio] = useState<{ blob: Blob; durationSeconds: number } | null>(null);
+  const [processingAudio, setProcessingAudio] = useState<{ blob: Blob; durationSeconds: number; source: 'live' | 'uploaded' } | null>(null);
   const [processingResult, setProcessingResult] = useState<any>(null);
   const [dailyStats, setDailyStats] = useState<{ recordingsToday: number; minutesToday: number; avgConfidenceToday: number; urgentToday: number } | null>(null);
   const [expertApplyStatus, setExpertApplyStatus] = useState<
@@ -279,6 +281,7 @@ export default function Dashboard({
         return;
       }
       if (babies.length === 0) {
+        setPendingAction('record');
         setSelectedBabyId(null);
         setShowSelectBaby(true);
         return;
@@ -288,7 +291,8 @@ export default function Dashboard({
         startRecording();
         return;
       }
-      if (!selectedBabyId) setSelectedBabyId(babies[0].id);
+      setPendingAction('record');
+      setSelectedBabyId(null);
       setShowSelectBaby(true);
       return;
     }
@@ -324,14 +328,9 @@ export default function Dashboard({
   };
 
   const handleStartRecording = () => {
-    // Don't show baby selection if recording is already in progress or baby is already selected
+    // Don't show baby selection if recording is already in progress
     if (isRecording || shouldStartRecording) {
       return; // Recording already started, don't interfere
-    }
-    if (selectedBabyId) {
-      // Baby already selected, just start recording
-      startRecording();
-      return;
     }
     if (babies.length === 0) {
       toast.error('Please add your baby first.');
@@ -343,7 +342,29 @@ export default function Dashboard({
       startRecording();
       return;
     }
-    if (!selectedBabyId) setSelectedBabyId(babies[0].id);
+    // Always ask again which baby this recording is for, even if one was picked before
+    setPendingAction('record');
+    setSelectedBabyId(null);
+    setShowSelectBaby(true);
+  };
+
+  const handleUploadRequested = () => {
+    if (isRecording || shouldStartRecording) {
+      return;
+    }
+    if (babies.length === 0) {
+      toast.error('Please add your baby first.');
+      setShowSelectBaby(false);
+      return;
+    }
+    if (babies.length === 1) {
+      setSelectedBabyId(babies[0].id);
+      setUploadTrigger(n => n + 1);
+      return;
+    }
+    // Always ask which baby this upload is for, even if one was picked before
+    setPendingAction('upload');
+    setSelectedBabyId(null);
     setShowSelectBaby(true);
   };
 
@@ -508,11 +529,20 @@ export default function Dashboard({
               return;
             }
             setShowSelectBaby(false);
-            startRecording();
+            if (pendingAction === 'upload') {
+              setUploadTrigger(n => n + 1);
+            } else {
+              startRecording();
+            }
           }}
-          onCancel={() => setShowSelectBaby(false)}
+          onCancel={() => {
+            setShowSelectBaby(false);
+            setSelectedBabyId(null);
+            setPendingAction('record');
+          }}
           onAddBaby={handleAddBaby}
           isLoading={babiesLoading}
+          confirmLabel={pendingAction === 'upload' ? 'Upload Audio' : 'Start Recording'}
         />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
@@ -552,13 +582,15 @@ export default function Dashboard({
                   onStopRecording={stopRecording}
                   shouldStartRecording={shouldStartRecording}
                   selectedBaby={selectedBabyId ? babies.find(b => b.id === selectedBabyId) || null : null}
-                  onProcessingStart={(blob, durationSeconds) => {
+                  onUploadRequested={handleUploadRequested}
+                  uploadTrigger={uploadTrigger}
+                  onProcessingStart={(blob, durationSeconds, source) => {
                     const targetBabyId = selectedBabyId || (babies[0]?.id || null);
                     if (!targetBabyId) {
                       toast.error('Please add/select a baby first');
                       return;
                     }
-                    setProcessingAudio({ blob, durationSeconds });
+                    setProcessingAudio({ blob, durationSeconds, source: source || 'live' });
                     setShowProcessingProgress(true);
                   }}
                 />
@@ -892,6 +924,7 @@ export default function Dashboard({
             toast.success('Audio processed successfully!');
           }}
           audioFile={processingAudio.blob}
+          source={processingAudio.source}
           babyId={selectedBabyId || (babies[0]?.id || '')}
           babyName={selectedBabyId ? babies.find(b => b.id === selectedBabyId)?.name : babies[0]?.name}
         />

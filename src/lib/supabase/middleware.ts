@@ -22,12 +22,18 @@ const API_PUBLIC_PREFIXES = ['/api/auth/', '/api/webhooks/', '/api/log-error']
 
 export async function updateSession(request: NextRequest) {
   const currentPath = request.nextUrl.pathname
-  const supabase = await createServerClient()
-  const supabaseResponse = NextResponse.next()
 
-  if (currentPath.startsWith('/api/auth/') || currentPath.startsWith('/api/webhooks/')) {
+  // Skip Supabase entirely for routes that never need auth
+  if (
+    currentPath.startsWith('/api/auth/') ||
+    currentPath.startsWith('/api/webhooks/') ||
+    PUBLIC_PATHS.includes(currentPath)
+  ) {
     return NextResponse.next()
   }
+
+  const supabase = await createServerClient()
+  const supabaseResponse = NextResponse.next()
 
   const {
     data: { user },

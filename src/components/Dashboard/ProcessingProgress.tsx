@@ -9,6 +9,13 @@ import { deriveUrgencyFromCryAndConfidence } from '@/lib/cry-urgency';
 import { formatCryTypeLabel, getCryTypeGuidance } from '@/lib/cry-type-guidance';
 import { usePlanLimit } from '@/hooks/useSubscription';
 
+// Passing an explicit AbortError reason avoids the runtime falling back to its own
+// "signal is aborted without reason" DOMException when an internal abort listener
+// reads `signal.reason` before it would otherwise be auto-populated.
+function abortReason() {
+  return new DOMException('Processing cancelled', 'AbortError');
+}
+
 interface ProgressStep {
   step: string;
   message: string;
@@ -23,6 +30,7 @@ interface ProcessingProgressProps {
   audioFile: Blob;
   babyId: string;
   babyName?: string;
+  source?: 'live' | 'uploaded';
 }
 
 function UrgencyMeter({ level, meterPercent }: { level: string; meterPercent: number }) {
@@ -96,7 +104,7 @@ function TranslationOutput({ result }: { result: Record<string, any> }) {
   const { level, meterPercent } = resolveUrgencyForDisplay(result, cryRaw, confidence)
 
   return (
-    <div className="mt-6 space-y-4">
+    <div className="space-y-4">
       <div className="rounded-xl border-2 border-pink-100 bg-gradient-to-br from-white to-pink-50/40 p-6 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-wide text-pink-600">Cry type</p>
         <p className="mt-1 text-2xl font-bold capitalize text-gray-900 sm:text-3xl">{label}</p>
@@ -141,7 +149,8 @@ export default function ProcessingProgress({
   onComplete,
   audioFile,
   babyId,
-  babyName
+  babyName,
+  source = 'live'
 }: ProcessingProgressProps) {
   const handlePlanLimit = usePlanLimit();
   const [currentStep, setCurrentStep] = useState<string>('');
@@ -161,7 +170,7 @@ export default function ProcessingProgress({
     if (!isOpen || !audioFile) {
       // Cleanup when modal closes
       if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+        abortControllerRef.current.abort(abortReason());
         abortControllerRef.current = null;
       }
       hasProcessedRef.current = false;
@@ -180,24 +189,32 @@ export default function ProcessingProgress({
     setError(null);
     hasProcessedRef.current = true;
 
+    // Create the abort controller synchronously (before any async work) so that if this
+    // effect's cleanup runs before the health checks below resolve — e.g. React Strict
+    // Mode's dev-only double effect invocation — it can actually cancel this run instead
+    // of silently letting it continue alongside a second, parallel run (which was
+    // double-saving the recording and firing onComplete/the success toast twice).
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     const processAudio = async () => {
       try {
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
         const endpoint = `${backendUrl}/api/streaming/process-audio`;
-        
+
         // Log for debugging
         console.log('Processing audio with backend URL:', backendUrl);
         console.log('Endpoint:', endpoint);
-        
+
         // First, test if backend is reachable and streaming endpoint exists
         try {
-          const healthCheck = await fetch(`${backendUrl}/health`, { method: 'GET' });
+          const healthCheck = await fetch(`${backendUrl}/health`, { method: 'GET', signal: controller.signal });
           if (!healthCheck.ok) {
             console.warn('Backend health check failed:', healthCheck.status);
           }
-          
+
           // Test streaming endpoint specifically
-          const streamingHealthCheck = await fetch(`${backendUrl}/api/streaming/health`, { method: 'GET' });
+          const streamingHealthCheck = await fetch(`${backendUrl}/api/streaming/health`, { method: 'GET', signal: controller.signal });
           if (!streamingHealthCheck.ok) {
             console.error('Streaming endpoint not found:', streamingHealthCheck.status);
             setError(`Streaming endpoint not found at ${backendUrl}/api/streaming/health. Please restart the FastAPI server to load the streaming router.`);
@@ -206,26 +223,26 @@ export default function ProcessingProgress({
           }
           console.log('✓ Streaming endpoint is available');
         } catch (healthError: any) {
+          if (healthError?.name === 'AbortError') return;
           console.error('Cannot reach backend server:', healthError);
           setError(`Cannot connect to backend server at ${backendUrl}. Make sure the FastAPI server is running and has been restarted after adding the streaming router.`);
           setCurrentStep('error');
           return;
         }
-        
+
+        const uploadedFileName = (audioFile as File)?.name || 'recording.webm';
+
         const formData = new FormData();
-        formData.append('file', audioFile, 'recording.webm');
+        formData.append('file', audioFile, uploadedFileName);
         formData.append('baby_id', babyId);
         formData.append('remove_noise', 'true');
         formData.append('normalize', 'true');
         formData.append('n_mfcc', '13');
 
-        // Create abort controller for cleanup
-        abortControllerRef.current = new AbortController();
-        
         const response = await fetch(endpoint, {
           method: 'POST',
           body: formData,
-          signal: abortControllerRef.current.signal,
+          signal: controller.signal,
         });
 
         if (!response.ok) {
@@ -287,12 +304,13 @@ export default function ProcessingProgress({
                   hasSaved = true; // Mark as saved to prevent duplicates - MUST be set BEFORE async operations
 
                   // Save cleaned audio to database via Next.js API (only once)
-                  if (!abortControllerRef.current?.signal.aborted) {
+                  if (!controller.signal.aborted) {
                     try {
                       console.log('💾 Saving audio to database...');
                       const saveFormData = new FormData();
-                      saveFormData.append('file', audioFile); // Original file for reference
+                      saveFormData.append('file', audioFile, uploadedFileName); // Original file for reference
                       saveFormData.append('baby_id', babyId);
+                      saveFormData.append('source', source);
                       if (processedAudioBase64) {
                         saveFormData.append('processed_audio_base64', processedAudioBase64);
                       }
@@ -303,7 +321,7 @@ export default function ProcessingProgress({
                       const saveResponse = await fetch('/api/audio/process', {
                         method: 'POST',
                         body: saveFormData,
-                        signal: abortControllerRef.current?.signal,
+                        signal: controller.signal,
                       });
 
                       if (!saveResponse.ok) {
@@ -356,7 +374,7 @@ export default function ProcessingProgress({
                 // Handle completion
                 if (data.step === 'completed') {
                   setResult(data);
-                  if (!abortControllerRef.current?.signal.aborted) {
+                  if (!controller.signal.aborted) {
                     onCompleteRef.current(data);
                   }
 
@@ -366,7 +384,8 @@ export default function ProcessingProgress({
                       await fetch(`/api/recordings/${savedRecordingId}/features`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ features: data.features, extraction_method: 'streaming' })
+                        body: JSON.stringify({ features: data.features, extraction_method: 'streaming' }),
+                        signal: controller.signal,
                       });
                     } catch (featureError) {
                       console.error('Failed to save extracted features:', featureError);
@@ -385,7 +404,8 @@ export default function ProcessingProgress({
                           confidence_score: data.confidence_score,
                           confidence_scores: data.confidence_scores,
                           model_info: data.model_info,
-                        })
+                        }),
+                        signal: controller.signal,
                       });
                     } catch (predictionError) {
                       console.error('Failed to save prediction:', predictionError);
@@ -409,21 +429,23 @@ export default function ProcessingProgress({
           setCurrentStep('error');
         }
       } finally {
-        abortControllerRef.current = null;
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null;
+        }
       }
     };
 
     processAudio();
-    
+
     // Cleanup function
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+      controller.abort(abortReason());
+      if (abortControllerRef.current === controller) {
         abortControllerRef.current = null;
       }
       hasProcessedRef.current = false;
     };
-  }, [isOpen, audioFile, babyId]); // Removed onComplete from dependencies
+  }, [isOpen, audioFile, babyId, source]); // Removed onComplete from dependencies
 
   if (!isOpen) return null;
 
@@ -441,7 +463,7 @@ export default function ProcessingProgress({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] transform transition-all flex flex-col">
+      <div className={`bg-white rounded-2xl shadow-2xl w-full max-w-2xl transform transition-all flex flex-col ${isCompleted || hasError ? '' : 'max-h-[90vh]'}`}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
           <div>
@@ -464,7 +486,7 @@ export default function ProcessingProgress({
         </div>
 
         {/* Progress Steps */}
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className={`p-6 ${isCompleted || hasError ? '' : 'overflow-y-auto flex-1'}`}>
         
           {hasError ? (
             <div className="text-center py-8">
@@ -482,7 +504,7 @@ export default function ProcessingProgress({
             </div>
           ) : (
             <div className="space-y-4">
-              {allSteps.map((stepName, index) => {
+              {!isCompleted && allSteps.map((stepName, index) => {
                 const config = STEP_CONFIG[stepName] || { label: stepName };
                 const status = getStepStatus(stepName);
                 const stepData = steps.find(s => s.step === stepName);
@@ -584,16 +606,27 @@ export default function ProcessingProgress({
 
               {/* Translation output — cry type, guidance, urgency only (no scores / threshold UI) */}
               {isCompleted && result && (
-                <>
+                <div className="animate-fade-in">
                   {result.prediction || result.predicted_cry_type ? (
                     <TranslationOutput result={result} />
                   ) : (
-                    <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-6 text-gray-700">
+                    <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 text-gray-700">
                       <p className="font-medium">No cry type from the model</p>
                       <p className="mt-2 text-sm">Features were saved; train or connect the classifier to get a translation.</p>
                     </div>
                   )}
-                </>
+                </div>
+              )}
+
+              {!isCompleted && (
+                <div className="flex justify-center pt-2">
+                  <button
+                    onClick={onClose}
+                    className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               )}
             </div>
           )}

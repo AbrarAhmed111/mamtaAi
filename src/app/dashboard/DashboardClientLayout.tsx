@@ -22,8 +22,8 @@ import ConnectOximeterModal from '@/components/oximeter/ConnectOximeterModal'
 import OximeterAlertModal from '@/components/oximeter/OximeterAlertModal'
 import {
   getActiveView,
-  getAdminDashboardViewPreference,
-  getExpertViewPreference,
+  getAdminViewSwitcherLabel,
+  getExpertViewSwitcherLabel,
   getSidebarView,
   isAdminAccount,
   isVerifiedExpert,
@@ -135,8 +135,8 @@ export default function DashboardClientLayout({
   const sidebarView = getSidebarView(user?.profile ?? null, pathname)
   const verifiedExpert = isVerifiedExpert(user?.profile ?? null)
   const adminAccount = isAdminAccount(user?.profile ?? null)
-  const expertViewPreference = getExpertViewPreference(user?.profile ?? null)
-  const adminViewPreference = getAdminDashboardViewPreference(user?.profile ?? null)
+  const expertViewPreference = getExpertViewSwitcherLabel(user?.profile ?? null, pathname)
+  const adminViewPreference = getAdminViewSwitcherLabel(user?.profile ?? null, pathname)
   const showParentApplicationBanner =
     activeView === 'parent' && !adminAccount && displayUser.role !== 'admin'
 
@@ -461,7 +461,7 @@ export default function DashboardClientLayout({
                             onClick={() => void handleNotificationListItemClick(n)}
                             className={`w-full border-b border-pink-50 p-3 text-left hover:bg-pink-50/40 ${
                               isStickyExpert
-                                ? 'bg-pink-50 ring-2 ring-inset ring-pink-300 animate-bell-alert'
+                                ? 'bg-pink-50 ring-2 ring-inset ring-pink-300'
                                 : n.isRead
                                   ? 'bg-white'
                                   : 'bg-pink-50/50'

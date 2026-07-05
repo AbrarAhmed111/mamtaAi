@@ -33,6 +33,8 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null;
     const babyId = String(formData.get('baby_id') || '');
     const processedAudioBase64 = String(formData.get('processed_audio_base64') || '');
+    const sourceRaw = String(formData.get('source') || 'live').toLowerCase();
+    const recordingSource = sourceRaw === 'uploaded' ? 'uploaded' : 'live';
 
     if (!file || !babyId) {
       return NextResponse.json({ error: 'Missing audio file or baby_id' }, { status: 400 });
@@ -45,7 +47,7 @@ export async function POST(request: NextRequest) {
     const recordingLimit = await checkLimit(user.id, 'create_recording', {
       timezone,
       durationSeconds,
-      recordingSource: 'live',
+      recordingSource,
     });
     if (!recordingLimit.allowed) return planLimitErrorResponse(recordingLimit, planCtx.slug);
 
@@ -94,7 +96,7 @@ export async function POST(request: NextRequest) {
       file_url: fileUrl,
       duration_seconds: Number(formData.get('duration_seconds')) || null,
       recorded_at: recordedAt,
-      source: 'live',
+      source: recordingSource,
       created_at: new Date().toISOString(),
     } as any;
 

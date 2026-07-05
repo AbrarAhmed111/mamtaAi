@@ -76,3 +76,31 @@ export function getExpertViewPreference(
   if (!profile) return 'parent'
   return readActiveViewPreference(profile)
 }
+
+function isAdminPath(pathname: string | null | undefined): boolean {
+  return Boolean(pathname && (pathname === '/dashboard/admin' || pathname.startsWith('/dashboard/admin/')))
+}
+
+function isExpertOwnPath(pathname: string | null | undefined): boolean {
+  return Boolean(pathname && (pathname === '/dashboard/expert' || pathname.startsWith('/dashboard/expert/')))
+}
+
+/** "Viewing as" badge for admins — reflects the stored preference, unless the current route is
+ *  itself under the admin panel, in which case the badge should show Admin regardless of preference. */
+export function getAdminViewSwitcherLabel(
+  profile: ProfileLike | null | undefined,
+  pathname: string | null | undefined,
+): AdminDashboardView {
+  if (isAdminPath(pathname)) return 'admin'
+  return getAdminDashboardViewPreference(profile)
+}
+
+/** "Viewing as" badge for verified experts — same path-override rule as the admin badge above,
+ *  scoped to the expert's own workspace routes (not the parent-facing "browse experts" pages). */
+export function getExpertViewSwitcherLabel(
+  profile: ProfileLike | null | undefined,
+  pathname: string | null | undefined,
+): ActiveViewPreference {
+  if (isExpertOwnPath(pathname)) return 'expert'
+  return getExpertViewPreference(profile)
+}
