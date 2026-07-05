@@ -18,8 +18,10 @@ interface Props {
   predictedCryType: string
 }
 
+type State = 'idle' | 'confirming_yes' | 'selecting' | 'submitting' | 'done'
+
 export default function PredictionFeedback({ recordingId, predictedCryType }: Props) {
-  const [state, setState] = useState<'idle' | 'selecting' | 'submitting' | 'done'>('idle')
+  const [state, setState] = useState<State>('idle')
   const [selected, setSelected] = useState('')
 
   const submitFeedback = async (correctedCryType: string) => {
@@ -35,7 +37,7 @@ export default function PredictionFeedback({ recordingId, predictedCryType }: Pr
       })
       if (!res.ok) throw new Error('Failed to save feedback')
       setState('done')
-      toast.success('Thanks! Your correction helps improve the model.')
+      toast.success('Thanks! Your feedback helps improve the model.')
     } catch {
       toast.error('Could not save feedback. Please try again.')
       setState('idle')
@@ -52,12 +54,13 @@ export default function PredictionFeedback({ recordingId, predictedCryType }: Pr
 
   return (
     <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+      {/* Step 1 — initial yes/no */}
       {state === 'idle' && (
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm text-gray-600 font-medium">Was this prediction correct?</p>
           <div className="flex gap-2">
             <button
-              onClick={() => submitFeedback(predictedCryType)}
+              onClick={() => setState('confirming_yes')}
               className="px-3 py-1.5 rounded-lg bg-green-100 text-green-700 text-sm font-semibold hover:bg-green-200 transition-colors"
             >
               👍 Yes
@@ -72,6 +75,30 @@ export default function PredictionFeedback({ recordingId, predictedCryType }: Pr
         </div>
       )}
 
+      {/* Step 2a — confirm correct prediction */}
+      {state === 'confirming_yes' && (
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600 font-medium">
+            Great! Confirm the prediction was <span className="font-bold text-gray-800 capitalize">{CRY_TYPE_LABELS[predictedCryType] ?? predictedCryType}</span>?
+          </p>
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => setState('idle')}
+              className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => submitFeedback(predictedCryType)}
+              className="px-4 py-1.5 rounded-lg bg-green-500 text-white text-sm font-semibold hover:bg-green-600 transition-colors"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2b — pick correct label */}
       {(state === 'selecting' || state === 'submitting') && (
         <div className="space-y-3">
           <p className="text-sm text-gray-600 font-medium">What was your baby actually doing?</p>
@@ -104,7 +131,7 @@ export default function PredictionFeedback({ recordingId, predictedCryType }: Pr
               disabled={!selected || state === 'submitting'}
               className="px-4 py-1.5 rounded-lg bg-pink-500 text-white text-sm font-semibold hover:bg-pink-600 disabled:opacity-40 transition-colors"
             >
-              {state === 'submitting' ? 'Saving...' : 'Submit'}
+              {state === 'submitting' ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
