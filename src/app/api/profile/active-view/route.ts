@@ -90,7 +90,12 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: updateError.message }, { status: 500 })
       }
 
-      return NextResponse.json({ ok: true, profile: updated, dashboard_view: view })
+      return NextResponse.json({
+        ok: true,
+        profile: updated,
+        dashboard_view: adminView,
+        active_view: expertView,
+      })
     }
 
     const view = activeView as ActiveViewPreference | undefined
