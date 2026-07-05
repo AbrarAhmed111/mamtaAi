@@ -1,6 +1,7 @@
 import { FaUser } from 'react-icons/fa'
 import { DETAIL_HERO_CLASS } from './detailStyles'
 import DetailStat from './DetailStat'
+import { highResAvatar } from '@/lib/utils/avatar'
 
 export type ProfileHeroStat = {
   label: string
@@ -28,14 +29,15 @@ export default function ProfileHero({
   placeholderClassName = 'bg-gray-50',
   imageAlt,
 }: ProfileHeroProps) {
+  const heroImage = highResAvatar(imageUrl)
   return (
     <section className={DETAIL_HERO_CLASS}>
       <div className="flex flex-col md:flex-row">
         <div className="w-full md:w-1/3">
-          {imageUrl ? (
+          {heroImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={imageUrl}
+              src={heroImage}
               alt={imageAlt || name}
               className="h-64 w-full object-cover md:h-full"
             />

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { resolveOAuthPostLoginPath } from '@/lib/expert/oauth-routing'
+import { highResAvatar } from '@/lib/utils/avatar'
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
@@ -48,11 +49,14 @@ export async function GET(request: NextRequest) {
           (user.email?.split('@')[0] as string) ||
           'User'
         
-        // Google provides picture in user_metadata.picture, not avatar_url
+        // Google provides picture in user_metadata.picture, not avatar_url.
+        // Bump the default 96px size so it's not blurry when displayed large.
         const avatarUrl =
-          (user.user_metadata?.avatar_url as string) ||
-          (user.user_metadata?.picture as string) ||
-          null
+          highResAvatar(
+            (user.user_metadata?.avatar_url as string) ||
+            (user.user_metadata?.picture as string) ||
+            null
+          ) || null
 
         if (profileFetchError) {
           // Create minimal profile for new users
