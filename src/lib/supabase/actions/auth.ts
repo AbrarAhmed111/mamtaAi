@@ -3,6 +3,9 @@
 import { supabaseAdmin } from '../client';
 import { createServerClient } from '../server';
 import { Database } from '@/types/supabase';
+import { sendEmail } from '@/lib/email/send-email';
+import { createForgotPasswordEmailTemplate } from '@/lib/email/templates';
+import { getInviteEmailLogoMailParts } from '@/lib/email/invite-email-logo';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 type ProfileInsert = Database['public']['Tables']['profiles']['Insert'];
@@ -263,17 +266,44 @@ export async function getCurrentUser(): Promise<{ user: AuthUser | null; error: 
   }
 }
 
-// Send password reset email
+// Send password reset email via the app's own SMTP (not Supabase's built-in
+// email, which is rate-limited and was not delivering). We mint a recovery
+// token with the admin API and email a link to our own verify route.
 export async function resetPassword(email: string): Promise<{ error: AuthError | null }> {
   try {
-    const supabase = await createServerClient()
     const baseURL = await getBaseURL()
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${baseURL}/api/auth/reset-password`,
-    });
+    const redirectTo = `${baseURL}/api/auth/reset-password`
 
-    if (error) {
-      return { error: { message: error.message, code: error.message } };
+    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: { redirectTo },
+    })
+
+    if (error || !data?.properties?.hashed_token) {
+      // Never reveal whether an account exists — treat "user not found" as success
+      if (/not.*found|no.*user|user.*(exist|registered)/i.test(error?.message || '')) {
+        return { error: null }
+      }
+      return { error: { message: error?.message || 'Failed to generate reset link' } }
+    }
+
+    // Verify the token on our own route (verifyOtp), so no Supabase redirect
+    // allow-list entry or PKCE code-verifier cookie is required.
+    const resetLink = `${redirectTo}?token_hash=${encodeURIComponent(data.properties.hashed_token)}&type=recovery`
+
+    const { logoUrl, attachments } = getInviteEmailLogoMailParts(baseURL)
+    const html = createForgotPasswordEmailTemplate({ resetLink, logoUrl, expiryMinutes: 60 })
+
+    const sent = await sendEmail({
+      to: email,
+      subject: 'Reset your MumtaAI password',
+      html,
+      attachments: attachments.length > 0 ? attachments : undefined,
+    })
+
+    if (!sent.ok) {
+      return { error: { message: sent.error || 'Failed to send reset email' } }
     }
 
     return { error: null };

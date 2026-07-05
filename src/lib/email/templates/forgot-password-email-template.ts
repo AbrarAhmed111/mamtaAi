@@ -4,17 +4,20 @@ interface ForgotPasswordTemplateData {
   userName?: string
   resetLink?: string
   expiryMinutes?: number
+  logoUrl?: string | null
 }
 
 export function createForgotPasswordEmailTemplate({
-  userName = '{{user_name}}',
+  userName = 'there',
   resetLink = '{{reset_link}}',
   expiryMinutes = 60,
+  logoUrl,
 }: ForgotPasswordTemplateData = {}): string {
   return createBaseEmailTemplate({
     preheader: 'Reset your Mumta AI account password.',
     heading: 'Reset Your Password',
     subheading: 'A secure link to update your password is ready.',
+    logoUrl,
     bodyHtml: `
       <div style="font-size:15px;line-height:24px;color:#314067;">
         Hi ${userName},
