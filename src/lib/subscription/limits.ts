@@ -20,6 +20,15 @@ function isUnlimited(value: number | null | undefined): boolean {
   return value === null || value === undefined
 }
 
+async function isAdminUser(userId: string): Promise<boolean> {
+  const { data } = await (supabaseAdmin as any)
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle()
+  return (data?.role || '').toLowerCase() === 'admin'
+}
+
 function exceedsCount(current: number, max: number | null | undefined, softCap?: number | null): boolean {
   const cap = softCap ?? max
   if (isUnlimited(cap)) return false
@@ -81,6 +90,13 @@ export async function checkLimit(
   action: SubscriptionAction,
   metadata: CheckLimitMetadata = {},
 ): Promise<PlanLimitCheckResult> {
+  if (
+    (action === 'create_recording' || action === 'recording_duration' || action === 'audio_upload') &&
+    (await isAdminUser(userId))
+  ) {
+    return { allowed: true }
+  }
+
   const ctx = await getSubscriptionContext(userId, metadata.timezone)
   const { limitations: lim, slug, usage } = ctx
   const upgrade = recommendedUpgrade(slug)
