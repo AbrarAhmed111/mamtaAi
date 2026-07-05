@@ -133,7 +133,7 @@ export default function PredictionFeedback({ recordingId, predictedCryType }: Pr
           {/* Custom label input */}
           <div>
             <label className="block text-xs text-gray-500 font-medium mb-1">
-              Or type your own label
+              Or add your own custom label
             </label>
             <input
               type="text"
