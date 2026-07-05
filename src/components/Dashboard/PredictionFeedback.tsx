@@ -20,9 +20,18 @@ interface Props {
 
 type State = 'idle' | 'confirming_yes' | 'confirming_yes_saving' | 'selecting' | 'submitting' | 'done'
 
+// Normalize a free-text custom label to the model's snake_case convention
+function normalizeLabel(raw: string): string {
+  return raw.trim().toLowerCase().replace(/\s+/g, '_')
+}
+
 export default function PredictionFeedback({ recordingId, predictedCryType }: Props) {
   const [state, setState] = useState<State>('idle')
   const [selected, setSelected] = useState('')
+  const [customLabel, setCustomLabel] = useState('')
+
+  // What actually gets submitted from the "No" path: custom text wins if present
+  const effectiveLabel = customLabel.trim() ? normalizeLabel(customLabel) : selected
 
   const submitFeedback = async (correctedCryType: string, fromYesPath = false) => {
     if (!fromYesPath) setState('submitting')
@@ -100,7 +109,7 @@ export default function PredictionFeedback({ recordingId, predictedCryType }: Pr
         </div>
       )}
 
-      {/* Step 2b — pick correct label */}
+      {/* Step 2b — pick correct label (or write a custom one) */}
       {(state === 'selecting' || state === 'submitting') && (
         <div className="space-y-3">
           <p className="text-sm text-gray-600 font-medium">What was your baby actually doing?</p>
@@ -108,10 +117,10 @@ export default function PredictionFeedback({ recordingId, predictedCryType }: Pr
             {Object.entries(CRY_TYPE_LABELS).map(([value, label]) => (
               <button
                 key={value}
-                onClick={() => setSelected(value)}
+                onClick={() => { setSelected(value); setCustomLabel('') }}
                 disabled={state === 'submitting'}
                 className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                  selected === value
+                  selected === value && !customLabel.trim()
                     ? 'bg-pink-500 text-white border-pink-500'
                     : 'bg-white text-gray-700 border-gray-200 hover:border-pink-300'
                 }`}
@@ -120,17 +129,34 @@ export default function PredictionFeedback({ recordingId, predictedCryType }: Pr
               </button>
             ))}
           </div>
+
+          {/* Custom label input */}
+          <div>
+            <label className="block text-xs text-gray-500 font-medium mb-1">
+              Or type your own label
+            </label>
+            <input
+              type="text"
+              value={customLabel}
+              onChange={(e) => { setCustomLabel(e.target.value); if (e.target.value.trim()) setSelected('') }}
+              disabled={state === 'submitting'}
+              placeholder="e.g. gassy, teething, wants cuddles"
+              maxLength={40}
+              className="w-full px-3 py-2 rounded-lg text-sm border border-gray-200 bg-white text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-pink-400 transition-colors disabled:opacity-60"
+            />
+          </div>
+
           <div className="flex gap-2 justify-end">
             <button
-              onClick={() => { setState('idle'); setSelected('') }}
+              onClick={() => { setState('idle'); setSelected(''); setCustomLabel('') }}
               disabled={state === 'submitting'}
               className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700"
             >
               Cancel
             </button>
             <button
-              onClick={() => selected && submitFeedback(selected)}
-              disabled={!selected || state === 'submitting'}
+              onClick={() => effectiveLabel && submitFeedback(effectiveLabel)}
+              disabled={!effectiveLabel || state === 'submitting'}
               className="px-4 py-1.5 rounded-lg bg-pink-500 text-white text-sm font-semibold hover:bg-pink-600 disabled:opacity-40 transition-colors"
             >
               {state === 'submitting' ? 'Saving...' : 'Save'}
