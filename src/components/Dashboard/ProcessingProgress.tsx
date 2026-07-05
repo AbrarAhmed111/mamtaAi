@@ -466,7 +466,7 @@ export default function ProcessingProgress({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className={`bg-white rounded-2xl shadow-2xl w-full max-w-2xl transform transition-all flex flex-col ${isCompleted || hasError ? '' : 'max-h-[90vh]'}`}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] transform transition-all flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
           <div>
@@ -489,7 +489,7 @@ export default function ProcessingProgress({
         </div>
 
         {/* Progress Steps */}
-        <div className={`p-6 ${isCompleted || hasError ? '' : 'overflow-y-auto flex-1'}`}>
+        <div className="p-6 overflow-y-auto flex-1">
         
           {hasError ? (
             <div className="text-center py-8">
@@ -614,14 +614,16 @@ export default function ProcessingProgress({
                     <>
                       <TranslationOutput result={result} />
                       {savedRecordingIdState && (
-                        <PredictionFeedback
-                          recordingId={savedRecordingIdState}
-                          predictedCryType={
-                            result.predicted_cry_type ||
-                            result.prediction?.predicted_cry_type ||
-                            ''
-                          }
-                        />
+                        <div className="pb-2">
+                          <PredictionFeedback
+                            recordingId={savedRecordingIdState}
+                            predictedCryType={
+                              result.predicted_cry_type ||
+                              result.prediction?.predicted_cry_type ||
+                              ''
+                            }
+                          />
+                        </div>
                       )}
                     </>
                   ) : (
