@@ -40,7 +40,7 @@ export const PRICING_FAQ = [
 export const COMPARISON_ROWS: ComparisonRow[] = [
   { category: 'Profiles', label: 'Baby profiles', free: '1', plus: 'Up to 3', pro: 'Unlimited*' },
   { category: 'Recordings', label: 'Cry analyses / month', free: '7', plus: '60', pro: 'Unlimited*' },
-  { category: 'Recordings', label: 'Max recording length', free: '30 sec', plus: '2 min', pro: '5 min' },
+  { category: 'Recordings', label: 'Max recording length', free: '8 sec', plus: '8 sec', pro: '8 sec' },
   { category: 'Family', label: 'Invite caregivers', free: false, plus: 'Up to 2', pro: 'Unlimited' },
   { category: 'Tracking', label: 'Activity logs / month', free: '20', plus: 'Unlimited', pro: 'Unlimited' },
   {
@@ -79,7 +79,7 @@ export const PLAN_UI: Record<PlanSlug, PlanUiConfig> = {
         title: 'Cry intelligence',
         items: [
           '7 AI cry analyses per calendar month',
-          '30-second max recording length',
+          '8-second recordings for best accuracy',
           'Live microphone capture only',
           'Full AI quality on every analysis',
         ],
@@ -114,7 +114,7 @@ export const PLAN_UI: Record<PlanSlug, PlanUiConfig> = {
         title: 'Cry intelligence',
         items: [
           '60 cry analyses per month',
-          '2-minute recordings',
+          '8-second recordings for best accuracy',
           'Confidence scores & full cry guidance',
         ],
       },
@@ -149,7 +149,7 @@ export const PLAN_UI: Record<PlanSlug, PlanUiConfig> = {
         title: 'Cry intelligence',
         items: [
           'Unlimited cry analyses (fair use)*',
-          '5-minute recordings',
+          '8-second recordings for best accuracy',
           'Live microphone capture',
           'Per-baby comparison insights',
         ],
