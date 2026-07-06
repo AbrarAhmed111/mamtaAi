@@ -104,10 +104,10 @@ export default function SiteFooter() {
               <h3 className="text-lg font-semibold mb-6 text-white">Support</h3>
               <ul className="space-y-3 text-sm">
                 <li>
-                  <a href="mailto:support@mamtaai.com" className={linkClass}>
+                  <Link href="/contact" className={linkClass}>
                     <FaArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                     Contact Support
-                  </a>
+                  </Link>
                 </li>
                 <li>
                   <Link href="/privacy" className={linkClass}>
