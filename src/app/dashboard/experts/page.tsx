@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
@@ -485,8 +486,9 @@ export default function ExpertsPage() {
         </div>
       </section>
 
-      {/* Expert detail modal */}
-      {selectedExpert && (
+      {/* Expert detail modal — portaled to <body> so the fixed overlay covers the
+          full viewport instead of being clipped by the boxed dashboard layout */}
+      {selectedExpert && typeof document !== 'undefined' && createPortal(
         <div
           className="fixed inset-0 z-[75] flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm"
           onClick={() => setSelectedExpertId(null)}
@@ -562,7 +564,8 @@ export default function ExpertsPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
