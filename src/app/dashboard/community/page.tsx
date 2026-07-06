@@ -237,15 +237,15 @@ function CommunityPageContent() {
         </div>
 
         {/* Search and Filters */}
-        <div className="mb-6 flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        <div className="mb-6 flex flex-col md:flex-row md:items-center gap-3">
+          <div className="relative flex-1">
+            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+              className="w-full h-11 pl-10 pr-4 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
             />
           </div>
           {activeTab === 'forums' && forumCategories.length > 0 && (
@@ -257,17 +257,16 @@ function CommunityPageContent() {
                 ...forumCategories.map(cat => ({ value: cat.id, label: cat.name })),
               ]}
               aria-label="Filter by category"
+              className="w-full md:w-56 md:shrink-0"
             />
           )}
-          <div className="flex gap-2">
-            <Link
-              href={`/dashboard/community/${activeTab}/create`}
-              className="px-6 py-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 transition-all flex items-center gap-2"
-            >
-              <FaPlus />
-              Create New
-            </Link>
-          </div>
+          <Link
+            href={`/dashboard/community/${activeTab}/create`}
+            className="h-11 shrink-0 px-6 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+          >
+            <FaPlus />
+            Create New
+          </Link>
         </div>
 
         {/* Content */}
