@@ -268,7 +268,6 @@ function InsightsPageContent() {
                 <th className="py-2 pr-3">Recorded At</th>
                 <th className="py-2 pr-3">Duration</th>
                 {/* <th className="py-2 pr-3">Cry Type</th> */}
-                <th className="py-2 pr-3">Confidence</th>
                 <th className="py-2 pr-3">Urgency</th>
               </tr>
             </thead>
@@ -279,13 +278,12 @@ function InsightsPageContent() {
                   <td className="py-2 pr-3 text-gray-600">{new Date(item.recordedAt).toLocaleString()}</td>
                   <td className="py-2 pr-3 text-gray-600">{Math.round(item.durationSeconds)} sec</td>
                   {/* <td className="py-2 pr-3 capitalize">{item.cryType}</td> */}
-                  <td className="py-2 pr-3">{Math.round(item.confidence * 100)}%</td>
                   <td className="py-2 pr-3 capitalize">{item.urgency}</td>
                 </tr>
               ))}
               {(data?.recentHistory || []).length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-gray-500">
+                  <td colSpan={4} className="py-6 text-center text-gray-500">
                     No cry history available yet.
                   </td>
                 </tr>
