@@ -22,7 +22,6 @@ import {
   FaArrowRight,
   FaCheck,
   FaStar,
-  FaPlay,
   FaClock,
   FaLock,
   FaCheckCircle
@@ -193,10 +192,13 @@ function HomeContent() {
                   <span>Get Started Free</span>
                   <FaArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <button className="border-2 border-pink-300 text-pink-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-pink-50 transition-all duration-300 flex items-center justify-center">
-                  <FaPlay className="mr-2" />
-                  Watch Demo
-                </button>
+                <Link
+                  href="#features"
+                  className="border-2 border-pink-300 text-pink-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-pink-50 transition-all duration-300 flex items-center justify-center"
+                >
+                  <FaChartLine className="mr-2" />
+                  Explore Features
+                </Link>
               </div>
 
               {/* Stats */}
