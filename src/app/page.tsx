@@ -39,7 +39,7 @@ function FAQAccordion() {
   const faqs = [
     {
       question: "How accurate is the cry translation?",
-      answer: "MumtaAI uses advanced machine learning algorithms trained on thousands of cry samples, achieving over 95% accuracy in identifying common baby needs like hunger, sleep, discomfort, and pain. Our AI continuously learns and improves from user feedback to provide even more accurate results over time."
+      answer: "MumtaAI uses advanced machine learning algorithms trained on thousands of cry samples, achieving around 80% accuracy in identifying common baby needs like hunger, sleep, discomfort, and pain. Our AI continuously learns and improves from user feedback to provide even more accurate results over time."
     },
     {
       question: "Is my baby's data secure?",
@@ -204,7 +204,7 @@ function HomeContent() {
               {/* Stats */}
               <div className="grid grid-cols-3 gap-6 pt-8">
                 <div>
-                  <div className="text-3xl font-bold text-pink-600">95%+</div>
+                  <div className="text-3xl font-bold text-pink-600">80%</div>
                   <div className="text-sm text-gray-600">Accuracy Rate</div>
                 </div>
                 <div>
@@ -302,7 +302,7 @@ function HomeContent() {
                 <FaBrain className="h-8 w-8 text-blue-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">AI-Powered Analysis</h3>
-              <p className="text-gray-600">Advanced machine learning algorithms analyze cry patterns with 95%+ accuracy.</p>
+              <p className="text-gray-600">Advanced machine learning algorithms analyze cry patterns with around 80% accuracy.</p>
             </div>
 
             <div className="text-center">
