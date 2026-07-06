@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import type { AuthUser } from '@/lib/supabase/actions'
 import { useAuth } from '@/lib/supabase/context'
 
-type ActivePage = 'home' | 'pricing' | 'oximeter'
+type ActivePage = 'home' | 'pricing' | 'oximeter' | 'contact'
 
 type LandingNavProps = {
   activePage?: ActivePage
@@ -194,10 +194,10 @@ export default function LandingNav({ activePage = 'home' }: LandingNavProps) {
                 Testimonials
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300" />
               </a>
-              <a href={hashHref('#contact', activePage)} className={navLinkClass(false)}>
+              <Link href="/contact" className={navLinkClass(activePage === 'contact')}>
                 Contact
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500 group-hover:w-full transition-all duration-300" />
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -262,9 +262,9 @@ export default function LandingNav({ activePage = 'home' }: LandingNavProps) {
             >
               Testimonials
             </a>
-            <a href={hashHref('#contact', activePage)} className={mobileLinkClass(false)} onClick={closeMenu}>
+            <Link href="/contact" className={mobileLinkClass(activePage === 'contact')} onClick={closeMenu}>
               Contact
-            </a>
+            </Link>
             <div className="pt-4 border-t border-gray-200" aria-busy={loading}>
               {loading ? (
                 <>
