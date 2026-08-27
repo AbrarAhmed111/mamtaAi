@@ -426,4 +426,15 @@ MumtaAI was designed and built by **Abrar Ahmed** (Full Stack Engineer, [NizamLL
 
 ## License
 
-Add your preferred license in `LICENSE` (MIT is common for this setup).
+This project is open source under the [MIT License](LICENSE).
+
+Copyright (c) 2026 Abrar Ahmed.
+
+The cry-classification and oximeter features are provided for informational
+and educational purposes only. They are not medical devices and must not be
+used as a substitute for professional medical advice, diagnosis, or treatment.
+Seek qualified medical care for health concerns or emergencies.
+
+Third-party dependencies, datasets, pretrained models, and external services
+may have their own licenses and terms. Review those terms before redistributing
+any corresponding assets.
