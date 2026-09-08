@@ -14,6 +14,7 @@ import {
   FaTwitter,
 } from 'react-icons/fa'
 import smallLogo from '@/assets/img/smallLogo.png'
+import devAbbyFullLogo from '@/assets/img/devAbby-fulllogo.png'
 
 export default function SiteFooter() {
   const year = new Date().getFullYear()
@@ -158,11 +159,26 @@ export default function SiteFooter() {
             </div>
           </div>
 
-          <div className="border-t border-white/10 mt-12 pt-8">
+          <div className="border-t border-white/10 mt-12 pt-3">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-              <p className="text-pink-200/80 text-sm text-center md:text-left">
-                © {year} MumtaAI. All rights reserved. Made with ❤️ for parents everywhere.
-              </p>
+            
+
+                    <div className="flex w-full max-w-[280px] flex-col items-start text-left">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#d1d1d1]">Built by</span>
+              <a
+                href="https://www.linkedin.com/company/devabby"
+                target="_blank"
+                rel="noreferrer noopener"
+                title="Visit DevAbby on LinkedIn"
+                className="mt-2 block w-full max-w-[230px] transition-transform duration-300 hover:scale-[1.03] sm:max-w-[280px]"
+              >
+                <Image
+                  src={devAbbyFullLogo}
+                  alt="DevAbby on LinkedIn"
+                  className="w-full rounded-sm object-contain"
+                />
+              </a>
+            </div>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6">
                 <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
                   <Link
@@ -202,6 +218,18 @@ export default function SiteFooter() {
                 </a>
               </div>
             </div>
+          <p className="top-8 relative w-full text-center text-sm text-pink-200/80">
+                © {year} MumtaAI. All rights reserved. Made with ❤️ for parents everywhere by{' '}
+                <a
+                  href="https://abrarahmed.pro/"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="font-bold "
+                >
+                  Abrar Ahmed
+                </a>
+                .
+              </p>
           </div>
         </div>
       </div>
