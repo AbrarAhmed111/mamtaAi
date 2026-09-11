@@ -7,7 +7,7 @@ import ChatHeader from './ChatHeader'
 import ChatEmptyState from './ChatEmptyState'
 import ChatMessageList from './ChatMessageList'
 import ScrollToBottomButton from './ScrollToBottomButton'
-import { useMockChat } from './useMockChat'
+import { useAiChat } from './useAiChat'
 import {
   useCloseAnimation,
   useKeyboardShortcuts,
@@ -24,7 +24,7 @@ interface Props {
 }
 
 export default function ChatPanel({ open, onClose, userName, userAvatarUrl }: Props) {
-  const { messages, isStreaming, sendMessage, stop, regenerate, clear, rateMessage } = useMockChat()
+  const { messages, isStreaming, sendMessage, stop, regenerate, clear, rateMessage } = useAiChat()
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const { isClosing, handleClose } = useCloseAnimation(onClose)
