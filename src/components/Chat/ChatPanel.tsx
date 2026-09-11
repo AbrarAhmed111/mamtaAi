@@ -19,8 +19,8 @@ import { CLOSE_ANIMATION_DURATION } from './constants'
 interface Props {
   open: boolean
   onClose: () => void
-  userName?: string
-  userAvatarUrl?: string
+  userName?: string | null
+  userAvatarUrl?: string | null
 }
 
 export default function ChatPanel({ open, onClose, userName, userAvatarUrl }: Props) {

@@ -26,7 +26,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
             <SmoothHashScroll />
             <Toaster position="top-center" />
             {children}
-            <ChatbotWidget userName={initialUser?.user_metadata?.full_name} userAvatarUrl={initialUser?.user_metadata?.avatar_url} />
+            <ChatbotWidget userName={initialUser?.profile?.full_name} userAvatarUrl={initialUser?.profile?.avatar_url} />
           </AuthProvider>
         </Providers>
       </body>

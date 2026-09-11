@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CLOSE_ANIMATION_DURATION, MOBILE_BREAKPOINT } from './constants'
+import { CLOSE_ANIMATION_DURATION, CLEAR_CONFIRM_TIMEOUT, MOBILE_BREAKPOINT } from './constants'
 
 /**
  * Manages closing animation and subsequent panel close
@@ -68,7 +68,7 @@ export const useClearConfirm = (shouldReset: boolean) => {
 /**
  * Manages auto-scroll behavior
  */
-export const useAutoScroll = (messages: any[], ref: React.RefObject<HTMLDivElement>) => {
+export const useAutoScroll = (messages: any[], ref: React.RefObject<HTMLDivElement | null>) => {
   const [autoFollow, setAutoFollow] = useState(true)
 
   // Auto-scroll when new messages arrive

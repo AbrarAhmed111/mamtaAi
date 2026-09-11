@@ -4,8 +4,8 @@ import { useState } from 'react'
 import Image from 'next/image'
 
 interface UserAvatarProps {
-  avatarUrl?: string
-  userName?: string
+  avatarUrl?: string | null
+  userName?: string | null
   size?: number
   isGuest?: boolean
 }
@@ -22,7 +22,7 @@ export default function UserAvatar({ avatarUrl, userName = 'User', size = 20, is
       <div className="h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-pink-200 bg-gradient-to-br from-pink-50 to-rose-50 shadow-sm flex">
         <Image
           src={avatarUrl}
-          alt={userName}
+          alt={userName || 'User Avatar'}
           width={size}
           height={size}
           className="h-full w-full rounded-full object-cover"

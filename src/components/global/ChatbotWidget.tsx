@@ -16,8 +16,8 @@ const AUTH_ROUTES = [
 ]
 
 interface ChatbotWidgetProps {
-  userName?: string
-  userAvatarUrl?: string
+  userName?: string | null
+  userAvatarUrl?: string | null
 }
 
 /**

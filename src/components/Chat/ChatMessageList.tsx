@@ -8,14 +8,15 @@ interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
+  createdAt: number
   isStreaming?: boolean
 }
 
 interface ChatMessageListProps {
   messages: Message[]
-  userName?: string
-  userAvatarUrl?: string
-  onRate: (messageId: string, rating: number) => void
+  userName?: string | null
+  userAvatarUrl?: string | null
+  onRate?: (id: string, value: 'up' | 'down' | null) => void
 }
 
 export default function ChatMessageList({

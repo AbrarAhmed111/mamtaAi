@@ -9,8 +9,8 @@ import type { ChatMessage as ChatMessageType } from './types'
 
 interface Props {
   message: ChatMessageType
-  userAvatarUrl?: string
-  userName?: string
+  userAvatarUrl?: string | null
+  userName?: string | null
   onRate?: (id: string, value: 'up' | 'down' | null) => void
 }
 
@@ -123,10 +123,6 @@ export default function ChatMessage({ message, userAvatarUrl, userName, onRate }
         </div>
       )}
 
-      {/* User avatar */}
-      {isUser && (
-        <UserAvatar avatarUrl={userAvatarUrl} userName={userName} isGuest={isGuest} />
-      )}
 
       <div className={`flex max-w-[85%] flex-col ${isUser ? 'items-end' : 'items-start'}`}>
         <div
