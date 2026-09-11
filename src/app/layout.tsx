@@ -4,6 +4,7 @@ import { ReactNode } from 'react'
 import Providers from '@/store/Providers'
 import { AuthProvider } from '@/lib/supabase/context'
 import SmoothHashScroll from '@/components/marketing/SmoothHashScroll'
+import ChatbotWidget from '@/components/global/ChatbotWidget'
 import { metadata as siteMetadata, viewport as siteViewport } from '@/lib/site-metadata'
 import { getServerAuthUser } from '@/lib/supabase/server-auth'
 
@@ -25,6 +26,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
             <SmoothHashScroll />
             <Toaster position="top-center" />
             {children}
+            <ChatbotWidget userName={initialUser?.user_metadata?.full_name} userAvatarUrl={initialUser?.user_metadata?.avatar_url} />
           </AuthProvider>
         </Providers>
       </body>
