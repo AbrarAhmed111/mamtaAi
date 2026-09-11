@@ -45,3 +45,5 @@ previousProject/
 # Supabase CLI local cache (created by link/login)
 supabase/.temp/
 
+/mamtaai-rag
+/mamtaAi
