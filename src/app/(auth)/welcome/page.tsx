@@ -4,7 +4,7 @@
 
 import { useState, useRef, useEffect, Suspense } from 'react'
 import { checkEmailAndRedirect } from '@/lib/actions/auth'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getBaseUrl, AUTH_CONSTANTS } from '@/lib/constants'
 import { validateEmail, validateEmailLive } from '@/lib/supabase/validations'
 import { useReturnUrl } from '@/hooks/useReturnUrl'
@@ -19,6 +19,8 @@ function WelcomeContent() {
   const [emailError, setEmailError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const accountRemoved = searchParams.get('reason') === 'account_deleted'
   const emailInputRef = useRef<HTMLInputElement>(null)
   const returnUrl = useReturnUrl()
 
@@ -79,6 +81,12 @@ function WelcomeContent() {
   }, [email, emailError])
 
   const handleEmailBlur = (value: string): void => {
+    // Don't surface a "required" error just because focus left an empty field
+    // (e.g. when clicking "Continue with Google"). Required is still enforced on submit.
+    if (!value.trim()) {
+      setEmailError('')
+      return
+    }
     const validation = validateEmail(value)
     setEmailError(validation.error || '')
   }
@@ -99,6 +107,11 @@ function WelcomeContent() {
 
   return (
     <div className="px-[24px] py-[10px] md:px-0 md:py-0">
+      {accountRemoved ? (
+        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          This account is no longer available. Sign in with a different email or create a new account.
+        </div>
+      ) : null}
       <AuthHeader
         title="Enter your email"
         backHref={getBaseUrl()}
@@ -136,6 +149,7 @@ function WelcomeContent() {
 
       <div className="mt-4">
         <button
+          type="button"
           onClick={handleGoogleLogin}
           className="flex items-center justify-center w-full gap-3 rounded-2xl min-h-[46px] md:min-h-[56px] border-2 border-pink-200 bg-white px-4 py-2.5 sm:py-3 text-sm sm:text-[16px] font-semibold text-gray-700 shadow-sm transition-all duration-300 hover:bg-pink-50 hover:border-pink-300 hover:shadow-md"
         >
@@ -170,7 +184,7 @@ function WelcomeContent() {
 
 export default function WelcomePage() {
   return (
-    <Suspense fallback={<div className="px-[24px] py-[10px] md:px-0 md:py-0">Loading...</div>}>
+    <Suspense fallback={null}>
       <WelcomeContent />
     </Suspense>
   )

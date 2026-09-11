@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import {
+  checkLimit,
+  getPlanLimits,
+  incrementUsage,
+  planLimitErrorResponse,
+} from '@/lib/subscription'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,9 +63,28 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const body = await request.json().catch(() => ({}))
     const activityType = body.activity_type
-    if (!['feeding', 'sleep'].includes(activityType)) {
+    const allowedTypes = [
+      'feeding',
+      'sleep',
+      'diaper_change',
+      'play',
+      'bath',
+      'medicine',
+      'milestone',
+      'other',
+    ]
+    if (!allowedTypes.includes(activityType)) {
       return NextResponse.json({ error: 'Invalid activity type' }, { status: 400 })
     }
+
+    const { data: profile } = await supabase.from('profiles').select('timezone').eq('id', user.id).maybeSingle()
+    const timezone = (profile as { timezone?: string } | null)?.timezone ?? null
+    const planCtx = await getPlanLimits(user.id, timezone)
+    const activityLimit = await checkLimit(user.id, 'create_activity', {
+      timezone,
+      activityType,
+    })
+    if (!activityLimit.allowed) return planLimitErrorResponse(activityLimit, planCtx.slug)
 
     const startedAt = body.started_at ? new Date(body.started_at) : null
     if (!startedAt || Number.isNaN(startedAt.getTime())) {
@@ -116,6 +141,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const { data, error } = await supabase.from('baby_activities').insert(insert).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+    await incrementUsage(user.id, 'activities_count', 1, timezone)
 
     return NextResponse.json({ item: data })
   } catch (e: any) {

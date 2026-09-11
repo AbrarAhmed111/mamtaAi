@@ -9,6 +9,50 @@ body{
   font-optical-sizing: auto;
 }
 
+/* Themed scrollbars (site-wide) */
+:root {
+    --scrollbar-track: #fdf4f6;
+    --scrollbar-thumb: #DD2469;
+    --scrollbar-thumb-hover: #ec4899;
+}
+
+html {
+    scrollbar-gutter: stable;
+    scroll-behavior: smooth;
+}
+
+[id] {
+    scroll-margin-top: 5.5rem;
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #DD2469 0%, var(--scrollbar-thumb) 100%);
+    border-radius: 9999px;
+    border: 2px solid var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--scrollbar-thumb) 0%, var(--scrollbar-thumb-hover) 100%);
+}
+
+*::-webkit-scrollbar-corner {
+    background: var(--scrollbar-track);
+}
+
 .no-scroll {
     scrollbar-width: none !important; /* Hides scrollbar in Firefox */
     -ms-overflow-style: none !important; /* Hides scrollbar in IE & Edge */
@@ -57,7 +101,45 @@ body{
 }
 
 .animate-fade-in {
-    animation: fade-in 0.8s ease-out;
+    animation: fade-in 0.8s ease-out both;
+}
+
+.animate-fade-in-delay-150 {
+    animation: fade-in 0.8s ease-out 0.15s both;
+}
+
+.animate-fade-in-delay-300 {
+    animation: fade-in 0.8s ease-out 0.3s both;
+}
+
+.animate-fade-in-delay-450 {
+    animation: fade-in 0.8s ease-out 0.45s both;
+}
+
+@keyframes oxi-heart {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.12);
+    }
+}
+
+@keyframes oxi-value-flash {
+    0% {
+        transform: scale(1);
+    }
+    40% {
+        transform: scale(1.025);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.oxi-value-flash {
+    animation: oxi-value-flash 0.45s ease-out;
 }
 
 /* ===== Chatbot UI animations ===== */

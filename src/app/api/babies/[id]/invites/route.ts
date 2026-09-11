@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase/client'
 import { createInviteEmailTemplate } from '@/lib/email/templates'
 import { sendEmail } from '@/lib/email/send-email'
 import { getInviteEmailLogoMailParts } from '@/lib/email/invite-email-logo'
+import { checkLimit, getPlanLimits, planLimitErrorResponse } from '@/lib/subscription'
 
 function getBaseURL(request: NextRequest): string {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL
@@ -71,6 +72,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!ALLOWED_RELATIONSHIPS.has(relationship)) {
       return NextResponse.json({ error: 'Invalid relationship' }, { status: 400 })
     }
+
+    const { data: profile } = await supabase.from('profiles').select('timezone').eq('id', user.id).maybeSingle()
+    const timezone = (profile as { timezone?: string } | null)?.timezone ?? null
+    const planCtx = await getPlanLimits(user.id, timezone)
+    const inviteLimit = await checkLimit(user.id, 'send_family_invite', { babyId: id, timezone })
+    if (!inviteLimit.allowed) return planLimitErrorResponse(inviteLimit, planCtx.slug)
 
     const { data: baby } = await supabase.from('babies').select('id,name').eq('id', id).single()
     if (!baby) return NextResponse.json({ error: 'Baby not found' }, { status: 404 })

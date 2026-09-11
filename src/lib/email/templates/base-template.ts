@@ -6,7 +6,7 @@ export interface BaseEmailTemplateOptions {
   footerNote?: string
   /** Absolute URL to logo image (e.g. https://yoursite.com/mamta-email-logo.png) */
   logoUrl?: string | null
-  /** Pink/rose palette to match MamtaAI web app (invite, marketing) */
+  /** Pink/rose palette to match MumtaAI web app (invite, marketing) */
   brandTheme?: boolean
 }
 
@@ -43,7 +43,7 @@ const brandColors = {
 }
 
 export function createBaseEmailTemplate({
-  preheader = 'Mamta AI Dashboard Updates',
+  preheader = 'Mumta AI Dashboard Updates',
   heading,
   subheading,
   bodyHtml,
@@ -56,7 +56,7 @@ export function createBaseEmailTemplate({
   const logoBlock =
     logoUrl && String(logoUrl).trim()
       ? `<div style="text-align:center;margin-bottom:14px;">
-          <img src="${String(logoUrl).replace(/"/g, '&quot;')}" alt="MamtaAI" width="64" height="64" style="display:inline-block;width:64px;height:64px;border-radius:9999px;border:2px solid ${c.cardBorder};object-fit:cover;" />
+          <img src="${String(logoUrl).replace(/"/g, '&quot;')}" alt="MumtaAI" width="64" height="64" style="display:inline-block;width:64px;height:64px;border-radius:9999px;border:2px solid ${c.cardBorder};object-fit:cover;" />
         </div>`
       : ''
 
@@ -80,7 +80,7 @@ export function createBaseEmailTemplate({
               <td style="padding:22px 24px;background-color:${c.headerBg};border-bottom:1px solid ${c.headerBorder};">
                 ${logoBlock}
                 <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${c.eyebrow};margin-bottom:8px;text-align:center;">
-                  MamtaAI
+                  MumtaAI
                 </div>
                 <div style="font-size:22px;line-height:30px;font-weight:700;color:${c.heading};text-align:center;">
                   ${heading}
@@ -107,7 +107,7 @@ export function createBaseEmailTemplate({
                   ${footerNote}
                 </div>
                 <div style="margin-top:10px;font-size:12px;line-height:18px;color:${c.mutedSmall};">
-                  © ${new Date().getFullYear()} MamtaAI. All rights reserved.
+                  © ${new Date().getFullYear()} MumtaAI. All rights reserved.
                 </div>
               </td>
             </tr>

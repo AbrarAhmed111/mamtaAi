@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { checkLimit, getPlanLimits, incrementUsage, planLimitErrorResponse } from '@/lib/subscription'
 
 export async function GET(request: NextRequest) {
   try {
@@ -174,6 +175,12 @@ export async function POST(request: NextRequest) {
     if (!relationship || !allowedRelations.has(relationship)) {
       return NextResponse.json({ error: 'Please select a valid relationship' }, { status: 400 })
     }
+
+    const { data: profile } = await supabase.from('profiles').select('timezone').eq('id', user.id).maybeSingle()
+    const timezone = (profile as { timezone?: string } | null)?.timezone ?? null
+    const planCtx = await getPlanLimits(user.id, timezone)
+    const babyLimit = await checkLimit(user.id, 'create_baby', { timezone })
+    if (!babyLimit.allowed) return planLimitErrorResponse(babyLimit, planCtx.slug)
 
     const { data: baby, error: insertError } = await supabase
       .from('babies')

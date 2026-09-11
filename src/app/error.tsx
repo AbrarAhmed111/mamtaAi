@@ -12,8 +12,18 @@ export default function Error({
   reset: () => void;
 }) {
   React.useEffect(() => {
-    // Log the error to an error reporting service
     console.error(error);
+    void fetch('/api/log-error', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        errorType: 'nextjs_error_boundary',
+        errorMessage: error.message,
+        errorStack: error.stack,
+        severity: 'high',
+        metadata: { digest: error.digest },
+      }),
+    }).catch(() => {});
   }, [error]);
 
   return (

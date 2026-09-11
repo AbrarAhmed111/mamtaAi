@@ -4,6 +4,7 @@
 'use client'
 
 import React, { useEffect, useState, useRef, Suspense } from 'react'
+import Link from 'next/link'
 import { signup } from '@/lib/actions/auth'
 import { toast } from '@/components/ui/sonner'
 import { useRouter } from 'next/navigation'
@@ -439,21 +440,28 @@ function SignUpContent() {
                 <div>
                   <div className="py-4">
                     <p className="text-[#AAADB1] text-xs sm:text-sm">
-                      By tapping &quot;Create Account&quot;, you agree to the
-                      MamtaAi Terms of Use.
+                      By tapping &quot;Create Account&quot;, you agree to the{' '}
+                      <Link
+                        href="/terms"
+                        className="text-pink-600 hover:text-pink-700 font-bold transition-colors"
+                      >
+                        Terms of Service
+                      </Link>
+                      .
                     </p>
-                    <button className="text-pink-600 hover:text-pink-700 font-bold text-xs sm:text-sm transition-colors">
-                      Terms of Use
-                    </button>
                   </div>
                   <div className="pb-4">
                     <p className="text-[#AAADB1] text-xs sm:text-sm">
-                      To learn more about how MamtaAi collects, uses, shares, and
-                      protects your personal data, please see the MamtaAi Privacy.
+                      To learn more about how MumtaAI collects, uses, shares, and protects your
+                      personal data, please see the{' '}
+                      <Link
+                        href="/privacy"
+                        className="text-pink-600 hover:text-pink-700 font-bold transition-colors"
+                      >
+                        Privacy Policy
+                      </Link>
+                      .
                     </p>
-                    <button className="text-pink-600 hover:text-pink-700 font-bold text-xs sm:text-sm transition-colors">
-                      Privacy Policy
-                    </button>
                   </div>
                   {role === 'expert' ? (
                     <div className="md:hidden mb-4">
@@ -591,7 +599,7 @@ function SignUpContent() {
 
 export default function SignUpPage() {
   return (
-    <Suspense fallback={<div className="px-[24px] py-[10px] md:px-0 md:py-0">Loading...</div>}>
+    <Suspense fallback={null}>
       <SignUpContent />
     </Suspense>
   )

@@ -1,8 +1,7 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { Poppins } from 'next/font/google'
-import { IoMdArrowRoundBack } from "react-icons/io";
-const BackIcon = '/icons/Auth-Back.svg'
+import { IoMdArrowRoundBack } from 'react-icons/io'
+
 const poppins = Poppins({
   subsets: ['latin'],
   weight: ['700', '400'],
@@ -25,60 +24,57 @@ export default function AuthHeader({
   onBack,
   returnUrl,
 }: AuthHeaderProps) {
-  const BackButton = () => (
-    <IoMdArrowRoundBack
-      size={24}
-      className="cursor-pointer text-pink-600 hover:text-pink-700 transition-colors"
-      onClick={onBack}
-    />
-  )
+  const backIconClass =
+    'cursor-pointer text-pink-600 transition-colors hover:text-pink-700 shrink-0'
 
   return (
-    <div>
-      {/* Header with back button and label */}
-      <div className="flex items-center justify-between w-full">
-        {backHref ? (
+    <div className="min-w-0">
+      <div className="flex w-full min-w-0 items-center justify-between gap-3">
+        {onBack ? (
+          <button
+            type="button"
+            aria-label="Go back"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg p-1 -ml-1"
+            onClick={onBack}
+          >
+            <IoMdArrowRoundBack size={24} className={backIconClass} />
+          </button>
+        ) : backHref ? (
           <Link
             href={
               returnUrl
                 ? `${backHref}?returnUrl=${encodeURIComponent(returnUrl)}`
                 : backHref
             }
-            className="sm:flex-none"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg p-1 -ml-1"
+            aria-label="Go back"
           >
-            <BackButton />
+            <IoMdArrowRoundBack size={24} className={backIconClass} />
           </Link>
         ) : (
-          <div className="sm:flex-none" onClick={onBack}>
-            <BackButton />
-          </div>
+          <span className="w-8 shrink-0" aria-hidden />
         )}
 
-        {label && (
-          <div className="flex-auto flex justify-center md:justify-end">
-            <span
-              className={`text-sm leading-[28px] bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent font-semibold auth-signup-text ${poppins.className}`}
-            >
-              {label}
-            </span>
-          </div>
-        )}
+        {label ? (
+          <span
+            className={`ml-auto shrink-0 text-xs font-semibold uppercase tracking-wide bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent sm:text-sm ${poppins.className}`}
+          >
+            {label}
+          </span>
+        ) : null}
       </div>
 
-      {/* Title and subtitle */}
-      <div className="flex flex-col gap-3 mt-[24px]">
-        <div className="flex items-center gap-1 text-lg sm:text-3xl font-bold">
-          <h1
-            className={`${poppins.className} text-2xl lg:text-3xl xl:text-4xl font-bold mb-1 bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 bg-clip-text text-transparent`}
-          >
-            {title}
-          </h1>
-        </div>
-        {subtitle && (
-          <span className="text-gray-600 font-medium leading-[150%] tracking-[-0.5px] text-[16px] lg:text-lg xl:text-[22px]">
+      <div className="mt-4 flex min-w-0 flex-col gap-2 sm:mt-5 sm:gap-3">
+        <h1
+          className={`${poppins.className} text-xl font-bold leading-tight bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 bg-clip-text text-transparent sm:text-2xl lg:text-3xl`}
+        >
+          {title}
+        </h1>
+        {subtitle ? (
+          <p className="text-sm leading-relaxed text-gray-600 sm:text-base">
             {subtitle}
-          </span>
-        )}
+          </p>
+        ) : null}
       </div>
     </div>
   )

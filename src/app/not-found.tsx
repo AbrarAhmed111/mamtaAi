@@ -5,7 +5,7 @@ import Link from 'next/link';
 import BackButton from '@/components/global/BackButton';
 
 export const metadata: Metadata = {
-  title: 'Page Not Found | MamtaAI',
+  title: 'Page Not Found | MumtaAI',
   description: 'The page you are looking for does not exist.',
 };
 

@@ -30,15 +30,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Get the actual posts
-    const { data: posts, error: postsError } = await supabase
+    const { data: postsData, error: postsError } = await supabase
       .from('blog_posts')
       .select(`
         *,
-        author:profiles!blog_posts_author_id_fkey (
-          id,
-          full_name,
-          avatar_url
-        )
+        author_id
       `)
       .in('id', postIds)
       .eq('status', 'published')
@@ -48,7 +44,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: postsError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ posts: posts || [] })
+    const authorIds = Array.from(
+      new Set(((postsData as any[]) || []).map(post => post.author_id).filter(Boolean)),
+    ) as string[]
+    let authors: any[] = []
+
+    if (authorIds.length > 0) {
+      const { data: authorData, error: authorError } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', authorIds)
+
+      if (!authorError && Array.isArray(authorData)) {
+        authors = authorData
+      }
+    }
+
+    const authorMap = new Map(authors.map(author => [author.id, author]))
+    const posts = ((postsData as any[]) || []).map(post => ({
+      ...post,
+      author: authorMap.get(post.author_id) ?? null,
+    }))
+
+    return NextResponse.json({ posts })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }

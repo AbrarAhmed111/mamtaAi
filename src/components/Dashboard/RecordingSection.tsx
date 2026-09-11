@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { FaMicrophone, FaPlay, FaStop, FaUser } from 'react-icons/fa';
+import { FaMicrophone, FaPlay, FaStop, FaUser, FaUpload } from 'react-icons/fa';
 import { Tooltip } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui/sonner';
 import Spinner from '@/components/ui/spinner';
@@ -19,13 +19,19 @@ interface RecordingSectionProps {
   recordingTime?: number; // Optional - component manages its own state if not provided
   onStartRecording?: () => void; // Optional - called when recording starts
   onStopRecording?: () => void; // Optional - called when recording stops
-  onSave?: (blob: Blob, durationSeconds: number) => void; // Required for saving recordings
+  onSave?: (blob: Blob, durationSeconds: number, source?: 'live' | 'uploaded') => void; // Required for saving recordings
   shouldStartRecording?: boolean; // Flag to trigger actual recording start (for dashboard mode)
   selectedBaby?: SelectedBaby | null; // Selected baby info to display during recording
   babyId?: string; // Direct baby ID (for baby detail page mode)
   autoStart?: boolean; // Auto-start recording when component mounts (for direct mode)
-  onProcessingStart?: (blob: Blob, durationSeconds: number) => void; // Callback when processing starts (for streaming)
+  onProcessingStart?: (blob: Blob, durationSeconds: number, source?: 'live' | 'uploaded') => void; // Callback when processing starts (for streaming)
+  onUploadRequested?: () => void; // Optional - called when the Upload Audio button is clicked, to gate it (e.g. baby selection) before the file picker opens
+  uploadTrigger?: number; // Increment to programmatically open the file picker (dashboard mode, after baby selection is confirmed)
 }
+
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // 25MB
+const MAX_RECORDING_SECONDS = 8;
+const MAX_UPLOAD_SECONDS = 8;
 
 export default function RecordingSection({
   isRecording: externalIsRecording,
@@ -37,7 +43,9 @@ export default function RecordingSection({
   selectedBaby = null,
   babyId,
   autoStart = false,
-  onProcessingStart
+  onProcessingStart,
+  onUploadRequested,
+  uploadTrigger
 }: RecordingSectionProps) {
   const [recorder, setRecorder] = useState<MediaRecorder | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -55,6 +63,7 @@ export default function RecordingSection({
   const streamRef = useRef<MediaStream | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const hasStartedRef = useRef<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Use internal state if external state not provided
   const isRecording = externalIsRecording !== undefined ? externalIsRecording : internalRecording;
@@ -123,6 +132,12 @@ export default function RecordingSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldStartRecording]);
 
+  // Open the file picker once uploadTrigger changes (after baby selection is confirmed, dashboard mode)
+  useEffect(() => {
+    if (!uploadTrigger) return;
+    fileInputRef.current?.click();
+  }, [uploadTrigger]);
+
   const start = async () => {
     // Prevent multiple simultaneous starts
     if (internalRecording || recorder) {
@@ -187,13 +202,13 @@ export default function RecordingSection({
             // Convert WebM to WAV on frontend to avoid backend format issues
             const { convertWebMToWAV } = await import('@/utils/audioConverter');
             const wavBlob = await convertWebMToWAV(webmBlob);
-            onProcessingStart(wavBlob, durationSeconds);
+            onProcessingStart(wavBlob, durationSeconds, 'live');
           } catch (e) {
             console.error('Error converting or starting processing:', e);
             toast.error('Failed to process audio');
             // Fallback: try with original WebM blob
             try {
-              onProcessingStart(webmBlob, durationSeconds);
+              onProcessingStart(webmBlob, durationSeconds, 'live');
             } catch (e2) {
               console.error('Fallback also failed:', e2);
             }
@@ -201,7 +216,7 @@ export default function RecordingSection({
         } else if (onSave) {
           // Fallback to regular save
           try {
-            const maybePromise: any = (onSave as unknown as (b: Blob, d: number) => any)(webmBlob, durationSeconds);
+            const maybePromise: any = (onSave as unknown as (b: Blob, d: number, s?: 'live' | 'uploaded') => any)(webmBlob, durationSeconds, 'live');
             // If consumer returns a promise, reflect saving state until finished
             if (typeof maybePromise?.then === 'function') {
               setIsSaving(true);
@@ -226,9 +241,20 @@ export default function RecordingSection({
         onStartRecording();
       }
       
-      // Start timer
+      // Start timer — auto-stop once the max recording length is reached
       timerRef.current = setInterval(() => {
-        setInternalTime(Math.floor((Date.now() - startRef.current) / 1000));
+        const elapsed = Math.floor((Date.now() - startRef.current) / 1000);
+        setInternalTime(elapsed);
+        if (elapsed >= MAX_RECORDING_SECONDS) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          if (rec.state !== 'inactive') {
+            try {
+              rec.stop();
+            } catch (e) {
+              console.error('Error auto-stopping recorder at max duration:', e);
+            }
+          }
+        }
       }, 1000);
 
       // Setup analyser for realtime volume
@@ -283,6 +309,79 @@ export default function RecordingSection({
       setRecorder(null);
       if (timerRef.current) clearInterval(timerRef.current);
       await cleanupAudio();
+    }
+  };
+
+  const getAudioDuration = (file: File): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const audio = document.createElement('audio');
+      const url = URL.createObjectURL(file);
+      audio.preload = 'metadata';
+      audio.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        const d = Math.round(audio.duration);
+        resolve(Number.isFinite(d) && d > 0 ? d : 1);
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Could not read audio file'));
+      };
+      audio.src = url;
+    });
+  };
+
+  const handleUploadClick = () => {
+    if (isSaving) return;
+    if (onUploadRequested) {
+      onUploadRequested();
+      return;
+    }
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    e.target.value = ''; // allow re-selecting the same file later
+    if (!file) return;
+
+    if (!file.type.startsWith('audio/')) {
+      toast.error('Please select an audio file');
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast.error('Audio file is too large (max 25MB)');
+      return;
+    }
+
+    try {
+      const rawDuration = await getAudioDuration(file);
+      let audioBlob: Blob = file;
+      let durationSeconds = rawDuration;
+
+      if (rawDuration > MAX_UPLOAD_SECONDS) {
+        const { cropAudioToSeconds } = await import('@/utils/audioConverter');
+        const { blob: cropped } = await cropAudioToSeconds(file, MAX_UPLOAD_SECONDS);
+        audioBlob = cropped;
+        durationSeconds = MAX_UPLOAD_SECONDS;
+        toast.info(`Audio trimmed to ${MAX_UPLOAD_SECONDS}s for best results.`);
+      }
+
+      if (onProcessingStart) {
+        onProcessingStart(audioBlob, durationSeconds, 'uploaded');
+      } else if (onSave) {
+        const maybePromise: any = (onSave as unknown as (b: Blob, d: number, s?: 'live' | 'uploaded') => any)(
+          audioBlob,
+          durationSeconds,
+          'uploaded'
+        );
+        if (typeof maybePromise?.then === 'function') {
+          setIsSaving(true);
+          (maybePromise as Promise<any>).catch(() => {}).finally(() => setIsSaving(false));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to read uploaded audio file:', err);
+      toast.error('Could not read that audio file. Please try a different file.');
     }
   };
 
@@ -362,6 +461,10 @@ export default function RecordingSection({
               <p className="text-lg font-medium text-gray-900">
                 {selectedBaby ? `Recording ${selectedBaby.name}'s cry...` : 'Recording...'}
               </p>
+              <p className="mt-1 text-3xl font-bold tabular-nums text-red-600">
+                {formatTime(effectiveTime)}
+                <span className="text-base font-medium text-gray-400"> / {formatTime(MAX_RECORDING_SECONDS)}</span>
+              </p>
               {selectedBaby && (
                 <p className="text-sm text-gray-500 mt-1">Keep the microphone close to your baby</p>
               )}
@@ -403,7 +506,7 @@ export default function RecordingSection({
                 <div>
                   <p className="text-lg font-medium text-gray-900">Ready to Record</p>
                   <p className="text-gray-600">Tap the button when your baby starts crying</p>
-                  <p className="text-sm text-amber-600 mt-2 font-medium">💡 For best results, audio should not be longer than 8 seconds</p>
+                  <p className="text-sm text-amber-600 mt-2 font-medium">💡 Recording stops automatically after {MAX_RECORDING_SECONDS}s · Uploaded files are trimmed to {MAX_UPLOAD_SECONDS}s</p>
                 </div>
                 <Tooltip content="Start recording a cry">
                   <button
@@ -426,6 +529,24 @@ export default function RecordingSection({
                     </h1>
                   </button>
                 </Tooltip>
+                <Tooltip content="Upload an audio file from your device">
+                  <button
+                    onClick={handleUploadClick}
+                    disabled={isSaving}
+                    className={`px-6 py-3 bg-white border-2 border-pink-200 flex item-center !gap-x-2 justify-center text-pink-600 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md font-semibold ${isSaving ? 'opacity-60 cursor-not-allowed' : 'hover:bg-pink-50'}`}
+                  >
+                    <FaUpload className="" />
+                    Upload Audio
+                  </button>
+                </Tooltip>
+                <p className="text-xs text-gray-400 text-center">Files longer than {MAX_UPLOAD_SECONDS}s will be automatically cropped for better results.</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={handleFileSelected}
+                />
               </>
             )}
           </div>

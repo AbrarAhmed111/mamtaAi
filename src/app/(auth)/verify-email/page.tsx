@@ -47,7 +47,7 @@ function VerifyEmailContent() {
   return (
     <div className="px-[24px] py-[10px] md:px-0 md:py-0">
       <AuthHeader
-        title="Welcome to MamtaAi"
+        title="Welcome to MumtaAI"
         subtitle={'Please verify your email address before signing in.'}
         label="VERIFY EMAIL"
         backHref="/"
@@ -84,7 +84,7 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={<div className="px-[24px] py-[10px] md:px-0 md:py-0">Loading...</div>}>
+    <Suspense fallback={null}>
       <VerifyEmailContent />
     </Suspense>
   )

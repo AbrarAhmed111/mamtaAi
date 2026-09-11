@@ -7,6 +7,9 @@ import Image from 'next/image'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase/client'
+import ReportContentButton from '@/components/community/ReportContentButton'
+import CommunityAuthorIdentity, { ExpertContentBadge } from '@/components/community/CommunityAuthorIdentity'
+import { type CommunityAuthorProfile, shouldLabelPostAsExpert } from '@/lib/expert/community-author'
 
 interface BlogPost {
   id: string
@@ -25,11 +28,7 @@ interface BlogPost {
   author_credentials: string | null
   published_at: string | null
   created_at: string | null
-  author: {
-    id: string
-    full_name: string
-    avatar_url: string | null
-  } | null
+  author: CommunityAuthorProfile | null
 }
 
 interface Comment {
@@ -39,11 +38,7 @@ interface Comment {
   created_at: string | null
   is_edited: boolean | null
   edited_at: string | null
-  author: {
-    id: string
-    full_name: string
-    avatar_url: string | null
-  } | null
+  author: CommunityAuthorProfile | null
   parent_comment_id: string | null
 }
 
@@ -473,43 +468,30 @@ export default function BlogPostPage() {
 
           <div className="p-6 md:p-8">
             <div className="flex items-center gap-2 mb-4">
-              {post.is_expert_content && (
-                <span className="px-3 py-1 bg-purple-100 text-purple-700 text-sm font-semibold rounded">
-                  Expert Content
-                </span>
+              {shouldLabelPostAsExpert(post.is_expert_content, post.author) && (
+                <ExpertContentBadge className="px-3 py-1 text-sm" />
               )}
               <span className="px-3 py-1 bg-pink-100 text-pink-700 text-sm font-semibold rounded">
                 {post.category}
               </span>
             </div>
 
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              {post.title}
-            </h1>
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+                {post.title}
+              </h1>
+              {user && id ? (
+                <ReportContentButton contentType="blog_post" contentId={id} />
+              ) : null}
+            </div>
 
             <div className="flex items-center gap-4 text-sm text-gray-600 mb-6">
               {post.author && (
-                <div className="flex items-center gap-2">
-                  {post.author.avatar_url ? (
-                    <Image
-                      src={post.author.avatar_url}
-                      alt={post.author.full_name}
-                      width={40}
-                      height={40}
-                      className="rounded-full object-cover h-10 w-10"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center">
-                      {post.author.full_name[0]}
-                    </div>
-                  )}
-                  <div>
-                    <div className="font-semibold">{post.author.full_name}</div>
-                    {post.author_credentials && (
-                      <div className="text-xs text-gray-500">{post.author_credentials}</div>
-                    )}
-                  </div>
-                </div>
+                <CommunityAuthorIdentity
+                  author={post.author}
+                  subtitle={post.author_credentials}
+                  showSubtitle={Boolean(post.author_credentials)}
+                />
               )}
               <span className="text-gray-400">•</span>
               <span>{formatDate(post.published_at || post.created_at)}</span>
@@ -622,34 +604,22 @@ export default function BlogPostPage() {
                   <div key={comment.id} className="border-b border-gray-200 pb-6 last:border-0">
                     <div className="flex items-start gap-4">
                       {comment.author && (
-                        <>
-                          {comment.author.avatar_url ? (
-                            <Image
-                              src={comment.author.avatar_url}
-                              alt={comment.author.full_name}
-                              width={40}
-                              height={40}
-                              className="rounded-full object-cover flex-shrink-0"
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-2">
+                            <CommunityAuthorIdentity
+                              author={comment.author}
+                              avatarSize={40}
+                              showSubtitle={false}
                             />
-                          ) : (
-                            <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center flex-shrink-0">
-                              {comment.author.full_name[0]}
-                            </div>
-                          )}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="font-semibold text-gray-900">
-                                {comment.author.full_name}
+                            <span className="text-sm text-gray-500">
+                              {formatDate(comment.created_at)}
+                            </span>
+                            {comment.is_edited && (
+                              <span className="text-xs text-gray-400 italic">
+                                (edited)
                               </span>
-                              <span className="text-sm text-gray-500">
-                                {formatDate(comment.created_at)}
-                              </span>
-                              {comment.is_edited && (
-                                <span className="text-xs text-gray-400 italic">
-                                  (edited)
-                                </span>
-                              )}
-                            </div>
+                            )}
+                          </div>
                             {isEditing ? (
                               <div className="mb-4">
                                 <textarea
@@ -676,7 +646,8 @@ export default function BlogPostPage() {
                             ) : (
                               <p className="text-gray-700 mb-2">{comment.content}</p>
                             )}
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 flex-wrap">
+                              <ReportContentButton contentType="blog_comment" contentId={comment.id} />
                               {user && (
                                 <button 
                                   onClick={() => {
@@ -723,36 +694,24 @@ export default function BlogPostPage() {
 
                                   return (
                                     <div key={reply.id} className="pb-4 border-b border-gray-100 last:border-0">
-                                      <div className="flex items-start gap-3">
-                                        {reply.author && (
-                                          <>
-                                            {reply.author.avatar_url ? (
-                                              <Image
-                                                src={reply.author.avatar_url}
-                                                alt={reply.author.full_name}
-                                                width={32}
-                                                height={32}
-                                                className="rounded-full object-cover flex-shrink-0"
-                                              />
-                                            ) : (
-                                              <div className="w-8 h-8 bg-pink-200 rounded-full flex items-center justify-center flex-shrink-0 text-xs">
-                                                {reply.author.full_name[0]}
-                                              </div>
+                                      {reply.author && (
+                                        <div className="min-w-0">
+                                          <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                            <CommunityAuthorIdentity
+                                              author={reply.author}
+                                              avatarSize={32}
+                                              nameSize="sm"
+                                              showSubtitle={false}
+                                            />
+                                            <span className="text-xs text-gray-500">
+                                              {formatDate(reply.created_at)}
+                                            </span>
+                                            {reply.is_edited && (
+                                              <span className="text-xs text-gray-400 italic">
+                                                (edited)
+                                              </span>
                                             )}
-                                            <div className="flex-1">
-                                              <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-semibold text-gray-900 text-sm">
-                                                  {reply.author.full_name}
-                                                </span>
-                                                <span className="text-xs text-gray-500">
-                                                  {formatDate(reply.created_at)}
-                                                </span>
-                                                {reply.is_edited && (
-                                                  <span className="text-xs text-gray-400 italic">
-                                                    (edited)
-                                                  </span>
-                                                )}
-                                              </div>
+                                          </div>
                                               {isEditingReply ? (
                                                 <div className="mb-2">
                                                   <textarea
@@ -779,7 +738,12 @@ export default function BlogPostPage() {
                                               ) : (
                                                 <p className="text-gray-700 text-sm mb-2">{reply.content}</p>
                                               )}
-                                              <div className="flex items-center gap-3">
+                                              <div className="flex items-center gap-3 flex-wrap">
+                                                <ReportContentButton
+                                                  contentType="blog_comment"
+                                                  contentId={reply.id}
+                                                  className="text-xs py-1 px-2"
+                                                />
                                                 {isReplyAuthor && !isEditingReply && (
                                                   <>
                                                     <button 
@@ -799,10 +763,8 @@ export default function BlogPostPage() {
                                                   </>
                                                 )}
                                               </div>
-                                            </div>
-                                          </>
-                                        )}
-                                      </div>
+                                        </div>
+                                      )}
                                     </div>
                                   )
                                 })}
@@ -842,8 +804,7 @@ export default function BlogPostPage() {
                                 </form>
                               </div>
                             )}
-                          </div>
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>

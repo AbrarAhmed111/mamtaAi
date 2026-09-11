@@ -9,10 +9,10 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createServerClient()
 
+    // Keep redirect_to EXACTLY equal to the allow-listed callback URL.
+    // Query params (e.g. returnUrl) would break Supabase's exact match and make it
+    // fall back to the project Site URL, so we carry returnUrl in a cookie instead.
     const redirectTarget = new URL('/api/auth/callback', request.url)
-    if (returnUrl) {
-      redirectTarget.searchParams.set('returnUrl', returnUrl)
-    }
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -34,7 +34,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(errUrl)
     }
 
-    return NextResponse.redirect(data.url)
+    const response = NextResponse.redirect(data.url)
+    if (returnUrl) {
+      response.cookies.set('oauth_return_url', returnUrl, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: 60 * 10,
+      })
+    } else {
+      response.cookies.delete('oauth_return_url')
+    }
+    return response
   } catch (e: any) {
     const errUrl = new URL('/signin', request.url)
     errUrl.searchParams.set('error', 'true')

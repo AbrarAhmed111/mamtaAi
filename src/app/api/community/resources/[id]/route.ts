@@ -26,14 +26,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('shared_resources')
-      .select(`
-        *,
-        uploader:profiles!shared_resources_uploader_id_fkey (
-          id,
-          full_name,
-          avatar_url
-        )
-      `)
+      .select('*')
       .eq('id', id)
       .eq('is_active', true)
       .single()
@@ -42,7 +35,14 @@ export async function GET(
       return NextResponse.json({ error: 'Resource not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ resource: data })
+    const { data: uploaderProfile } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .eq('id', (data as any).uploader_id)
+      .maybeSingle()
+    const resource = { ...(data as any), uploader: uploaderProfile ?? null }
+
+    return NextResponse.json({ resource })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }

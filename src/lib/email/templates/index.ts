@@ -2,3 +2,5 @@ export { createBaseEmailTemplate, type BaseEmailTemplateOptions } from './base-t
 export { createInviteEmailTemplate } from './invite-email-template'
 export { createOtpEmailTemplate } from './otp-email-template'
 export { createForgotPasswordEmailTemplate } from './forgot-password-email-template'
+export { createAdminAlertEmailTemplate } from './admin-alert-email-template'
+export { createPromotionalEmailTemplate } from './promotional-email-template'

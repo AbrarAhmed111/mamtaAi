@@ -1,11 +1,37 @@
 'use client';
 
-import { useState } from 'react';
-import { FaBaby, FaMicrophone, FaChartLine, FaUsers, FaUserMd, FaTimes, FaCog } from 'react-icons/fa';
 import Link from 'next/link';
-import logo from '@/assets/img/smallLogo.png';
 import Image from 'next/image';
-import { MdDashboard } from "react-icons/md";
+import {
+  FaBaby,
+  FaMicrophone,
+  FaChartLine,
+  FaUsers,
+  FaUserMd,
+  FaBars,
+  FaTimes,
+  FaCog,
+  FaCrown,
+  FaGem,
+  FaUserShield,
+  FaUserCheck,
+  FaCreditCard,
+  FaTicketAlt,
+  FaFlag,
+  FaClipboardList,
+  FaIdCard,
+  FaBookOpen,
+  FaHeartbeat,
+  FaBullhorn,
+} from 'react-icons/fa';
+import { MdDashboard } from 'react-icons/md';
+import logo from '@/assets/img/smallLogo.png';
+import { useSubscription } from '@/hooks/useSubscription';
+import { PLAN_DEFINITIONS } from '@/lib/subscription/plans';
+import type { PlanSlug } from '@/lib/subscription/types';
+import type { DashboardActiveView, ActiveViewPreference, AdminDashboardView } from '@/lib/expert/constants';
+import SidebarHeaderChrome from '@/components/Dashboard/SidebarHeaderChrome';
+
 interface SidebarProps {
   currentPath?: string;
   user?: {
@@ -13,135 +39,305 @@ interface SidebarProps {
     role: string;
     avatar?: string;
   };
+  activeView?: DashboardActiveView;
   isOpen?: boolean;
   onToggle?: () => void;
+  showPlanBadge?: boolean;
+  showAdminBadge?: boolean;
+  adminAccount?: boolean;
+  verifiedExpert?: boolean;
+  adminViewPreference?: AdminDashboardView;
+  expertViewPreference?: ActiveViewPreference;
 }
 
-export default function Sidebar({ currentPath = '/dashboard', user, isOpen = false, onToggle }: SidebarProps) {
-  const navigationItems = [
-    {
-      href: '/dashboard',
-      label: 'Dashboard',
-      icon: MdDashboard,
-      active: currentPath?.startsWith('/dashboard') && (currentPath === '/dashboard')
-    },
-    {
-      href: '/dashboard/babies',
-      label: 'My Babies',
-      icon: FaBaby,
-      active: currentPath?.startsWith('/dashboard/babies')
-    },
-    {
-      href: '/dashboard/recordings',
-      label: 'Recordings',
-      icon: FaMicrophone,
-      active: currentPath?.startsWith('/dashboard/recordings')
-    },
-    {
-      href: '/dashboard/insights',
-      label: 'Insights',
-      icon: FaChartLine,
-      active: currentPath?.startsWith('/dashboard/insights')
-    },
-    {
-      href: '/dashboard/community',
-      label: 'Community',
-      icon: FaUsers,
-      active: currentPath?.startsWith('/dashboard/community')
-    },
-    {
-      href: '/dashboard/experts',
-      label: 'Experts',
-      icon: FaUserMd,
-      active: currentPath?.startsWith('/dashboard/experts')
-    },
-    {
-      href: '/dashboard/settings',
-      label: 'Settings',
-      icon: FaCog,
-      active: currentPath?.startsWith('/dashboard/settings')
-    }
-  ];
+const PARENT_NAV_ITEMS = [
+  { href: '/dashboard', label: 'Dashboard', icon: MdDashboard, match: (p: string) => p === '/dashboard' },
+  { href: '/dashboard/babies', label: 'My Babies', icon: FaBaby, match: (p: string) => p.startsWith('/dashboard/babies') },
+  { href: '/dashboard/recordings', label: 'Recordings', icon: FaMicrophone, match: (p: string) => p.startsWith('/dashboard/recordings') },
+  { href: '/dashboard/insights', label: 'Insights', icon: FaChartLine, match: (p: string) => p.startsWith('/dashboard/insights') },
+  { href: '/dashboard/oximeter', label: 'Oximeter', icon: FaHeartbeat, match: (p: string) => p.startsWith('/dashboard/oximeter') },
+  { href: '/dashboard/community', label: 'Community', icon: FaUsers, match: (p: string) => p.startsWith('/dashboard/community') },
+  { href: '/dashboard/experts', label: 'Experts', icon: FaUserMd, match: (p: string) => p.startsWith('/dashboard/experts') },
+  { href: '/dashboard/settings', label: 'Settings', icon: FaCog, match: (p: string) => p.startsWith('/dashboard/settings') },
+] as const;
+
+const EXPERT_NAV_ITEMS = [
+  { href: '/dashboard', label: 'Overview', icon: MdDashboard, match: (p: string) => p === '/dashboard' },
+  { href: '/dashboard/expert/profile', label: 'My Profile', icon: FaIdCard, match: (p: string) => p.startsWith('/dashboard/expert/profile') },
+  { href: '/dashboard/expert/articles', label: 'Articles', icon: FaBookOpen, match: (p: string) => p.startsWith('/dashboard/expert/articles') },
+  { href: '/dashboard/community', label: 'Community', icon: FaUsers, match: (p: string) => p.startsWith('/dashboard/community') },
+  { href: '/dashboard/insights', label: 'Insights', icon: FaChartLine, match: (p: string) => p.startsWith('/dashboard/insights') },
+  { href: '/dashboard/settings', label: 'Settings', icon: FaCog, match: (p: string) => p.startsWith('/dashboard/settings') },
+] as const;
+
+const ADMIN_NAV_ITEMS = [
+  { href: '/dashboard', label: 'Overview', icon: MdDashboard, match: (p: string) => p === '/dashboard' },
+  { href: '/dashboard/admin/users', label: 'Users', icon: FaUserShield, match: (p: string) => p.startsWith('/dashboard/admin/users') },
+  { href: '/dashboard/admin/experts', label: 'Expert Verification', icon: FaUserCheck, match: (p: string) => p.startsWith('/dashboard/admin/experts') },
+  { href: '/dashboard/admin/subscriptions', label: 'Subscriptions', icon: FaCreditCard, match: (p: string) => p.startsWith('/dashboard/admin/subscriptions') },
+  { href: '/dashboard/admin/coupons', label: 'Coupons', icon: FaTicketAlt, match: (p: string) => p.startsWith('/dashboard/admin/coupons') },
+  { href: '/dashboard/admin/promotions', label: 'Promotions', icon: FaBullhorn, match: (p: string) => p.startsWith('/dashboard/admin/promotions') },
+  { href: '/dashboard/admin/moderation', label: 'Moderation', icon: FaFlag, match: (p: string) => p.startsWith('/dashboard/admin/moderation') },
+  { href: '/dashboard/admin/logs', label: 'System Logs', icon: FaClipboardList, match: (p: string) => p.startsWith('/dashboard/admin/logs') },
+  { href: '/dashboard/settings', label: 'Settings', icon: FaCog, match: (p: string) => p.startsWith('/dashboard/settings') },
+] as const;
+const SIDEBAR_CARD =
+  'flex h-full min-h-0 flex-col rounded-[28px] border border-pink-100/90 bg-white p-5 shadow-[0_8px_30px_rgba(236,72,153,0.12)]';
+
+const PROMO_CARD_CLASS =
+  'mt-4 flex shrink-0 items-center gap-3 rounded-2xl border border-pink-200/80 bg-pink-50/90 p-4 transition-shadow';
+
+function planPromoContent(slug: PlanSlug): {
+  title: string;
+  description: string;
+  Icon: typeof FaGem;
+  iconClass: string;
+} {
+  if (slug === 'free') {
+    return {
+      title: 'MumtaAI Plus',
+      description: 'Unlock advanced insights and personalized care.',
+      Icon: FaGem,
+      iconClass: 'text-pink-500',
+    };
+  }
+  if (slug === 'plus') {
+    return {
+      title: 'MumtaAI Pro',
+      description: PLAN_DEFINITIONS.pro.description,
+      Icon: FaCrown,
+      iconClass: 'text-purple-700',
+    };
+  }
+  return {
+    title: 'MumtaAI Pro',
+    description: PLAN_DEFINITIONS.pro.description,
+    Icon: FaCrown,
+    iconClass: 'text-purple-700',
+  };
+}
+
+function PlanPromoCard({
+  slug,
+  onNavigate,
+}: {
+  slug: PlanSlug;
+  onNavigate?: () => void;
+}) {
+  const { title, description, Icon, iconClass } = planPromoContent(slug);
+
+  return (
+    <Link href="/pricing" onClick={onNavigate} className={`${PROMO_CARD_CLASS} hover:shadow-md`}>
+      <div className="min-w-0 flex-1">
+        <p className="flex items-center gap-1.5 text-sm font-bold text-pink-600">
+          <Icon className={`h-4 w-4 shrink-0 ${iconClass}`} aria-hidden />
+          {title}
+        </p>
+        <p className="mt-1.5 text-xs leading-relaxed text-gray-600">{description}</p>
+      </div>
+    </Link>
+  );
+}
+
+function SidebarPanel({
+  currentPath,
+  onNavigate,
+  showClose,
+  onClose,
+  userRole,
+  activeView = 'parent',
+  showPlanBadge = false,
+  showAdminBadge = false,
+  adminAccount = false,
+  verifiedExpert = false,
+  adminViewPreference = 'admin',
+  expertViewPreference = 'parent',
+}: {
+  currentPath: string;
+  onNavigate?: () => void;
+  showClose?: boolean;
+  onClose?: () => void;
+  userRole?: string;
+  activeView?: DashboardActiveView;
+  showPlanBadge?: boolean;
+  showAdminBadge?: boolean;
+  adminAccount?: boolean;
+  verifiedExpert?: boolean;
+  adminViewPreference?: AdminDashboardView;
+  expertViewPreference?: ActiveViewPreference;
+}) {
+  const { slug, loading } = useSubscription();
+  const isAdminRole = userRole === 'admin';
+  const showAdminNav = isAdminRole && activeView === 'admin';
+  const navItems = showAdminNav
+    ? ADMIN_NAV_ITEMS
+    : activeView === 'expert'
+      ? EXPERT_NAV_ITEMS
+      : PARENT_NAV_ITEMS;
 
   return (
     <>
-      {/* Mobile Overlay */}
+      <div className="shrink-0">
+        <div className="flex items-start justify-between gap-2">
+          <Link
+            href="/"
+            onClick={onNavigate}
+            className="flex items-center gap-3 transition-opacity hover:opacity-85"
+            aria-label="MumtaAI home"
+          >
+            <Image
+              src={logo}
+              alt="MumtaAI"
+              width={56}
+              height={56}
+              className="h-14 w-14 shrink-0 rounded-full object-cover object-center"
+            />
+            <div>
+              <h1 className="text-[17px] font-bold leading-tight bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
+                MumtaAI
+              </h1>
+              <p className="mt-0.5 max-w-[9.5rem] text-[10px] font-medium leading-snug text-gray-500">
+                Understanding Your Baby&apos;s Every Cry
+              </p>
+            </div>
+          </Link>
+          {showClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-2 text-gray-400 hover:bg-pink-50 hover:text-gray-600 lg:hidden"
+              aria-label="Close menu"
+            >
+              <FaTimes className="text-lg" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <SidebarHeaderChrome
+        showPlanBadge={showPlanBadge}
+        showAdminBadge={showAdminBadge}
+        adminAccount={adminAccount}
+        verifiedExpert={verifiedExpert}
+        adminViewPreference={adminViewPreference}
+        expertViewPreference={expertViewPreference}
+      />
+
+      <nav className="mt-6 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto no-scroll py-1">
+        {navItems.map(item => {
+          const Icon = item.icon;
+          const active = item.match(currentPath);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavigate}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-medium transition-all duration-200 ${
+                active
+                  ? 'bg-pink-50 text-pink-600 shadow-[inset_3px_0_0_0_#ec4899]'
+                  : 'text-gray-600 hover:bg-pink-50/50 hover:text-pink-600'
+              }`}
+            >
+              <Icon className={`text-[17px] ${active ? 'text-pink-500' : 'text-gray-500'}`} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      {!loading && !showAdminNav && activeView !== 'expert' && (
+        <PlanPromoCard slug={slug} onNavigate={onNavigate} />
+      )}
+    </>
+  );
+}
+
+export default function Sidebar({
+  currentPath = '/dashboard',
+  user,
+  activeView = 'parent',
+  isOpen = false,
+  onToggle,
+  showPlanBadge = false,
+  showAdminBadge = false,
+  adminAccount = false,
+  verifiedExpert = false,
+  adminViewPreference = 'admin',
+  expertViewPreference = 'parent',
+}: SidebarProps) {
+  const path = currentPath || '/dashboard';
+  const userRole = user?.role?.toLowerCase();
+
+  const closeOnNavigate = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      onToggle?.();
+    }
+  };
+
+  return (
+    <>
       {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="fixed inset-0 z-[80] bg-gray-900/30 backdrop-blur-[2px] lg:hidden"
           onClick={onToggle}
         />
       )}
-      
-      {/* Sidebar */}
-      <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white/95 backdrop-blur-lg shadow-lg border-r border-pink-100 flex flex-col
-        transform transition-transform duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
-        {/* Mobile Header */}
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-pink-100 bg-gradient-to-r from-pink-50/50 to-rose-50/50">
-          <div className="flex items-center space-x-3">
-            <Image
-              src={logo}
-              alt="MamtaAI"
-              width={24}
-              height={24}
-              className="object-contain rounded-full"
-            />
-            <h1 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">MamtaAI</h1>
-          </div>
-          <button
-            onClick={onToggle}
-            className="p-2 text-gray-400 hover:text-gray-600"
-          >
-            <FaTimes className="text-lg" />
-          </button>
+
+      {/* Mobile drawer */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-[90] w-[min(288px,88vw)] p-3 transition-transform duration-300 ease-out lg:hidden ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className={SIDEBAR_CARD}>
+          <SidebarPanel
+            currentPath={path}
+            onNavigate={closeOnNavigate}
+            showClose
+            onClose={onToggle}
+            userRole={userRole}
+            activeView={activeView}
+            showPlanBadge={showPlanBadge}
+            showAdminBadge={showAdminBadge}
+            adminAccount={adminAccount}
+            verifiedExpert={verifiedExpert}
+            adminViewPreference={adminViewPreference}
+            expertViewPreference={expertViewPreference}
+          />
         </div>
+      </aside>
 
-        {/* Logo - Desktop */}
-        <div className="hidden lg:block p-6 border-b border-pink-100 bg-gradient-to-r from-pink-50/50 to-rose-50/50">
-          <div className="flex items-center space-x-3">
-            <Image
-              src={logo}
-              alt="MamtaAI"
-              width={28}
-              height={28}
-              className="object-contain rounded-full"
-            />
-            <h1 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">MamtaAI</h1>
-          </div>
+      {/* Desktop — full height of dashboard row, no gap below */}
+      <aside className="hidden h-full w-[272px] shrink-0 lg:block">
+        <div className={SIDEBAR_CARD}>
+          <SidebarPanel
+            currentPath={path}
+            userRole={userRole}
+            activeView={activeView}
+            showPlanBadge={showPlanBadge}
+            showAdminBadge={showAdminBadge}
+            adminAccount={adminAccount}
+            verifiedExpert={verifiedExpert}
+            adminViewPreference={adminViewPreference}
+            expertViewPreference={expertViewPreference}
+          />
         </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
-          {navigationItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => {
-                  // Close mobile menu when clicking a link on mobile
-                  if (window.innerWidth < 1024) {
-                    onToggle?.();
-                  }
-                }}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                  item.active
-                    ? 'text-pink-600 bg-gradient-to-r from-pink-50 to-rose-50 font-semibold border-l-4 border-pink-500 shadow-sm'
-                    : 'text-gray-600 hover:text-pink-600 hover:bg-pink-50/50'
-                }`}
-              >
-                <Icon className="text-lg" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-       
-      </div>
+      </aside>
     </>
+  );
+}
+
+export function SidebarMenuButton({ onClick }: { onClick?: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-xl p-2.5 text-gray-400 hover:bg-pink-50 hover:text-gray-600 lg:hidden"
+      aria-label="Open menu"
+    >
+      <FaBars className="text-lg" />
+    </button>
   );
 }

@@ -1,9 +1,20 @@
 'use client'
 
-import { Suspense, useEffect, useId, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Spinner from '@/components/ui/spinner'
-import { FaChartLine, FaClock, FaExclamationTriangle, FaHistory, FaMicrophone, FaBaby } from 'react-icons/fa'
+import { toast } from '@/components/ui/sonner'
+import { FaChartLine, FaClock, FaExclamationTriangle, FaHistory, FaMicrophone, FaBaby, FaDownload } from 'react-icons/fa'
+import Link from 'next/link'
+import { usePlanLimit } from '@/hooks/useSubscription'
+import OximeterInsightsSection from '@/components/insights/OximeterInsightsSection'
+import type { OximeterInsightsPayload } from '@/lib/insights/oximeter-insights'
+import {
+  BabyRecordingsChart,
+  CryTypeDistributionChart,
+  HourlyPatternChart,
+  RecordingsDailyChart,
+} from '@/components/charts/InsightsCryCharts'
 
 type InsightResponse = {
   overview: {
@@ -31,189 +42,18 @@ type InsightResponse = {
     confidence: number
     urgency: string
   }>
-}
-
-function formatTrendTickDate(iso: string) {
-  try {
-    const d = new Date(`${iso}T12:00:00`)
-    if (Number.isNaN(d.getTime())) return iso
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  } catch {
-    return iso
+  subscription?: {
+    slug: string
+    insightsHistoryDays: number | null
+    allowExport: boolean
+    fullCharts: boolean
   }
-}
-
-function DailyTrendChart({ trend }: { trend: Array<{ date: string; count: number }> }) {
-  const uid = useId().replace(/:/g, '')
-  const fillGradId = `dailyTrendFill-${uid}`
-  const lineGradId = `dailyTrendLine-${uid}`
-
-  const w = 560
-  const h = 200
-  const padL = 44
-  const padR = 16
-  const padT = 20
-  const padB = 36
-  const innerW = w - padL - padR
-  const innerH = h - padT - padB
-  const maxY = Math.max(1, ...trend.map(t => t.count))
-  const yTicks = maxY <= 1 ? [0, 1] : [0, Math.ceil(maxY / 2), maxY]
-  const n = trend.length
-
-  const pts = trend.map((t, i) => {
-    const x = padL + (n <= 1 ? innerW / 2 : (i / (n - 1)) * innerW)
-    const y = padT + innerH - (t.count / maxY) * innerH
-    return { x, y, ...t }
-  })
-
-  const linePath =
-    pts.length > 0
-      ? pts
-          .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-          .join(' ')
-      : ''
-
-  const baseY = padT + innerH
-  const areaPath =
-    pts.length > 0
-      ? `M ${pts[0].x.toFixed(1)} ${baseY} ` +
-        pts.map(p => `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ') +
-        ` L ${pts[pts.length - 1].x.toFixed(1)} ${baseY} Z`
-      : ''
-
-  const xTickIndices =
-    n <= 1 ? [0] : n <= 4 ? [...Array(n).keys()] : [0, Math.floor((n - 1) / 2), n - 1]
-
-  return (
-    <div className="mt-4">
-      <svg
-        viewBox={`0 0 ${w} ${h}`}
-        className="w-full h-[200px] sm:h-[220px] max-h-[260px]"
-        preserveAspectRatio="xMidYMid meet"
-        role="img"
-        aria-label="Recordings per day over the last two weeks"
-      >
-        <defs>
-          <linearGradient id={fillGradId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ec4899" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#fce7f3" stopOpacity="0.15" />
-          </linearGradient>
-          <linearGradient id={lineGradId} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#db2777" />
-            <stop offset="100%" stopColor="#f43f5e" />
-          </linearGradient>
-        </defs>
-
-        {/* Y grid + labels */}
-        {yTicks.map((tick, i) => {
-          const yy = padT + innerH - (tick / maxY) * innerH
-          return (
-            <g key={`y-${i}`}>
-              <line
-                x1={padL}
-                y1={yy}
-                x2={padL + innerW}
-                y2={yy}
-                stroke="#f3f4f6"
-                strokeWidth={tick === 0 ? 1.5 : 1}
-              />
-              <text x={padL - 8} y={yy + 4} textAnchor="end" className="fill-gray-400 text-[11px] font-medium">
-                {tick}
-              </text>
-            </g>
-          )
-        })}
-
-        <text x={padL} y={14} className="fill-gray-500 text-[11px] font-medium">
-          Recordings
-        </text>
-
-        {areaPath ? <path d={areaPath} fill={`url(#${fillGradId})`} /> : null}
-        {linePath ? (
-          <path
-            d={linePath}
-            fill="none"
-            stroke={`url(#${lineGradId})`}
-            strokeWidth={2.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        ) : null}
-
-        {pts.map(p => (
-          <g key={p.date}>
-            <circle
-              cx={p.x}
-              cy={p.y}
-              r={5}
-              fill="#fff"
-              stroke="#db2777"
-              strokeWidth={2}
-              className="drop-shadow-sm"
-            >
-              <title>{`${formatTrendTickDate(p.date)}: ${p.count} recording${p.count === 1 ? '' : 's'}`}</title>
-            </circle>
-          </g>
-        ))}
-
-        {xTickIndices.map(i => {
-          const p = pts[i]
-          if (!p) return null
-          return (
-            <text
-              key={`x-${p.date}`}
-              x={p.x}
-              y={h - 8}
-              textAnchor="middle"
-              className="fill-gray-500 text-[10px] sm:text-[11px] font-medium"
-            >
-              {formatTrendTickDate(p.date)}
-            </text>
-          )
-        })}
-      </svg>
-      <p className="text-xs text-gray-500 mt-1 text-center">Hover points for exact counts · last {n} day{n === 1 ? '' : 's'} with activity</p>
-    </div>
-  )
-}
-
-function SimpleBars({
-  items,
-  getKey,
-  getLabel,
-  getValue,
-  colorClass = 'bg-pink-500',
-}: {
-  items: any[]
-  getKey: (item: any) => string
-  getLabel: (item: any) => string
-  getValue: (item: any) => number
-  colorClass?: string
-}) {
-  const max = Math.max(1, ...items.map(getValue))
-  return (
-    <div className="space-y-2">
-      {items.map(item => {
-        const value = getValue(item)
-        const width = Math.max(4, Math.round((value / max) * 100))
-        return (
-          <div key={getKey(item)}>
-            <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-              <span className="truncate">{getLabel(item)}</span>
-              <span>{value}</span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
-              <div className={`h-2 rounded-full ${colorClass}`} style={{ width: `${width}%` }} />
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
+  oximeter?: OximeterInsightsPayload
 }
 
 function InsightsPageContent() {
   const searchParams = useSearchParams()
+  const handlePlanLimit = usePlanLimit()
   const focusBabyId = (searchParams.get('babyId') || '').trim()
 
   const [loading, setLoading] = useState(true)
@@ -274,7 +114,42 @@ function InsightsPageContent() {
         <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
           Insights & Analytics
         </h1>
-        <p className="text-sm text-gray-600 mt-2">Daily stats, cry history, and graphical trends for your babies.</p>
+        <p className="text-sm text-gray-600 mt-2">Daily stats, cry history, oximeter trends, and graphical analytics for your babies.</p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          {data?.subscription?.allowExport ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-lg bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-700"
+              onClick={async () => {
+                const res = await fetch('/api/insights/export')
+                if (!res.ok) {
+                  const err = await res.json().catch(() => ({}))
+                  if (handlePlanLimit(err)) return
+                  toast.error(err?.message || err?.error || 'Export failed')
+                  return
+                }
+                const blob = await res.blob()
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `MumtaAI-insights-${new Date().toISOString().slice(0, 10)}.csv`
+                a.click()
+                URL.revokeObjectURL(url)
+                toast.success('Export downloaded')
+              }}
+            >
+              <FaDownload />
+              Export CSV
+            </button>
+          ) : (
+            <Link
+              href="/pricing"
+              className="inline-flex items-center gap-2 rounded-lg border border-pink-300 px-4 py-2 text-sm font-medium text-pink-700 hover:bg-pink-50"
+            >
+              Upgrade to export insights
+            </Link>
+          )}
+        </div>
         {focusBabyId ? (
           <p className="mt-3 text-sm rounded-xl border border-emerald-200 bg-emerald-50/80 text-emerald-900 px-4 py-2 max-w-2xl">
             <span className="font-semibold">Health context</span>{' '}
@@ -288,6 +163,10 @@ function InsightsPageContent() {
           </p>
         ) : null}
       </section>
+
+      {data?.oximeter ? (
+        <OximeterInsightsSection oximeter={data.oximeter} focusBabyId={focusBabyId || undefined} />
+      ) : null}
 
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-pink-100 p-4">
@@ -311,66 +190,47 @@ function InsightsPageContent() {
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-pink-100 p-5">
           <h2 className="font-semibold text-gray-900 flex items-center gap-2"><FaChartLine className="text-pink-500" /> Daily Trend (14 days)</h2>
-          {(data?.dailyTrend?.length || 0) > 0 ? (
-            <DailyTrendChart trend={data?.dailyTrend ?? []} />
-          ) : (
-            <p className="text-sm text-gray-500 mt-3">No trend data yet.</p>
-          )}
+          <RecordingsDailyChart trend={data?.dailyTrend ?? []} days={data?.subscription?.fullCharts ? 14 : 7} />
         </div>
 
         <div className="bg-white rounded-xl border border-pink-100 p-5">
           <h2 className="font-semibold text-gray-900 flex items-center gap-2"><FaHistory className="text-pink-500" /> Cry Type Distribution</h2>
-          <div className="mt-4">
-            <SimpleBars
-              items={(data?.cryTypeDistribution || []).slice(0, 6)}
-              getKey={i => i.type}
-              getLabel={i => i.type}
-              getValue={i => i.count}
-            />
-          </div>
+          <CryTypeDistributionChart items={(data?.cryTypeDistribution || []).slice(0, 6)} />
         </div>
 
         <div className="bg-white rounded-xl border border-pink-100 p-5">
           <h2 className="font-semibold text-gray-900 flex items-center gap-2"><FaClock className="text-pink-500" /> Hourly Pattern (Today)</h2>
-          <div className="mt-4">
-            <SimpleBars
-              items={(data?.hourlyTrend || []).filter(x => x.count > 0)}
-              getKey={i => String(i.hour)}
-              getLabel={i => `${String(i.hour).padStart(2, '0')}:00`}
-              getValue={i => i.count}
-              colorClass="bg-rose-500"
-            />
-          </div>
+          <HourlyPatternChart items={data?.hourlyTrend || []} />
         </div>
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-pink-100 p-5">
           <h2 className="font-semibold text-gray-900 flex items-center gap-2"><FaBaby className="text-pink-500" /> Baby-wise Breakdown (30 days)</h2>
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 space-y-4">
             {(data?.babyBreakdown || []).length === 0 ? (
               <p className="text-sm text-gray-500">No baby data available yet.</p>
             ) : (
-              (data?.babyBreakdown || []).map(item => {
-                const isFocused = focusBabyId === item.babyId
-                return (
-                  <div
-                    key={item.babyId}
-                    id={`insight-baby-${item.babyId}`}
-                    className={`rounded-lg border p-3 flex items-center justify-between transition-shadow ${
-                      isFocused
-                        ? 'border-emerald-300 bg-emerald-50/60 ring-2 ring-emerald-200 shadow-sm'
-                        : 'border-gray-100'
-                    }`}
-                  >
-                    <div>
-                      <p className="font-medium text-gray-900">{item.babyName}</p>
-                      <p className="text-xs text-gray-500">Avg Duration: {Math.round(item.avgDuration)} sec</p>
-                    </div>
-                    <span className="text-sm px-2 py-1 rounded-full bg-pink-100 text-pink-700">{item.recordings} recordings</span>
-                  </div>
-                )
-              })
+              <>
+                <BabyRecordingsChart items={data?.babyBreakdown || []} focusBabyId={focusBabyId || undefined} />
+                {(data?.babyBreakdown || []).map(item => {
+              const isFocused = focusBabyId === item.babyId
+              return (
+                <div
+                  key={item.babyId}
+                  id={`insight-baby-${item.babyId}`}
+                  className={`rounded-lg border p-3 text-sm transition-shadow ${
+                    isFocused
+                      ? 'border-emerald-300 bg-emerald-50/60 ring-2 ring-emerald-200 shadow-sm'
+                      : 'border-gray-100 bg-white'
+                  }`}
+                >
+                  <span className="font-medium text-gray-900">{item.babyName}</span>
+                  <span className="text-gray-500"> · avg duration {Math.round(item.avgDuration)} sec</span>
+                </div>
+              )
+                })}
+              </>
             )}
           </div>
         </div>
@@ -408,7 +268,6 @@ function InsightsPageContent() {
                 <th className="py-2 pr-3">Recorded At</th>
                 <th className="py-2 pr-3">Duration</th>
                 {/* <th className="py-2 pr-3">Cry Type</th> */}
-                <th className="py-2 pr-3">Confidence</th>
                 <th className="py-2 pr-3">Urgency</th>
               </tr>
             </thead>
@@ -419,13 +278,12 @@ function InsightsPageContent() {
                   <td className="py-2 pr-3 text-gray-600">{new Date(item.recordedAt).toLocaleString()}</td>
                   <td className="py-2 pr-3 text-gray-600">{Math.round(item.durationSeconds)} sec</td>
                   {/* <td className="py-2 pr-3 capitalize">{item.cryType}</td> */}
-                  <td className="py-2 pr-3">{Math.round(item.confidence * 100)}%</td>
                   <td className="py-2 pr-3 capitalize">{item.urgency}</td>
                 </tr>
               ))}
               {(data?.recentHistory || []).length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-gray-500">
+                  <td colSpan={4} className="py-6 text-center text-gray-500">
                     No cry history available yet.
                   </td>
                 </tr>

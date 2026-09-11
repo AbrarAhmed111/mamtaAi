@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast, Toaster } from '@/components/ui/sonner';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Spinner from '@/components/ui/spinner';
+import Select from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FaBaby, FaCamera, FaUsers, FaPlay, FaStop, FaPause, FaUser } from 'react-icons/fa';
-import Sidebar from './Sidebar';
-import DashboardHeader from './DashboardHeader';
+import { FaBaby, FaCamera, FaMicrophone, FaClock, FaShieldAlt, FaBell } from 'react-icons/fa';
 import WelcomeChecklist from './WelcomeChecklist';
 import RecordingSection from './RecordingSection';
 import BabyProfiles from './BabyProfiles';
@@ -16,6 +15,13 @@ import BabySelectionModal from './BabySelectionModal';
 import ProcessingProgress from './ProcessingProgress';
 // import BadgesSection from './BadgesSection';
 import QuickActions from './QuickActions';
+import ExpertRequestStatusCard, {
+  type ExpertApplicationSummary,
+} from './Expert/ExpertRequestStatusCard';
+import { usePlanLimit } from '@/hooks/useSubscription';
+import { useOnboardingStats } from '@/contexts/OnboardingStatsContext';
+import OximeterOverviewCard from '@/components/oximeter/OximeterOverviewCard';
+import OximeterOverviewRecentReadings from '@/components/oximeter/OximeterOverviewRecentReadings';
 
 interface ChecklistItem {
   id: string;
@@ -59,33 +65,31 @@ export default function Dashboard({
   onboardingCompleted
 }: DashboardProps) {
   const router = useRouter();
+  const handlePlanLimit = usePlanLimit();
+  const { hasBaby, hasRecording, loading: statsLoading, refresh: refreshOnboardingStats } =
+    useOnboardingStats();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [checklist, setChecklist] = useState<ChecklistItem[]>([
-    {
-      id: 'add-baby',
-      title: 'Add Baby Profile',
-      description: 'Complete your baby\'s profile with photos and details',
-      completed: false,
-      icon: FaBaby,
-      action: 'Complete Profile'
-    },
-    {
-      id: 'first-cry',
-      title: 'Record First Cry',
-      description: 'Record your baby\'s cry to get AI-powered insights',
-      completed: false,
-      icon: FaCamera,
-      action: 'Record Cry'
-    },
-    {
-      id: 'join-community',
-      title: 'Join Community',
-      description: 'Connect with other parents and get expert advice',
-      completed: false,
-      icon: FaUsers,
-      action: 'Join Now'
-    }
-  ]);
+  const checklistItems = useMemo<ChecklistItem[]>(
+    () => [
+      {
+        id: 'add-baby',
+        title: 'Add Baby Profile',
+        description: 'Complete your baby\'s profile with photos and details',
+        completed: hasBaby,
+        icon: FaBaby,
+        action: 'Complete Profile',
+      },
+      {
+        id: 'first-cry',
+        title: 'Record First Cry',
+        description: 'Record your baby\'s cry to get AI-powered insights',
+        completed: hasRecording,
+        icon: FaCamera,
+        action: 'Record Cry',
+      },
+    ],
+    [hasBaby, hasRecording],
+  );
 
   // Badges removed
 
@@ -116,27 +120,33 @@ export default function Dashboard({
 
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [hasBaby, setHasBaby] = useState(false);
-  const [hasRecording, setHasRecording] = useState(false);
-  const [hasCommunity, setHasCommunity] = useState(false);
-  const [recentRecs, setRecentRecs] = useState<Array<{ id: string; fileUrl: string; durationSeconds: number | null; recordedAt: string; babyId: string; babyName: string; babyAvatar?: string | null; babyGender?: string | null }>>([]);
-  const [recentLoading, setRecentLoading] = useState(false);
-  const [playingRecordingId, setPlayingRecordingId] = useState<string | null>(null);
-  const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
+  const [pendingAction, setPendingAction] = useState<'record' | 'upload'>('record');
+  const [uploadTrigger, setUploadTrigger] = useState(0);
   const [showProcessingProgress, setShowProcessingProgress] = useState(false);
-  const [processingAudio, setProcessingAudio] = useState<{ blob: Blob; durationSeconds: number } | null>(null);
+  const [processingAudio, setProcessingAudio] = useState<{ blob: Blob; durationSeconds: number; source: 'live' | 'uploaded' } | null>(null);
   const [processingResult, setProcessingResult] = useState<any>(null);
   const [dailyStats, setDailyStats] = useState<{ recordingsToday: number; minutesToday: number; avgConfidenceToday: number; urgentToday: number } | null>(null);
-
-  useEffect(() => {
-    // Points and badges removed
-  }, [checklist, babies]);
+  const [expertApplyStatus, setExpertApplyStatus] = useState<
+    'none' | 'pending' | 'approved' | 'rejected'
+  >('none');
+  const [expertApplication, setExpertApplication] = useState<ExpertApplicationSummary | null>(null);
+  const [expertCanApply, setExpertCanApply] = useState(true);
+  const [expertReapplyAt, setExpertReapplyAt] = useState<string | null>(null);
+  const [expertHasIntent, setExpertHasIntent] = useState(false);
+  const [expertApplyLoaded, setExpertApplyLoaded] = useState(false);
 
   const effectiveRole = (role ?? user.role ?? '').toLowerCase();
+  const isAdmin = effectiveRole === 'admin';
   const isParent = effectiveRole === 'parent';
-  const isRoleUnset = !effectiveRole || (effectiveRole !== 'parent' && effectiveRole !== 'expert');
+  const isRoleUnset = !effectiveRole || (effectiveRole !== 'parent' && effectiveRole !== 'admin');
   const isOnboardingIncomplete = onboardingCompleted === false;
+  const onboardingChecklistComplete = hasBaby && hasRecording;
+  const showWelcomeChecklist = !statsLoading && !onboardingChecklistComplete;
+  const showSetupBanner =
+    !isAdmin &&
+    (isRoleUnset ||
+      isOnboardingIncomplete ||
+      (isParent && babiesListResolved && babies.length === 0));
 
   const loadBabies = useCallback(async () => {
     if (!isParent) {
@@ -172,28 +182,31 @@ export default function Dashboard({
     } finally {
       setBabiesLoading(false);
       setBabiesListResolved(true);
+      if (isParent) void refreshOnboardingStats();
     }
-  }, [isParent]);
+  }, [isParent, refreshOnboardingStats]);
 
   useEffect(() => {
     void loadBabies();
   }, [loadBabies]);
 
-  // Fetch dynamic checklist stats
   useEffect(() => {
-    const loadStats = async () => {
+    void (async () => {
       try {
-        setStatsLoading(true);
-        const res = await fetch('/api/user/stats', { cache: 'no-store' });
+        const res = await fetch('/api/experts/apply', { cache: 'no-store' });
         const json = await res.json().catch(() => ({}));
-        setHasBaby(Boolean(json?.hasBaby));
-        setHasRecording(Boolean(json?.hasRecording));
-        setHasCommunity(Boolean(json?.hasCommunity));
+        if (!res.ok) return;
+        setExpertApplyStatus(json.status || 'none');
+        setExpertApplication(json.application ?? null);
+        setExpertCanApply(Boolean(json.canApply));
+        setExpertReapplyAt(json.reapplyAt ?? null);
+        setExpertHasIntent(Boolean(json.hasExpertIntent));
+      } catch {
+        // ignore
       } finally {
-        setStatsLoading(false);
+        setExpertApplyLoaded(true);
       }
-    };
-    loadStats();
+    })();
   }, []);
 
   useEffect(() => {
@@ -210,35 +223,12 @@ export default function Dashboard({
       }
     };
     void loadDailyStats();
-  }, []);
 
-  // Apply stats to checklist items
-  useEffect(() => {
-    setChecklist(prev =>
-      prev.map(item => {
-        if (item.id === 'add-baby') return { ...item, completed: hasBaby, loading: statsLoading };
-        if (item.id === 'first-cry') return { ...item, completed: hasRecording, loading: statsLoading };
-        if (item.id === 'join-community') return { ...item, completed: hasCommunity, loading: statsLoading };
-        return { ...item, loading: statsLoading };
-      }),
-    );
-  }, [hasBaby, hasRecording, hasCommunity, statsLoading]);
-
-  const loadRecentRecordings = async () => {
-    try {
-      setRecentLoading(true);
-      const res = await fetch('/api/recordings', { cache: 'no-store' });
-      const json = await res.json().catch(() => ({}));
-      const allRecordings = Array.isArray(json?.items) ? json.items : [];
-      // Limit to latest 5 recordings for dashboard display
-      setRecentRecs(allRecordings.slice(0, 5));
-    } finally {
-      setRecentLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadRecentRecordings();
+    const onOximeterAlert = () => {
+      void loadDailyStats();
+    };
+    window.addEventListener('mamta:oximeter-alert-created', onOximeterAlert);
+    return () => window.removeEventListener('mamta:oximeter-alert-created', onOximeterAlert);
   }, []);
 
   function formatAge(birthDateISO: string): string {
@@ -255,15 +245,6 @@ export default function Dashboard({
       return '';
     }
   }
-
-  const completeChecklistItem = (itemId: string) => {
-    setChecklist(prev => prev.map(item => {
-      if (item.id === itemId && !item.completed) {
-        return { ...item, completed: true };
-      }
-      return item;
-    }));
-  };
 
   const startRecording = () => {
     // Trigger actual recording start in RecordingSection
@@ -300,6 +281,7 @@ export default function Dashboard({
         return;
       }
       if (babies.length === 0) {
+        setPendingAction('record');
         setSelectedBabyId(null);
         setShowSelectBaby(true);
         return;
@@ -309,11 +291,12 @@ export default function Dashboard({
         startRecording();
         return;
       }
-      if (!selectedBabyId) setSelectedBabyId(babies[0].id);
+      setPendingAction('record');
+      setSelectedBabyId(null);
       setShowSelectBaby(true);
       return;
     }
-    completeChecklistItem(itemId);
+    handleAddBaby();
   };
 
   const handleAddBaby = () => {
@@ -345,14 +328,9 @@ export default function Dashboard({
   };
 
   const handleStartRecording = () => {
-    // Don't show baby selection if recording is already in progress or baby is already selected
+    // Don't show baby selection if recording is already in progress
     if (isRecording || shouldStartRecording) {
       return; // Recording already started, don't interfere
-    }
-    if (selectedBabyId) {
-      // Baby already selected, just start recording
-      startRecording();
-      return;
     }
     if (babies.length === 0) {
       toast.error('Please add your baby first.');
@@ -364,7 +342,29 @@ export default function Dashboard({
       startRecording();
       return;
     }
-    if (!selectedBabyId) setSelectedBabyId(babies[0].id);
+    // Always ask again which baby this recording is for, even if one was picked before
+    setPendingAction('record');
+    setSelectedBabyId(null);
+    setShowSelectBaby(true);
+  };
+
+  const handleUploadRequested = () => {
+    if (isRecording || shouldStartRecording) {
+      return;
+    }
+    if (babies.length === 0) {
+      toast.error('Please add your baby first.');
+      setShowSelectBaby(false);
+      return;
+    }
+    if (babies.length === 1) {
+      setSelectedBabyId(babies[0].id);
+      setUploadTrigger(n => n + 1);
+      return;
+    }
+    // Always ask which baby this upload is for, even if one was picked before
+    setPendingAction('upload');
+    setSelectedBabyId(null);
     setShowSelectBaby(true);
   };
 
@@ -372,66 +372,40 @@ export default function Dashboard({
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  const handlePlayRecording = (recording: { id: string; fileUrl: string; babyName: string }) => {
-    // Stop any currently playing audio
-    Object.values(audioRefs.current).forEach(audio => {
-      if (audio && !audio.paused) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
-    });
-
-    if (playingRecordingId === recording.id) {
-      // If clicking the same recording, stop it
-      setPlayingRecordingId(null);
-      return;
-    }
-
-    // Create or get audio element
-    if (!audioRefs.current[recording.id]) {
-      const audio = new Audio(recording.fileUrl);
-      audioRefs.current[recording.id] = audio;
-      audio.onended = () => {
-        setPlayingRecordingId(null);
-      };
-      audio.onerror = () => {
-        toast.error('Failed to play recording');
-        setPlayingRecordingId(null);
-      };
-    }
-
-    const audio = audioRefs.current[recording.id];
-    audio.play();
-    setPlayingRecordingId(recording.id);
-  };
-
-  const handleStopRecording = () => {
-    Object.values(audioRefs.current).forEach(audio => {
-      if (audio && !audio.paused) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
-    });
-    setPlayingRecordingId(null);
-  };
-
-  // Cleanup: tear down all HTMLAudioElements we created (must read .current at unmount, not mount)
-  useEffect(() => {
-    return () => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: latest audio map on unmount only
-      const audios = audioRefs.current;
-      Object.values(audios).forEach(audio => {
-        if (audio) {
-          audio.pause();
-          audio.src = '';
-        }
-      });
-    };
-  }, []);
-
   return (
     <>
      
+        {expertApplyLoaded &&
+          (expertApplyStatus === 'pending' || expertApplyStatus === 'rejected') && (
+            <ExpertRequestStatusCard
+              status={expertApplyStatus}
+              application={expertApplication}
+              canApply={expertCanApply}
+              reapplyAt={expertReapplyAt}
+            />
+          )}
+
+        {expertApplyLoaded &&
+          expertApplyStatus === 'none' &&
+          expertHasIntent &&
+          expertCanApply && (
+            <div className="mb-6 rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-white p-5 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                Request status
+              </p>
+              <p className="mt-2 font-semibold text-gray-900">Complete your expert application</p>
+              <p className="mt-1 text-sm text-gray-600">
+                You chose Expert during signup. Upload your verification document to submit for review.
+              </p>
+              <Link
+                href="/dashboard/expert-application"
+                className="mt-4 inline-flex rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 px-4 py-2 text-sm font-semibold text-white hover:from-pink-700 hover:to-rose-700"
+              >
+                Continue application
+              </Link>
+            </div>
+          )}
+
         {isParent && !babiesListResolved && (
           <div className="mt-4 mb-4 rounded-xl border border-pink-100 bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -444,66 +418,106 @@ export default function Dashboard({
           </div>
         )}
 
-        {(isRoleUnset ||
-          isOnboardingIncomplete ||
-          (isParent && babiesListResolved && babies.length === 0)) &&
-          !(isParent && !babiesListResolved) && (
-          <div className=" mt-4 mb-4">
-            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <p className="font-medium">
-                    {isRoleUnset
-                      ? 'Please choose your role (Parent or Expert).'
-                      : 'Please add at least one baby to continue.'}
-                  </p>
-                  <p className="text-sm text-yellow-700 mt-1">
-                    {isRoleUnset
-                      ? 'This helps us tailor the dashboard to your needs.'
-                      : 'Add a baby to start tracking and get personalized insights.'}
-                  </p>
+        {showSetupBanner && !(isParent && !babiesListResolved) && (
+          <div className="mb-6">
+            <div className="rounded-3xl border border-pink-100/80 bg-gradient-to-r from-pink-50 via-rose-50 to-purple-50 p-4 shadow-sm shadow-pink-100/20 sm:p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex gap-4">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-pink-100 text-pink-600 ring-4 ring-pink-50">
+                    <FaBaby className="text-xl" />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      {isRoleUnset
+                        ? 'Please choose your role (Parent or Expert).'
+                        : 'Please add at least one baby to continue.'}
+                    </p>
+                    <p className="mt-1 text-sm text-gray-600">
+                      {isRoleUnset
+                        ? 'This helps us tailor the dashboard to your needs.'
+                        : 'Add a baby to start tracking and get personalized insights.'}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  {!isRoleUnset && (
-                    <Link
-                      href="/dashboard/babies/add-baby"
-                      onClick={handleAddBaby}
-                      className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                    >
-                      Add Baby
-                    </Link>
-                  )}
-                </div>
+                {!isRoleUnset && (
+                  <Link
+                    href="/dashboard/babies/add-baby"
+                    onClick={handleAddBaby}
+                    className="inline-flex shrink-0 items-center justify-center rounded-xl bg-pink-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-pink-200/60 transition-all hover:bg-pink-600 hover:shadow-lg"
+                  >
+                    Add Baby
+                  </Link>
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {/* Daily overview card (top of overview page) */}
-        <section className="mb-4">
-          <div className="bg-white rounded-xl border border-pink-100 p-4 sm:p-5 shadow-sm bg-gradient-to-br from-white to-pink-50/20">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Today&apos;s Overview</h3>
-            <div className="mt-3 grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="rounded-lg bg-pink-50 px-3 py-2">
-                <div className="text-xs text-gray-500">Recordings</div>
-                <div className="text-lg font-bold text-gray-900">{dailyStats?.recordingsToday ?? 0}</div>
-              </div>
-              <div className="rounded-lg bg-pink-50 px-3 py-2">
-                <div className="text-xs text-gray-500">Cry Minutes</div>
-                <div className="text-lg font-bold text-gray-900">{dailyStats?.minutesToday ?? 0}m</div>
-              </div>
-              <div className="rounded-lg bg-pink-50 px-3 py-2">
-                <div className="text-xs text-gray-500">Avg Confidence</div>
-                <div className="text-lg font-bold text-gray-900">{dailyStats?.avgConfidenceToday ?? 0}%</div>
-              </div>
-              <div className="rounded-lg bg-red-50 px-3 py-2">
-                <div className="text-xs text-gray-500">Urgent Alerts</div>
-                <div className="text-lg font-bold text-red-600">{dailyStats?.urgentToday ?? 0}</div>
-              </div>
+        {/* Today's overview */}
+        <section className="mb-6">
+          <div className="rounded-3xl border border-pink-100/80 bg-white p-5 shadow-md shadow-pink-100/20 sm:p-6">
+            <h3 className="text-lg font-bold text-gray-900">Today&apos;s Overview</h3>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
+              {[
+                {
+                  label: 'Recordings',
+                  value: dailyStats?.recordingsToday ?? 0,
+                  icon: FaMicrophone,
+                  card: 'border-pink-100/80 bg-pink-50/60',
+                  iconWrap: 'bg-pink-100 text-pink-500',
+                  valueClass: 'text-gray-900',
+                },
+                {
+                  label: 'Cry Minutes',
+                  value: `${dailyStats?.minutesToday ?? 0}m`,
+                  icon: FaClock,
+                  card: 'border-purple-100/80 bg-purple-50/50',
+                  iconWrap: 'bg-purple-100 text-purple-500',
+                  valueClass: 'text-gray-900',
+                },
+                {
+                  label: 'Avg Confidence',
+                  value: `${dailyStats?.avgConfidenceToday ?? 0}%`,
+                  icon: FaShieldAlt,
+                  card: 'border-emerald-100/80 bg-emerald-50/50',
+                  iconWrap: 'bg-emerald-100 text-emerald-600',
+                  valueClass: 'text-gray-900',
+                },
+                {
+                  label: 'Urgent Alerts',
+                  value: dailyStats?.urgentToday ?? 0,
+                  icon: FaBell,
+                  card: 'border-rose-100/80 bg-rose-50/50',
+                  iconWrap: 'bg-rose-100 text-rose-500',
+                  valueClass: 'text-rose-600',
+                },
+              ].map(stat => {
+                const Icon = stat.icon;
+                return (
+                  <div
+                    key={stat.label}
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-4 ${stat.card}`}
+                  >
+                    <span
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${stat.iconWrap}`}
+                    >
+                      <Icon className="text-base" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-500">{stat.label}</p>
+                      <p className={`text-xl font-bold sm:text-2xl ${stat.valueClass}`}>{stat.value}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
-        
+
+        <section className="mb-6">
+          <OximeterOverviewCard />
+        </section>
+
         <BabySelectionModal
           isOpen={showSelectBaby}
           babies={babies}
@@ -515,26 +529,40 @@ export default function Dashboard({
               return;
             }
             setShowSelectBaby(false);
-            startRecording();
+            if (pendingAction === 'upload') {
+              setUploadTrigger(n => n + 1);
+            } else {
+              startRecording();
+            }
           }}
-          onCancel={() => setShowSelectBaby(false)}
+          onCancel={() => {
+            setShowSelectBaby(false);
+            setSelectedBabyId(null);
+            setPendingAction('record');
+          }}
           onAddBaby={handleAddBaby}
           isLoading={babiesLoading}
+          confirmLabel={pendingAction === 'upload' ? 'Upload Audio' : 'Start Recording'}
         />
 
-        <div className="p-0">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6 lg:space-y-8">
-          <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <WelcomeChecklist
-                checklist={checklist}
-                onItemAction={handleChecklistAction}
-              />
-          </div>
-              
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+            {/* Welcome checklist + recording */}
+            <div className="space-y-6 lg:col-span-2 lg:space-y-8">
+              {showWelcomeChecklist && (
+                <WelcomeChecklist
+                  checklist={checklistItems}
+                  onItemAction={handleChecklistAction}
+                />
+              )}
+
+              {onboardingChecklistComplete && isParent && (
+                <OximeterOverviewRecentReadings
+                  babies={babies.map(b => ({ id: b.id, name: b.name }))}
+                />
+              )}
+
               {isParent && (
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <div className="rounded-3xl border border-pink-100/80 bg-white p-5 shadow-md shadow-pink-100/20">
                 <RecordingSection
                   onStartRecording={() => {
                     // This callback is called:
@@ -554,13 +582,15 @@ export default function Dashboard({
                   onStopRecording={stopRecording}
                   shouldStartRecording={shouldStartRecording}
                   selectedBaby={selectedBabyId ? babies.find(b => b.id === selectedBabyId) || null : null}
-                  onProcessingStart={(blob, durationSeconds) => {
+                  onUploadRequested={handleUploadRequested}
+                  uploadTrigger={uploadTrigger}
+                  onProcessingStart={(blob, durationSeconds, source) => {
                     const targetBabyId = selectedBabyId || (babies[0]?.id || null);
                     if (!targetBabyId) {
                       toast.error('Please add/select a baby first');
                       return;
                     }
-                    setProcessingAudio({ blob, durationSeconds });
+                    setProcessingAudio({ blob, durationSeconds, source: source || 'live' });
                     setShowProcessingProgress(true);
                   }}
                 />
@@ -568,9 +598,8 @@ export default function Dashboard({
           )}
             </div>
 
-            {/* Sidebar */}
+            {/* Right column — quick actions & profiles */}
             <div className="space-y-6">
-              {/* BadgesSection removed */}
               <QuickActions onActionClick={handleActionClick} />
               {isParent && (
                 babiesLoading ? (
@@ -592,13 +621,15 @@ export default function Dashboard({
                     onBabyClick={handleBabyClick}
                   />
                 ) : (
-                  <div className="bg-white rounded-xl p-6 border border-dashed border-gray-200 text-center">
-                    <p className="text-gray-700 font-medium">No babies added yet</p>
-                    <p className="text-gray-500 text-sm mt-1">Add your baby to start tracking and getting insights.</p>
+                  <div className="rounded-3xl border border-dashed border-pink-200 bg-white p-6 text-center shadow-sm">
+                    <p className="font-medium text-gray-700">No babies added yet</p>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Add your baby to start tracking and getting insights.
+                    </p>
                     <Link
                       href="/dashboard/babies/add-baby"
                       onClick={handleAddBaby}
-                      className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                      className="mt-4 inline-flex items-center gap-2 rounded-xl bg-pink-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-pink-200/50 hover:bg-pink-600"
                     >
                       Add Baby
                     </Link>
@@ -606,71 +637,7 @@ export default function Dashboard({
                 )
               )}
 
-          {/* Recent recordings */}
-          <div className="bg-white rounded-2xl border border-pink-100 p-5 bg-gradient-to-br from-white to-pink-50/20">
-            <h3 className="text-lg font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent mb-4">Your Baby Recordings</h3>
-            {recentLoading ? (
-              <div className="text-gray-600 text-sm">Loading recordings...</div>
-            ) : recentRecs.length === 0 ? (
-              <div className="text-gray-600 text-sm">No recordings yet.</div>
-            ) : (
-              <ul className="space-y-3">
-                {recentRecs.map(r => {
-                  const isPlaying = playingRecordingId === r.id;
-                  const avatarBgClass =
-                    r.babyGender === 'male'
-                      ? 'bg-blue-50'
-                      : r.babyGender === 'female'
-                      ? 'bg-pink-50'
-                      : 'bg-gray-50';
-                  const avatarIconClass =
-                    r.babyGender === 'male'
-                      ? 'text-blue-400'
-                      : r.babyGender === 'female'
-                      ? 'text-pink-400'
-                      : 'text-gray-400';
-                  return (
-                    <li key={r.id} className="flex items-center justify-between text-sm p-3 rounded-lg hover:bg-pink-50/50 transition-colors">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className={`w-10 h-10 rounded-full overflow-hidden border-2 border-pink-200 flex-shrink-0 flex items-center justify-center ${avatarBgClass}`}>
-                          {r.babyAvatar ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={r.babyAvatar} alt={r.babyName} className="w-full h-full object-cover" />
-                          ) : (
-                            <FaUser className={`text-sm ${avatarIconClass}`} />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-gray-900 truncate">{r.babyName}</div>
-                          <div className="text-gray-600 text-xs">
-                            {new Date(r.recordedAt).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric',
-                              hour: 'numeric',
-                              minute: '2-digit'
-                            })} • {r.durationSeconds ? `${Math.floor(r.durationSeconds / 60)}:${String(Math.floor(r.durationSeconds % 60)).padStart(2, '0')}` : '—'}
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => isPlaying ? handleStopRecording() : handlePlayRecording(r)}
-                        className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-110 flex-shrink-0"
-                        title={isPlaying ? 'Stop playback' : 'Play recording'}
-                      >
-                        {isPlaying ? (
-                          <FaStop className="text-xs" />
-                        ) : (
-                          <FaPlay className="text-xs ml-0.5" />
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
             </div>
-          </div>
         </div>
       {showAddBaby && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -732,37 +699,39 @@ export default function Dashboard({
               </div>
               <div>
                 <label className="block text-sm text-gray-700 mb-1">Gender</label>
-                <select
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                <Select
                   value={babyGender}
-                  onChange={e => setBabyGender(e.target.value as 'male' | 'female' | '')}
-                >
-                  <option value="">Select gender (optional)</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                </select>
+                  onChange={v => setBabyGender(v as 'male' | 'female' | '')}
+                  options={[
+                    { value: '', label: 'Select gender (optional)' },
+                    { value: 'male', label: 'Male' },
+                    { value: 'female', label: 'Female' },
+                  ]}
+                  aria-label="Gender"
+                />
               </div>
               <div>
                 <label className="block text-sm text-gray-700 mb-1">Your relationship to the baby</label>
-                <select
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                <Select
                   value={babyRelationship}
-                  onChange={e => {
-                    setBabyRelationship(e.target.value as any);
+                  onChange={v => {
+                    setBabyRelationship(v as typeof babyRelationship);
                     if (relationshipError) setRelationshipError('');
                   }}
                   onBlur={() => {
                     if (!babyRelationship) setRelationshipError('Please select your relationship');
                   }}
-                >
-                  <option value="">Select relationship</option>
-                  <option value="mother">Mother</option>
-                  <option value="father">Father</option>
-                  <option value="guardian">Guardian</option>
-                  <option value="caregiver">Caregiver</option>
-                  <option value="grandparent">Grandparent</option>
-                  <option value="other">Other</option>
-                </select>
+                  options={[
+                    { value: '', label: 'Select relationship' },
+                    { value: 'mother', label: 'Mother' },
+                    { value: 'father', label: 'Father' },
+                    { value: 'guardian', label: 'Guardian' },
+                    { value: 'caregiver', label: 'Caregiver' },
+                    { value: 'grandparent', label: 'Grandparent' },
+                    { value: 'other', label: 'Other' },
+                  ]}
+                  aria-label="Your relationship to the baby"
+                />
                 {relationshipError && <p className="text-xs text-red-600 mt-1">{relationshipError}</p>}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -819,11 +788,10 @@ export default function Dashboard({
               </div>
               <div>
                 <label className="block text-sm text-gray-700 mb-1">Blood Type</label>
-                <select
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                <Select
                   value={babyBloodType}
-                  onChange={e => {
-                    setBabyBloodType(e.target.value);
+                  onChange={v => {
+                    setBabyBloodType(v);
                     if (bloodError) setBloodError('');
                   }}
                   onBlur={() => {
@@ -831,17 +799,19 @@ export default function Dashboard({
                       setBloodError('Invalid blood type');
                     }
                   }}
-                >
-                  <option value="">Select blood type (optional)</option>
-                  <option value="A+">A+</option>
-                  <option value="A-">A-</option>
-                  <option value="B+">B+</option>
-                  <option value="B-">B-</option>
-                  <option value="AB+">AB+</option>
-                  <option value="AB-">AB-</option>
-                  <option value="O+">O+</option>
-                  <option value="O-">O-</option>
-                </select>
+                  options={[
+                    { value: '', label: 'Select blood type (optional)' },
+                    { value: 'A+', label: 'A+' },
+                    { value: 'A-', label: 'A-' },
+                    { value: 'B+', label: 'B+' },
+                    { value: 'B-', label: 'B-' },
+                    { value: 'AB+', label: 'AB+' },
+                    { value: 'AB-', label: 'AB-' },
+                    { value: 'O+', label: 'O+' },
+                    { value: 'O-', label: 'O-' },
+                  ]}
+                  aria-label="Blood type"
+                />
                 {bloodError && <p className="text-xs text-red-600 mt-1">{bloodError}</p>}
               </div>
               <div>
@@ -906,7 +876,8 @@ export default function Dashboard({
                     });
                     const data = await res.json().catch(() => ({}));
                     if (!res.ok) {
-                      setFormError(data?.error || 'Failed to add baby');
+                      if (handlePlanLimit(data)) return;
+                      setFormError(data?.message || data?.error || 'Failed to add baby');
                       return;
                     }
                     toast.success('Baby added successfully');
@@ -920,6 +891,7 @@ export default function Dashboard({
                     setBabyNotes('');
                     setBabyRelationship('');
                     await loadBabies();
+                    void refreshOnboardingStats();
                   } catch (e: any) {
                     setFormError('Failed to add baby');
                   } finally {
@@ -945,19 +917,14 @@ export default function Dashboard({
             setProcessingResult(null);
             // Reset selectedBabyId so modal appears again next time
             setSelectedBabyId(null);
-            // Refresh stats and recordings
-            void loadRecentRecordings();
-            try {
-              fetch('/api/user/stats', { cache: 'no-store' }).then(res => res.json()).then(s => {
-                setHasRecording(Boolean(s?.hasRecording));
-              }).catch(() => {});
-            } catch {}
+            void refreshOnboardingStats();
           }}
           onComplete={(result) => {
             setProcessingResult(result);
             toast.success('Audio processed successfully!');
           }}
           audioFile={processingAudio.blob}
+          source={processingAudio.source}
           babyId={selectedBabyId || (babies[0]?.id || '')}
           babyName={selectedBabyId ? babies.find(b => b.id === selectedBabyId)?.name : babies[0]?.name}
         />

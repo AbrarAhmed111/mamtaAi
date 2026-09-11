@@ -1,10 +1,16 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { resolveOAuthPostLoginPath } from '@/lib/expert/oauth-routing'
+import { highResAvatar } from '@/lib/utils/avatar'
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
   const code = url.searchParams.get('code')
-  const returnUrl = url.searchParams.get('returnUrl')
+  // returnUrl is carried in a cookie (see /api/auth/login) so the OAuth redirect_to
+  // stays clean and matches the Supabase redirect allow-list. Fall back to the query
+  // param for backwards compatibility.
+  const returnUrl =
+    request.cookies.get('oauth_return_url')?.value || url.searchParams.get('returnUrl')
 
   if (!code) {
     const redirectUrl = new URL('/signin', request.url)
@@ -43,11 +49,14 @@ export async function GET(request: NextRequest) {
           (user.email?.split('@')[0] as string) ||
           'User'
         
-        // Google provides picture in user_metadata.picture, not avatar_url
+        // Google provides picture in user_metadata.picture, not avatar_url.
+        // Bump the default 96px size so it's not blurry when displayed large.
         const avatarUrl =
-          (user.user_metadata?.avatar_url as string) ||
-          (user.user_metadata?.picture as string) ||
-          null
+          highResAvatar(
+            (user.user_metadata?.avatar_url as string) ||
+            (user.user_metadata?.picture as string) ||
+            null
+          ) || null
 
         if (profileFetchError) {
           // Create minimal profile for new users
@@ -62,6 +71,12 @@ export async function GET(request: NextRequest) {
               signupMethod: 'google',
             },
           } as any)
+          try {
+            const { ensureFreeSubscription } = await import('@/lib/subscription')
+            await ensureFreeSubscription(user.id)
+          } catch {
+            // non-fatal
+          }
         } else if (existingProfile && !existingProfile.avatar_url && avatarUrl) {
           // Update existing profile if it doesn't have an avatar but we have one from Google
           await supabase
@@ -88,19 +103,13 @@ export async function GET(request: NextRequest) {
       if (user?.id) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role, is_verified')
+          .select('role, is_verified, metadata')
           .eq('id', user.id)
           .single()
 
-        // If role not chosen yet, take user to role selection
-        if (!profile?.role) {
-          return NextResponse.redirect(new URL('/auth/role', request.url))
-        }
-        // If expert and not verified, go to onboarding pending
-        if (profile.role === 'expert' && !profile.is_verified) {
-          return NextResponse.redirect(
-            new URL('/onboarding?status=pending', request.url),
-          )
+        const flowPath = await resolveOAuthPostLoginPath(user.id, profile)
+        if (flowPath) {
+          return NextResponse.redirect(new URL(flowPath, request.url))
         }
       }
     } catch {
@@ -112,14 +121,18 @@ export async function GET(request: NextRequest) {
       try {
         const candidate = new URL(returnUrl, url.origin)
         if (candidate.origin === url.origin) {
-          return NextResponse.redirect(candidate)
+          const res = NextResponse.redirect(candidate)
+          res.cookies.delete('oauth_return_url')
+          return res
         }
       } catch {
         // ignore malformed returnUrl
       }
     }
 
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    const res = NextResponse.redirect(new URL('/dashboard', request.url))
+    res.cookies.delete('oauth_return_url')
+    return res
   } catch (e: any) {
     const redirectUrl = new URL('/signin', request.url)
     redirectUrl.searchParams.set('error', 'true')

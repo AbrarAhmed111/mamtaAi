@@ -7,6 +7,8 @@ interface SendEmailOptions {
   html: string
   /** Inline images (e.g. logo with matching `cid:` in HTML). */
   attachments?: Attachment[]
+  /** Optional Reply-To (e.g. a contact-form sender's address). */
+  replyTo?: string
 }
 
 let smtpVerification: { verified: boolean; error?: string } | null = null
@@ -16,6 +18,7 @@ export async function sendEmail({
   subject,
   html,
   attachments,
+  replyTo,
 }: SendEmailOptions): Promise<{ ok: boolean; error?: string }> {
   const host = process.env.SMTP_HOST?.trim()
   const port = Number((process.env.SMTP_PORT || '587').trim())
@@ -57,6 +60,7 @@ export async function sendEmail({
       to,
       subject,
       html,
+      ...(replyTo ? { replyTo } : {}),
       ...(attachments && attachments.length > 0 ? { attachments } : {}),
     })
 

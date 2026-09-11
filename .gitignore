@@ -36,8 +36,14 @@ yarn-error.log*
 next-env.d.ts
 previousProject/
 
+# project docs (local only)
+/docs/PROJECT_PLANNING_DOCUMENT.md
+/docs
 # python backend (separate project)
 /mamtaai_python_backend
+/mamtaai-mobile-app
+# Supabase CLI local cache (created by link/login)
+supabase/.temp/
 
-# python backend (separate project)
-/mamtaai_python_backend
+/mamtaai-rag
+/mamtaAi

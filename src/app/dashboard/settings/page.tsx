@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   FaUser,
@@ -15,10 +15,19 @@ import {
   FaUsers,
   FaBell,
   FaUserTimes,
+  FaCreditCard,
+  FaIdCard,
+  FaUserShield,
+  FaUserCheck,
+  FaTicketAlt,
+  FaFlag,
+  FaClipboardList,
+  FaUserMd,
 } from 'react-icons/fa'
 import Image from 'next/image'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import Select from '@/components/ui/select'
 import type { Json } from '@/types/supabase'
 import { useAuth } from '@/lib/supabase/context'
 import {
@@ -26,13 +35,17 @@ import {
   type NotificationPreferences,
   parseNotificationPreferences,
 } from '@/lib/notification-preferences'
-
+import { useSubscription } from '@/hooks/useSubscription'
+import { useBilling } from '@/hooks/useBilling'
+import { getActiveView, isVerifiedExpert, isAdminAccount } from '@/lib/expert/active-view'
 interface Profile {
   id: string
   full_name: string
   phone_number: string | null
   avatar_url: string | null
   role: string | null
+  is_expert?: boolean | null
+  is_verified?: boolean | null
   created_at: string | null
   metadata: Json | null
 }
@@ -56,6 +69,44 @@ interface FamilyMemberRow {
   accessLevel: string
   isPrimary: boolean
 }
+
+const PARENT_SETTINGS_TABS = [
+  { id: 'profile', label: 'Profile', icon: FaUser },
+  { id: 'billing', label: 'Billing & plan', icon: FaCreditCard },
+  { id: 'notifications', label: 'Notifications', icon: FaBell },
+  { id: 'professional', label: 'Professional', icon: FaUserMd },
+  { id: 'family', label: 'Family access', icon: FaUsers },
+  { id: 'account', label: 'Account', icon: FaIdCard },
+] as const
+
+const ADMIN_SETTINGS_TABS = [
+  { id: 'profile', label: 'Profile', icon: FaUser },
+  { id: 'notifications', label: 'Notifications', icon: FaBell },
+  { id: 'admin', label: 'Admin panel', icon: FaUserShield },
+  { id: 'account', label: 'Account', icon: FaIdCard },
+] as const
+
+const ADMIN_PANEL_LINKS = [
+  { href: '/dashboard/admin/users', label: 'Users', description: 'Manage platform accounts', icon: FaUserShield, tone: 'pink' },
+  { href: '/dashboard/admin/experts', label: 'Expert verification', description: 'Review pending applications', icon: FaUserCheck, tone: 'emerald' },
+  { href: '/dashboard/admin/subscriptions', label: 'Subscriptions', description: 'Plans and billing overrides', icon: FaCreditCard, tone: 'purple' },
+  { href: '/dashboard/admin/coupons', label: 'Coupons', description: 'Discount codes', icon: FaTicketAlt, tone: 'amber' },
+  { href: '/dashboard/admin/moderation', label: 'Moderation', description: 'Community reports queue', icon: FaFlag, tone: 'rose' },
+  { href: '/dashboard/admin/logs', label: 'System logs', description: 'Audit and error logs', icon: FaClipboardList, tone: 'gray' },
+] as const
+
+type SettingsTabId =
+  | (typeof PARENT_SETTINGS_TABS)[number]['id']
+  | (typeof ADMIN_SETTINGS_TABS)[number]['id']
+
+const ADMIN_TONE_CLASSES = {
+  pink: 'bg-pink-100 text-pink-600 group-hover:bg-pink-200',
+  emerald: 'bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200',
+  purple: 'bg-purple-100 text-purple-600 group-hover:bg-purple-200',
+  amber: 'bg-amber-100 text-amber-600 group-hover:bg-amber-200',
+  rose: 'bg-rose-100 text-rose-600 group-hover:bg-rose-200',
+  gray: 'bg-gray-100 text-gray-600 group-hover:bg-gray-200',
+} as const
 
 function ToggleRow({
   id,
@@ -105,11 +156,234 @@ function ToggleRow({
   )
 }
 
+function ProfessionalSettingsPanel({ profile }: { profile: Profile | null }) {
+  const [loading, setLoading] = useState(true)
+  const [status, setStatus] = useState<'none' | 'pending' | 'approved' | 'rejected'>('none')
+  const [canApply, setCanApply] = useState(true)
+  const [reapplyAt, setReapplyAt] = useState<string | null>(null)
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch('/api/experts/apply', { cache: 'no-store' })
+        const data = await res.json().catch(() => ({}))
+        if (res.ok) {
+          setStatus(data.status || 'none')
+          setCanApply(Boolean(data.canApply))
+          setReapplyAt(data.reapplyAt ?? null)
+        }
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [])
+
+  const isVerifiedExpertUser = isVerifiedExpert(profile)
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg p-6 text-sm text-gray-500">
+        Loading professional settings…
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-lg p-6">
+      <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+        <FaUserMd className="text-pink-600" />
+        Professional / Expert program
+      </h2>
+      <p className="text-sm text-gray-600 mb-6">
+        Healthcare professionals can apply to join the MumtaAI expert network, publish guidance, and appear in the
+        expert directory.
+      </p>
+
+      {isVerifiedExpertUser ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-5">
+          <p className="font-semibold text-emerald-900">You are a verified expert</p>
+          <p className="mt-2 text-sm text-emerald-800">
+            Use the header toggle to switch between Parent and Expert dashboard views. Edit your public listing anytime.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link
+              href="/dashboard/expert/profile"
+              className="inline-flex rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              Edit expert profile
+            </Link>
+            <Link
+              href="/dashboard"
+              className="inline-flex rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-50"
+            >
+              Go to expert overview
+            </Link>
+          </div>
+        </div>
+      ) : status === 'pending' ? (
+        <div className="rounded-xl border border-pink-100/80 bg-gradient-to-br from-pink-50 via-rose-50/90 to-white p-5 shadow-sm shadow-pink-100/20">
+          <p className="font-semibold text-gray-900">Application under review</p>
+          <p className="mt-2 text-sm text-gray-600">
+            Your documents are being reviewed. You can continue using MumtaAI as a parent while you wait.
+          </p>
+        </div>
+      ) : status === 'rejected' ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50/80 p-5">
+          <p className="font-semibold text-rose-900">Application not approved</p>
+          <p className="mt-2 text-sm text-rose-800">
+            {canApply
+              ? 'You may submit a new application.'
+              : reapplyAt
+                ? `Re-apply after ${new Date(reapplyAt).toLocaleString()}.`
+                : 'Please contact support for assistance.'}
+          </p>
+          {canApply ? (
+            <Link
+              href="/dashboard/expert-application"
+              className="mt-4 inline-flex rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 px-4 py-2 text-sm font-semibold text-white"
+            >
+              Re-apply as expert
+            </Link>
+          ) : null}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-pink-100 bg-gradient-to-br from-white to-pink-50/30 p-5">
+          <p className="font-semibold text-gray-900">Become an expert on MumtaAI</p>
+          <p className="mt-2 text-sm text-gray-600">
+            Submit your credentials and a verification document. Approval typically takes 1–3 business days.
+          </p>
+          <Link
+            href="/dashboard/expert-application"
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 px-5 py-2.5 text-sm font-semibold text-white hover:from-pink-700 hover:to-rose-700"
+          >
+            <FaUserMd />
+            Start expert application
+          </Link>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   const router = useRouter()
-  const { refreshUser } = useAuth()
+  const { user, refreshUser } = useAuth()
+  const activeView = getActiveView(user?.profile ?? null)
+  const isAdmin = isAdminAccount(user?.profile ?? null)
+  const settingsTabs = useMemo(
+    () => (activeView === 'admin' ? ADMIN_SETTINGS_TABS : PARENT_SETTINGS_TABS),
+    [activeView],
+  )
+  const validTabIds = useMemo(() => settingsTabs.map(t => t.id), [settingsTabs])
+  const {
+    slug,
+    planName,
+    meters,
+    limitations,
+    loading: subLoading,
+    refresh: refreshSubscription,
+  } = useSubscription()
+  const { loadingPlan, portalLoading, startCheckout, openPortal } = useBilling()
+  const [billingLoaded, setBillingLoaded] = useState(false)
+  const [activeTab, setActiveTab] = useState<SettingsTabId>('profile')
+  const tabContentRef = useRef<HTMLDivElement>(null)
+
+  const selectTab = (id: SettingsTabId) => {
+    setActiveTab(id)
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', `/dashboard/settings?tab=${id}`)
+      // Wait for the new panel to render, then gently scroll it into view.
+      requestAnimationFrame(() => {
+        tabContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }
+  }
+  const [billingMeta, setBillingMeta] = useState<{
+    canManageBilling: boolean
+    cancelAtPeriodEnd: boolean
+    currentPeriodEnd: string | null
+    pendingPlanChange: { plan_slug: string; effective_at: string } | null
+  }>({
+    canManageBilling: false,
+    cancelAtPeriodEnd: false,
+    currentPeriodEnd: null,
+    pendingPlanChange: null,
+  })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch('/api/subscription', { cache: 'no-store' })
+        const data = await res.json().catch(() => ({}))
+        if (res.ok && data.billing) {
+          setBillingMeta({
+            canManageBilling: Boolean(data.billing.canManageBilling),
+            cancelAtPeriodEnd: Boolean(data.billing.cancelAtPeriodEnd),
+            currentPeriodEnd: data.billing.currentPeriodEnd ?? null,
+            pendingPlanChange: data.billing.pendingPlanChange ?? null,
+          })
+        }
+      } finally {
+        setBillingLoaded(true)
+      }
+    })()
+  }, [slug])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const legacyCheckout = params.get('session_id')
+    if (legacyCheckout?.startsWith('cs_')) {
+      router.replace(
+        `/billing/success?checkout_session=${encodeURIComponent(legacyCheckout)}`,
+      )
+      return
+    }
+    const billing = params.get('billing')
+    const planParam = params.get('plan')
+    const planLabel = planParam ? planParam.charAt(0).toUpperCase() + planParam.slice(1) : 'your new plan'
+
+    // Decide initial tab from the URL: explicit ?tab=, billing redirects, or #billing hash.
+    const tabParam = params.get('tab')
+    if (tabParam && validTabIds.includes(tabParam as SettingsTabId)) {
+      setActiveTab(tabParam as SettingsTabId)
+    } else if (activeView !== 'admin' && (billing || window.location.hash === '#billing')) {
+      setActiveTab('billing')
+    } else if (tabParam && !validTabIds.includes(tabParam as SettingsTabId)) {
+      setActiveTab('profile')
+    }
+
+    if (isAdmin) {
+      if (billing === 'success' || billing === 'scheduled' || billing === 'kept') {
+        void refreshSubscription()
+      }
+      return
+    }
+
+    if (billing === 'success') {
+      toast.success('Your subscription was updated successfully.')
+      void refreshSubscription()
+      window.history.replaceState({}, '', '/dashboard/settings?tab=billing')
+    } else if (billing === 'scheduled') {
+      toast.success(
+        `You'll switch to ${planLabel} at the end of your current billing period. You keep your current plan until then.`,
+      )
+      void refreshSubscription()
+      window.history.replaceState({}, '', '/dashboard/settings?tab=billing')
+    } else if (billing === 'kept') {
+      toast.success('Your scheduled plan change was cancelled. You keep your current plan.')
+      void refreshSubscription()
+      window.history.replaceState({}, '', '/dashboard/settings?tab=billing')
+    } else if (billing === 'cancelled') {
+      toast.error('Checkout was cancelled.')
+      window.history.replaceState({}, '', '/dashboard/settings?tab=billing')
+    } else if (billing === 'portal') {
+      void refreshSubscription()
+      window.history.replaceState({}, '', '/dashboard/settings?tab=billing')
+    }
+  }, [refreshSubscription, router, isAdmin, validTabIds])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [stats, setStats] = useState<Stats>({
     babies: 0,
@@ -137,11 +411,17 @@ export default function SettingsPage() {
   }, [])
 
   useEffect(() => {
-    if (profile) {
+    if (profile && activeView !== 'admin') {
       loadStats()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile])
+  }, [profile, activeView])
+
+  useEffect(() => {
+    if (!validTabIds.includes(activeTab)) {
+      setActiveTab('profile')
+    }
+  }, [activeTab, validTabIds])
 
   const loadProfile = async () => {
     try {
@@ -412,10 +692,153 @@ export default function SettingsPage() {
         Settings
       </h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Profile Information */}
+      {/* Tab navigation */}
+      <div className="mb-6 border-b border-pink-100 overflow-x-auto no-scroll">
+        <nav className="flex gap-1 -mb-px min-w-max" aria-label="Settings sections">
+          {settingsTabs.map(tab => {
+            const isActive = tab.id === activeTab
+            const Icon = tab.icon
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => selectTab(tab.id as SettingsTabId)}
+                aria-current={isActive ? 'page' : undefined}
+                className={`inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'border-pink-600 text-pink-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-200'
+                }`}
+              >
+                <Icon className="text-base" />
+                {tab.label}
+              </button>
+            )
+          })}
+        </nav>
+      </div>
+
+      <div ref={tabContentRef} className="space-y-6 scroll-mt-24">
+        {/* Billing & plan */}
+        {activeTab === 'billing' && activeView !== 'admin' && (
+        <>
+          <div className="bg-white rounded-xl shadow-lg p-6" id="billing">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Billing & plan</h2>
+            {subLoading || !billingLoaded ? (
+              <div className="animate-pulse" aria-hidden="true">
+                <div className="h-4 w-48 rounded bg-gray-100 mb-4" />
+                <div className="h-3.5 w-40 rounded bg-gray-100 mb-2" />
+                <div className="h-3.5 w-36 rounded bg-gray-100 mb-4" />
+                <div className="space-y-1.5 mb-4">
+                  <div className="h-3 w-44 rounded bg-gray-100" />
+                  <div className="h-3 w-40 rounded bg-gray-100" />
+                  <div className="h-3 w-36 rounded bg-gray-100" />
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <div className="h-9 w-32 rounded-lg bg-gray-100" />
+                  <div className="h-9 w-28 rounded-lg bg-gray-100" />
+                  <div className="h-9 w-28 rounded-lg bg-gray-100" />
+                </div>
+              </div>
+            ) : (
+            <>
+            <p className="text-sm text-gray-600 mb-4">
+              You&apos;re on <span className="font-semibold capitalize text-pink-700">{planName}</span> ({slug}).
+            </p>
+            {meters.recordings && meters.recordings.max != null && (
+              <p className="text-sm text-gray-700 mb-2">
+                {meters.recordings.label}: {meters.recordings.used} / {meters.recordings.max} this month
+              </p>
+            )}
+            {meters.activities && meters.activities.max != null && (
+              <p className="text-sm text-gray-700 mb-2">
+                {meters.activities.label}: {meters.activities.used} / {meters.activities.max} this month
+              </p>
+            )}
+            <ul className="text-xs text-gray-500 space-y-1 mb-4">
+              <li>Max recording length: {limitations.max_recording_duration_seconds}s</li>
+              <li>Family invites: {limitations.allow_family_invites ? 'Yes' : 'Not on Free'}</li>
+              <li>Insights export: {limitations.allow_insights_export ? 'Yes' : 'Available on Plus'}</li>
+            </ul>
+            {billingMeta.cancelAtPeriodEnd && billingMeta.currentPeriodEnd && (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-4">
+                Your paid plan ends on{' '}
+                {new Date(billingMeta.currentPeriodEnd).toLocaleDateString()}. You will move to Free
+                after that.
+              </p>
+            )}
+            {billingMeta.pendingPlanChange && (
+              <div className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-4">
+                <p>
+                  Your plan will switch to{' '}
+                  <span className="font-semibold capitalize">
+                    {billingMeta.pendingPlanChange.plan_slug}
+                  </span>{' '}
+                  on {new Date(billingMeta.pendingPlanChange.effective_at).toLocaleDateString()}. You
+                  keep your current <span className="font-semibold capitalize">{slug}</span> plan and
+                  features until then.
+                </p>
+                {(slug === 'plus' || slug === 'pro') && (
+                  <button
+                    type="button"
+                    disabled={loadingPlan !== null}
+                    onClick={() => {
+                      void startCheckout(slug).catch(err =>
+                        toast.error(err instanceof Error ? err.message : 'Could not cancel change'),
+                      )
+                    }}
+                    className="mt-2 inline-flex rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-60"
+                  >
+                    {loadingPlan === slug ? 'Cancelling…' : `Keep ${planName} instead`}
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/pricing"
+                className={
+                  slug === 'pro'
+                    ? 'inline-flex rounded-lg border border-pink-200 px-4 py-2 text-sm font-medium text-pink-700 hover:bg-pink-50'
+                    : 'inline-flex rounded-lg bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-700'
+                }
+              >
+                {slug === 'pro' ? 'Compare plans' : 'View plans & upgrade'}
+              </Link>
+              {billingMeta.canManageBilling && (
+                <button
+                  type="button"
+                  disabled={portalLoading}
+                  onClick={() => {
+                    void openPortal().catch(err =>
+                      toast.error(err instanceof Error ? err.message : 'Could not open portal'),
+                    )
+                  }}
+                  className="inline-flex rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                >
+                  {portalLoading ? 'Opening…' : 'Manage billing'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => void refreshSubscription()}
+                className="inline-flex rounded-lg border border-pink-200 px-4 py-2 text-sm font-medium text-pink-700 hover:bg-pink-50"
+              >
+                Refresh usage
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              Secure checkout powered by Stripe. Cancel anytime from Manage billing.
+            </p>
+            </>
+            )}
+          </div>
+
+        </>
+        )}
+
+        {/* Profile Information */}
+        {activeTab === 'profile' && (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Profile Information</h2>
 
@@ -522,8 +945,10 @@ export default function SettingsPage() {
               </div>
             </form>
           </div>
+        )}
 
-          {/* Notification preferences */}
+        {/* Notification preferences */}
+        {activeTab === 'notifications' && (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
               <FaBell className="text-pink-600" />
@@ -531,24 +956,104 @@ export default function SettingsPage() {
             </h2>
             <p className="text-sm text-gray-600 mb-6">
               Choose what we can notify you about. In-app sound and bell highlight apply on the dashboard when new items
-              arrive. Family and community toggles control those notification categories.
+              arrive.
+              {isAdmin
+                ? ' Use the master toggles for all in-app or email delivery, then pick which event types you care about.'
+                : ' Family and community toggles control those notification categories.'}
             </p>
 
             <div className="rounded-lg border border-pink-100 bg-gradient-to-br from-white to-pink-50/20 px-4">
-              <ToggleRow
-                id="pref-family-invites"
-                label="Family invites"
-                description={"When someone invites you to a baby's care circle."}
-                checked={notifPrefs.familyInvites}
-                onChange={(v) => setNotifPrefs((p) => ({ ...p, familyInvites: v }))}
-              />
-              <ToggleRow
-                id="pref-community"
-                label="Community activity"
-                description="Forum and blog: replies on your threads or posts, replies to your messages, and @mentions (use @ plus a user profile ID)."
-                checked={notifPrefs.community}
-                onChange={(v) => setNotifPrefs((p) => ({ ...p, community: v }))}
-              />
+              {isAdmin ? (
+                <>
+                  <ToggleRow
+                    id="pref-admin-alerts"
+                    label="Admin panel alerts (in-app)"
+                    description="Master switch for bell notifications on the dashboard. Individual alert types below still apply."
+                    checked={notifPrefs.adminAlerts}
+                    onChange={v => setNotifPrefs(p => ({ ...p, adminAlerts: v }))}
+                  />
+                  <ToggleRow
+                    id="pref-admin-email"
+                    label="Email admin alerts"
+                    description="Master switch for admin emails. Requires SMTP to be configured on the server."
+                    checked={notifPrefs.emailAdminAlerts}
+                    onChange={v => setNotifPrefs(p => ({ ...p, emailAdminAlerts: v }))}
+                  />
+
+                  <div className="border-t border-pink-100/80 pt-2 mt-1 mb-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 px-1 py-2">
+                      Alert types
+                    </p>
+                  </div>
+
+                  <ToggleRow
+                    id="pref-admin-signups"
+                    label="New parent & user signups"
+                    description="When someone registers as a parent or other non-expert role."
+                    checked={notifPrefs.adminNotifySignups}
+                    onChange={v => setNotifPrefs(p => ({ ...p, adminNotifySignups: v }))}
+                  />
+                  <ToggleRow
+                    id="pref-admin-experts"
+                    label="Expert applications"
+                    description="New expert signups that need verification."
+                    checked={notifPrefs.adminNotifyExperts}
+                    onChange={v => setNotifPrefs(p => ({ ...p, adminNotifyExperts: v }))}
+                  />
+                  <ToggleRow
+                    id="pref-admin-subscriptions"
+                    label="Subscription & billing"
+                    description="New paid plans, upgrades, plan changes, payment failures, cancellations, and scheduled downgrades."
+                    checked={notifPrefs.adminNotifySubscriptions}
+                    onChange={v => setNotifPrefs(p => ({ ...p, adminNotifySubscriptions: v }))}
+                  />
+                  <ToggleRow
+                    id="pref-admin-moderation"
+                    label="Moderation reports"
+                    description="Reports on blog posts, forum threads, replies, and comments."
+                    checked={notifPrefs.adminNotifyModeration}
+                    onChange={v => setNotifPrefs(p => ({ ...p, adminNotifyModeration: v }))}
+                  />
+                  <ToggleRow
+                    id="pref-admin-coupons"
+                    label="Coupon redemptions"
+                    description="When a user applies a discount code at checkout."
+                    checked={notifPrefs.adminNotifyCoupons}
+                    onChange={v => setNotifPrefs(p => ({ ...p, adminNotifyCoupons: v }))}
+                  />
+                  <ToggleRow
+                    id="pref-admin-actions"
+                    label="Other admins’ actions"
+                    description="When another admin updates users, subscriptions, coupons, experts, or moderation."
+                    checked={notifPrefs.adminNotifyAdminActions}
+                    onChange={v => setNotifPrefs(p => ({ ...p, adminNotifyAdminActions: v }))}
+                  />
+                  <ToggleRow
+                    id="pref-admin-system-errors"
+                    label="System errors"
+                    description="High and critical errors logged by the application."
+                    checked={notifPrefs.adminNotifySystemErrors}
+                    onChange={v => setNotifPrefs(p => ({ ...p, adminNotifySystemErrors: v }))}
+                  />
+                </>
+              ) : (
+                <>
+                  <ToggleRow
+                    id="pref-family-invites"
+                    label="Family invites"
+                    description={"When someone invites you to a baby's care circle."}
+                    checked={notifPrefs.familyInvites}
+                    onChange={v => setNotifPrefs(p => ({ ...p, familyInvites: v }))}
+                  />
+                  <ToggleRow
+                    id="pref-community"
+                    label="Community activity"
+                    description="Forum and blog: replies on your threads or posts, replies to your messages, and @mentions (use @ plus a user profile ID)."
+                    checked={notifPrefs.community}
+                    onChange={v => setNotifPrefs(p => ({ ...p, community: v }))}
+                  />
+                </>
+              )}
               <ToggleRow
                 id="pref-sound"
                 label="In-app sound for new notifications"
@@ -568,29 +1073,25 @@ export default function SettingsPage() {
             <div className="mt-8 pt-6 border-t border-dashed border-gray-200">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <h3 className="text-sm font-bold text-gray-900">Oximeter readings</h3>
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
-                  Feature coming soon
-                </span>
               </div>
               <p className="text-xs text-gray-500 mb-4">
-                SpO₂ and pulse alerts from a connected oximeter will appear here. These options are not available yet.
+                SpO₂ and pulse alerts from a connected oximeter. Requires an active oximeter session on a
+                Bluetooth-capable browser.
               </p>
               <div className="rounded-lg border border-gray-100 bg-gray-50/80 px-4">
                 <ToggleRow
                   id="pref-oxi-spo2"
                   label="Low oxygen (SpO₂) alerts"
-                  description="Notify when oxygen saturation drops below your chosen threshold."
-                  checked={false}
-                  onChange={() => {}}
-                  disabled
+                  description="Notify when oxygen saturation drops below the attention threshold."
+                  checked={notifPrefs.oximeterSpo2}
+                  onChange={v => setNotifPrefs(p => ({ ...p, oximeterSpo2: v }))}
                 />
                 <ToggleRow
                   id="pref-oxi-pulse"
                   label="Heart rate alerts"
                   description="Notify when pulse is unusually high or low."
-                  checked={false}
-                  onChange={() => {}}
-                  disabled
+                  checked={notifPrefs.oximeterPulse}
+                  onChange={v => setNotifPrefs(p => ({ ...p, oximeterPulse: v }))}
                 />
               </div>
             </div>
@@ -615,9 +1116,22 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+        )}
 
-          {/* Family access — guardians & relatives */}
-          {familyBabies.length > 0 && (
+        {activeTab === 'professional' && activeView !== 'admin' && (
+          <ProfessionalSettingsPanel profile={profile} />
+        )}
+
+        {/* Family access — guardians & relatives */}
+        {activeTab === 'family' && activeView !== 'admin' && (
+          familyLoading && familyBabies.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-pink-600" />
+                Loading family access…
+              </div>
+            </div>
+          ) : familyBabies.length > 0 ? (
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
                 <FaUsers className="text-pink-600" />
@@ -663,20 +1177,21 @@ export default function SettingsPage() {
                                     <label htmlFor={`access-${rowKey}`} className="sr-only">
                                       Access for {m.fullName}
                                     </label>
-                                    <select
+                                    <Select
                                       id={`access-${rowKey}`}
                                       value={value}
                                       disabled={updatingMemberKey === rowKey || removingMemberKey === rowKey}
-                                      onChange={(e) => {
-                                        const next = e.target.value as 'full' | 'read_only'
+                                      onChange={(next) => {
                                         if (next === value) return
-                                        void updateMemberAccess(baby.id, m.parentId, next)
+                                        void updateMemberAccess(baby.id, m.parentId, next as 'full' | 'read_only')
                                       }}
-                                      className="text-sm border border-pink-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:opacity-50"
-                                    >
-                                      <option value="read_only">Read only</option>
-                                      <option value="full">Full access</option>
-                                    </select>
+                                      options={[
+                                        { value: 'read_only', label: 'Read only' },
+                                        { value: 'full', label: 'Full access' },
+                                      ]}
+                                      size="sm"
+                                      aria-label={`Access for ${m.fullName}`}
+                                    />
                                     <button
                                       type="button"
                                       disabled={updatingMemberKey === rowKey || removingMemberKey === rowKey}
@@ -699,9 +1214,58 @@ export default function SettingsPage() {
                 </div>
               )}
             </div>
-          )}
+          ) : (
+            <div className="bg-white rounded-xl shadow-lg p-6 text-sm text-gray-600">
+              You don&apos;t manage family access for any child yet. When you add a baby or invite a
+              caregiver from a child&apos;s page, they&apos;ll appear here.
+            </div>
+          ))}
+
+        {activeTab === 'admin' && isAdmin && (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent mb-2">
+              Admin panel
+            </h2>
+            <p className="text-sm text-gray-600 mb-6">
+              Jump to platform management tools. Use the header toggle to preview the app as a parent user,
+              or open admin tools from the links below.
+            </p>
+            <div className="space-y-3">
+              {ADMIN_PANEL_LINKS.map(link => {
+                const Icon = link.icon
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-pink-50 group"
+                  >
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${ADMIN_TONE_CLASSES[link.tone]}`}
+                    >
+                      <Icon />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900">{link.label}</p>
+                      <p className="text-xs text-gray-500">{link.description}</p>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+            <div className="mt-6 border-t border-pink-100 pt-4">
+              <Link
+                href="/dashboard/admin"
+                className="text-sm font-medium text-pink-600 hover:text-pink-700 hover:underline"
+              >
+                → Admin overview dashboard
+              </Link>
+            </div>
+          </div>
+        )}
 
           {/* Account Information */}
+          {activeTab === 'account' && (
+          <>
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Account Information</h2>
             <div className="space-y-3">
@@ -717,6 +1281,10 @@ export default function SettingsPage() {
                     : 'N/A'}
                 </span>
               </div>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600">Role</span>
+                <span className="text-sm font-medium capitalize text-gray-900">{profile?.role || '—'}</span>
+              </div>
               <div className="flex justify-between items-center py-2">
                 <span className="text-sm text-gray-600">User ID</span>
                 <span className="text-sm font-mono text-gray-500 text-xs">
@@ -725,10 +1293,9 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
+          {!isAdmin && (
+          <>
           {/* Your Activity */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Your Activity</h2>
@@ -811,7 +1378,27 @@ export default function SettingsPage() {
               </Link>
             </div>
           </div>
-        </div>
+          </>
+          )}
+
+          {isAdmin && (
+          <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl shadow-lg p-6 border border-pink-200">
+            <h3 className="font-semibold text-gray-900 mb-3">Administrator</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Billing, family access, and subscription limits do not apply to admin accounts. Use the Admin panel tab for
+              platform management.
+            </p>
+            <button
+              type="button"
+              onClick={() => selectTab('admin')}
+              className="text-sm font-medium text-pink-700 hover:text-pink-800 hover:underline"
+            >
+              → Open admin panel shortcuts
+            </button>
+          </div>
+          )}
+        </>
+        )}
       </div>
     </div>
   )

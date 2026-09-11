@@ -22,6 +22,7 @@ interface BabySelectionModalProps {
   onCancel: () => void;
   onAddBaby: () => void;
   isLoading?: boolean;
+  confirmLabel?: string;
 }
 
 export default function BabySelectionModal({
@@ -32,7 +33,8 @@ export default function BabySelectionModal({
   onConfirm,
   onCancel,
   onAddBaby,
-  isLoading = false
+  isLoading = false,
+  confirmLabel = 'Start Recording'
 }: BabySelectionModalProps) {
   if (!isOpen) return null;
 
@@ -162,7 +164,7 @@ export default function BabySelectionModal({
               disabled={!selectedBabyId}
               className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              Start Recording
+              {confirmLabel}
             </button>
           </div>
         )}

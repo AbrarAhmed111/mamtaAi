@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
+import {
+  checkLimit,
+  getBabyPrimaryParentId,
+  getPlanLimits,
+  planLimitErrorResponse,
+} from '@/lib/subscription'
 
 async function getInviteByToken(token: string) {
   return await (supabaseAdmin as any)
@@ -71,6 +77,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
     if (invite.expires_at && new Date(invite.expires_at).getTime() < Date.now()) {
       return NextResponse.json({ error: 'This invitation has expired' }, { status: 400 })
+    }
+
+    const ownerId = await getBabyPrimaryParentId(invite.baby_id)
+    if (ownerId) {
+      const ownerCtx = await getPlanLimits(ownerId)
+      const caregiverLimit = await checkLimit(ownerId, 'add_caregiver', { babyId: invite.baby_id })
+      if (!caregiverLimit.allowed) {
+        return planLimitErrorResponse(caregiverLimit, ownerCtx.slug)
+      }
     }
 
     const { data: existing } = await (supabaseAdmin as any)

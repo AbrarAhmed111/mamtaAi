@@ -3,6 +3,9 @@
 import { supabaseAdmin } from '../client';
 import { createServerClient } from '../server';
 import { Database } from '@/types/supabase';
+import { sendEmail } from '@/lib/email/send-email';
+import { createForgotPasswordEmailTemplate } from '@/lib/email/templates';
+import { getInviteEmailLogoMailParts } from '@/lib/email/invite-email-logo';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 type ProfileInsert = Database['public']['Tables']['profiles']['Insert'];
@@ -75,13 +78,17 @@ export async function signUpWithEmail(data: SignupData): Promise<{ user: AuthUse
     }
 
     // Create user profile
+    const signupRole = data.role === 'admin' ? 'admin' : 'parent'
+    const expertSignupIntent = data.role === 'expert'
+
     const profileData: ProfileInsert = {
       id: authData.user.id,
       full_name: `${data.firstName} ${data.lastName}`,
       phone_number: data.phone,
-      role: data.role,
-      is_verified: data.role === 'parent', // Parents are auto-verified
-      verification_data: data.role === 'expert' ? {
+      role: signupRole,
+      is_expert: false,
+      is_verified: true,
+      verification_data: expertSignupIntent ? {
         professionalTitle: data.professionalTitle,
         licenseNumber: data.licenseNumber,
         yearsOfExperience: data.yearsOfExperience,
@@ -91,7 +98,8 @@ export async function signUpWithEmail(data: SignupData): Promise<{ user: AuthUse
       metadata: {
         firstName: data.firstName,
         lastName: data.lastName,
-        signupMethod: 'email'
+        signupMethod: 'email',
+        ...(expertSignupIntent ? { expert_application_intent: true } : {}),
       }
     };
 
@@ -106,6 +114,22 @@ export async function signUpWithEmail(data: SignupData): Promise<{ user: AuthUse
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       return { user: null, error: { message: 'Failed to create user profile', code: profileError.code } };
     }
+
+    try {
+      const { ensureFreeSubscription } = await import('@/lib/subscription')
+      await ensureFreeSubscription(authData.user.id)
+    } catch {
+      // non-fatal
+    }
+
+    const { notifyAdminsOfUserSignup } = await import('@/lib/notifications/admin-notifications')
+    notifyAdminsOfUserSignup({
+      userId: authData.user.id,
+      fullName: profileData.full_name,
+      role: expertSignupIntent ? 'expert_application' : signupRole,
+      email: authData.user.email,
+      professionalTitle: expertSignupIntent ? data.professionalTitle ?? null : null,
+    })
 
     return {
       user: {
@@ -242,17 +266,44 @@ export async function getCurrentUser(): Promise<{ user: AuthUser | null; error: 
   }
 }
 
-// Send password reset email
+// Send password reset email via the app's own SMTP (not Supabase's built-in
+// email, which is rate-limited and was not delivering). We mint a recovery
+// token with the admin API and email a link to our own verify route.
 export async function resetPassword(email: string): Promise<{ error: AuthError | null }> {
   try {
-    const supabase = await createServerClient()
     const baseURL = await getBaseURL()
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${baseURL}/api/auth/reset-password`,
-    });
+    const redirectTo = `${baseURL}/api/auth/reset-password`
 
-    if (error) {
-      return { error: { message: error.message, code: error.message } };
+    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: { redirectTo },
+    })
+
+    if (error || !data?.properties?.hashed_token) {
+      // Never reveal whether an account exists — treat "user not found" as success
+      if (/not.*found|no.*user|user.*(exist|registered)/i.test(error?.message || '')) {
+        return { error: null }
+      }
+      return { error: { message: error?.message || 'Failed to generate reset link' } }
+    }
+
+    // Verify the token on our own route (verifyOtp), so no Supabase redirect
+    // allow-list entry or PKCE code-verifier cookie is required.
+    const resetLink = `${redirectTo}?token_hash=${encodeURIComponent(data.properties.hashed_token)}&type=recovery`
+
+    const { logoUrl, attachments } = getInviteEmailLogoMailParts(baseURL)
+    const html = createForgotPasswordEmailTemplate({ resetLink, logoUrl, expiryMinutes: 60 })
+
+    const sent = await sendEmail({
+      to: email,
+      subject: 'Reset your MumtaAI password',
+      html,
+      attachments: attachments.length > 0 ? attachments : undefined,
+    })
+
+    if (!sent.ok) {
+      return { error: { message: sent.error || 'Failed to send reset email' } }
     }
 
     return { error: null };
@@ -322,7 +373,7 @@ export async function checkUserVerification(userId: string): Promise<{ isVerifie
     const supabase = await createServerClient()
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('is_verified, role')
+      .select('is_verified, is_expert, role')
       .eq('id', userId)
       .single();
 
@@ -330,8 +381,11 @@ export async function checkUserVerification(userId: string): Promise<{ isVerifie
       return { isVerified: false, error: { message: error.message, code: error.code } };
     }
 
-    // Parents are always considered "verified"
-    const isVerified = profile.role === 'parent' || (profile.is_verified || false);
+    const isVerified =
+      profile.role === 'parent' ||
+      profile.role === 'admin' ||
+      profile.is_expert === true ||
+      (profile.is_verified || false);
 
     return { isVerified, error: null };
   } catch (error) {

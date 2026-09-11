@@ -1,11 +1,34 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { filterRecordingsByPlanHistory, getPlanLimits } from '@/lib/subscription'
+import {
+  buildOximeterInsights,
+  type OximeterReadingLite,
+} from '@/lib/insights/oximeter-insights'
+
+const EMPTY_OXIMETER = buildOximeterInsights({ readings: [], babyNames: new Map() })
 
 type PredictionLite = {
   recording_id: string
   predicted_cry_type: string | null
   confidence_score: number | null
   urgency_level: string | null
+}
+
+async function countOximeterAlertsToday(
+  supabase: any,
+  userId: string,
+  startOfToday: Date,
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('notification_type', 'oximeter_alert')
+    .gte('created_at', startOfToday.toISOString())
+
+  if (error) return 0
+  return count || 0
 }
 
 export async function GET(_req: NextRequest) {
@@ -26,10 +49,14 @@ export async function GET(_req: NextRequest) {
           hourlyTrend: [],
           babyBreakdown: [],
           recentHistory: [],
+          oximeter: EMPTY_OXIMETER,
         },
         { status: 200 },
       )
     }
+
+    const now = new Date()
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
     const { data: memberships, error: memError } = await supabase
       .from('baby_parents')
@@ -42,12 +69,13 @@ export async function GET(_req: NextRequest) {
     const babyIds = Array.from(new Set((memberships || []).map((m: any) => m.baby_id).filter(Boolean)))
 
     if (!babyIds.length) {
+      const oximeterUrgentToday = await countOximeterAlertsToday(supabase, user.id, startOfToday)
       return NextResponse.json({
         overview: {
           recordingsToday: 0,
           minutesToday: 0,
           avgConfidenceToday: 0,
-          urgentToday: 0,
+          urgentToday: oximeterUrgentToday,
         },
         totals: {
           babies: 0,
@@ -60,6 +88,7 @@ export async function GET(_req: NextRequest) {
         hourlyTrend: [],
         babyBreakdown: [],
         recentHistory: [],
+        oximeter: EMPTY_OXIMETER,
       })
     }
 
@@ -72,7 +101,21 @@ export async function GET(_req: NextRequest) {
 
     if (recError) return NextResponse.json({ error: recError.message }, { status: 400 })
 
-    const recordingIds = (recordings || []).map((r: any) => r.id).filter(Boolean)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('timezone')
+      .eq('id', user.id)
+      .maybeSingle()
+    const timezone = (profile as { timezone?: string } | null)?.timezone ?? null
+    const planCtx = await getPlanLimits(user.id, timezone)
+    const historyDays = planCtx.limitations.insights_history_days
+
+    const recsFiltered = filterRecordingsByPlanHistory(
+      (recordings || []) as { recorded_at: string }[],
+      historyDays,
+    )
+
+    const recordingIds = recsFiltered.map((r: any) => r.id).filter(Boolean)
 
     let predictionByRecording = new Map<string, PredictionLite>()
     if (recordingIds.length) {
@@ -96,13 +139,11 @@ export async function GET(_req: NextRequest) {
       }
     }
 
-    const now = new Date()
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
-    const recs = (recordings || []) as any[]
+    const recs = recsFiltered as any[]
     const todayRecs = recs.filter(r => new Date(r.recorded_at) >= startOfToday)
     const recsLast7Days = recs.filter(r => new Date(r.recorded_at) >= sevenDaysAgo)
     const recsLast14Days = recs.filter(r => new Date(r.recorded_at) >= fourteenDaysAgo)
@@ -116,7 +157,11 @@ export async function GET(_req: NextRequest) {
       todayPredictions.length > 0
         ? todayPredictions.reduce((sum, p) => sum + Number(p.confidence_score || 0), 0) / todayPredictions.length
         : 0
-    const urgentToday = todayPredictions.filter(p => ['high', 'critical'].includes(String(p.urgency_level))).length
+    const cryUrgentToday = todayPredictions.filter(p =>
+      ['high', 'critical'].includes(String(p.urgency_level)),
+    ).length
+    const oximeterUrgentToday = await countOximeterAlertsToday(supabase, user.id, startOfToday)
+    const urgentToday = cryUrgentToday + oximeterUrgentToday
 
     const typeCount = new Map<string, number>()
     recsLast30Days.forEach(r => {
@@ -181,6 +226,33 @@ export async function GET(_req: NextRequest) {
       }
     })
 
+    const dailyTrendOut = planCtx.limitations.insights_full_charts
+      ? dailyTrend
+      : dailyTrend.slice(-7)
+
+    const babyNameMap = new Map<string, string>()
+    for (const m of memberships || []) {
+      const id = String((m as { baby_id?: string }).baby_id || '')
+      const name = (m as { babies?: { name?: string } }).babies?.name || 'Baby'
+      if (id) babyNameMap.set(id, name)
+    }
+
+    const oxTrendDays = planCtx.limitations.insights_full_charts ? 14 : 7
+    const oxCutoff = new Date(now.getTime() - oxTrendDays * 24 * 60 * 60 * 1000)
+    const { data: oximeterReadings } = await supabase
+      .from('oximeter_readings')
+      .select('baby_id, measured_at, spo2_percentage, pulse_rate_bpm, is_valid, metadata')
+      .in('baby_id', babyIds)
+      .gte('measured_at', oxCutoff.toISOString())
+      .order('measured_at', { ascending: false })
+      .limit(5000)
+
+    const oximeter = buildOximeterInsights({
+      readings: (oximeterReadings || []) as OximeterReadingLite[],
+      babyNames: babyNameMap,
+      trendDays: oxTrendDays,
+    })
+
     return NextResponse.json({
       overview: {
         recordingsToday: todayRecs.length,
@@ -194,11 +266,18 @@ export async function GET(_req: NextRequest) {
         predictions: predictionByRecording.size,
         recordingsLast7Days: recsLast7Days.length,
       },
-      cryTypeDistribution,
-      dailyTrend,
-      hourlyTrend,
-      babyBreakdown,
+      cryTypeDistribution: planCtx.limitations.insights_full_charts ? cryTypeDistribution : cryTypeDistribution.slice(0, 5),
+      dailyTrend: dailyTrendOut,
+      hourlyTrend: planCtx.limitations.insights_full_charts ? hourlyTrend : [],
+      babyBreakdown: planCtx.limitations.insights_full_charts ? babyBreakdown : babyBreakdown.slice(0, 3),
       recentHistory,
+      oximeter,
+      subscription: {
+        slug: planCtx.slug,
+        insightsHistoryDays: historyDays,
+        allowExport: planCtx.limitations.allow_insights_export,
+        fullCharts: planCtx.limitations.insights_full_charts,
+      },
     })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unexpected error' }, { status: 500 })

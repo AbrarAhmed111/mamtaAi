@@ -18,7 +18,8 @@ CREATE TABLE profiles (
     full_name TEXT NOT NULL,
     phone_number TEXT,
     avatar_url TEXT,
-    role TEXT DEFAULT 'parent' CHECK (role IN ('parent', 'expert', 'admin')),
+    role TEXT DEFAULT 'parent' CHECK (role IN ('parent', 'admin')),
+    is_expert BOOLEAN NOT NULL DEFAULT FALSE,
     is_verified BOOLEAN DEFAULT FALSE,
     verification_data JSONB,  -- For expert verification documents
     timezone TEXT DEFAULT 'UTC',
@@ -32,6 +33,7 @@ CREATE TABLE profiles (
 
 CREATE INDEX idx_profiles_role ON profiles(role) WHERE role != 'parent';
 CREATE INDEX idx_profiles_verified ON profiles(is_verified) WHERE is_verified = TRUE;
+CREATE INDEX idx_profiles_is_expert ON profiles(is_expert) WHERE is_expert = TRUE;
 CREATE INDEX idx_profiles_last_active ON profiles(last_active_at DESC);
 
 -- ==========================================================
@@ -1636,7 +1638,8 @@ CREATE TABLE profiles (
     full_name TEXT NOT NULL,
     phone_number TEXT,
     avatar_url TEXT,
-    role TEXT DEFAULT 'parent' CHECK (role IN ('parent', 'expert', 'admin')),
+    role TEXT DEFAULT 'parent' CHECK (role IN ('parent', 'admin')),
+    is_expert BOOLEAN NOT NULL DEFAULT FALSE,
     is_verified BOOLEAN DEFAULT FALSE,
     verification_data JSONB,  -- For expert verification documents
     timezone TEXT DEFAULT 'UTC',
@@ -1650,6 +1653,7 @@ CREATE TABLE profiles (
 
 CREATE INDEX idx_profiles_role ON profiles(role) WHERE role != 'parent';
 CREATE INDEX idx_profiles_verified ON profiles(is_verified) WHERE is_verified = TRUE;
+CREATE INDEX idx_profiles_is_expert ON profiles(is_expert) WHERE is_expert = TRUE;
 CREATE INDEX idx_profiles_last_active ON profiles(last_active_at DESC);
 
 -- ==========================================================

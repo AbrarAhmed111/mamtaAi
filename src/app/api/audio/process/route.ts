@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { createClient } from '@supabase/supabase-js';
+import {
+  checkLimit,
+  getPlanLimits,
+  incrementUsage,
+  planLimitErrorResponse,
+} from '@/lib/subscription';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -27,10 +33,23 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null;
     const babyId = String(formData.get('baby_id') || '');
     const processedAudioBase64 = String(formData.get('processed_audio_base64') || '');
+    const sourceRaw = String(formData.get('source') || 'live').toLowerCase();
+    const recordingSource = sourceRaw === 'uploaded' ? 'uploaded' : 'live';
 
     if (!file || !babyId) {
       return NextResponse.json({ error: 'Missing audio file or baby_id' }, { status: 400 });
     }
+
+    const durationSeconds = Number(formData.get('duration_seconds')) || 0;
+    const { data: profile } = await supabase.from('profiles').select('timezone').eq('id', user.id).maybeSingle();
+    const timezone = (profile as { timezone?: string } | null)?.timezone ?? null;
+    const planCtx = await getPlanLimits(user.id, timezone);
+    const recordingLimit = await checkLimit(user.id, 'create_recording', {
+      timezone,
+      durationSeconds,
+      recordingSource,
+    });
+    if (!recordingLimit.allowed) return planLimitErrorResponse(recordingLimit, planCtx.slug);
 
     // If processed audio is provided (from FastAPI), save it instead of original
     let audioToSave = file;
@@ -77,7 +96,7 @@ export async function POST(request: NextRequest) {
       file_url: fileUrl,
       duration_seconds: Number(formData.get('duration_seconds')) || null,
       recorded_at: recordedAt,
-      source: 'live',
+      source: recordingSource,
       created_at: new Date().toISOString(),
     } as any;
 
@@ -85,6 +104,8 @@ export async function POST(request: NextRequest) {
     if (dbErr) {
       return NextResponse.json({ error: dbErr.message }, { status: 400 });
     }
+
+    await incrementUsage(user.id, 'recordings_count', 1, timezone);
 
     // Verify the recording was actually saved
     if (!dbData || !dbData.id) {

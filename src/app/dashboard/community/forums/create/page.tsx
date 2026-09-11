@@ -3,11 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { FaArrowLeft, FaTag } from 'react-icons/fa'
+import Select from '@/components/ui/select'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { usePlanLimit } from '@/hooks/useSubscription'
 
 export default function CreateForumThreadPage() {
   const router = useRouter()
+  const handlePlanLimit = usePlanLimit()
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState<any[]>([])
   const [formData, setFormData] = useState({
@@ -142,8 +145,10 @@ export default function CreateForumThreadPage() {
       if (res.ok) {
         toast.success('Thread created successfully!')
         router.push(`/dashboard/community/forums/${data.thread.id}`)
+      } else if (handlePlanLimit(data)) {
+        return
       } else {
-        toast.error(data.error || 'Failed to create thread')
+        toast.error(data.message || data.error || 'Failed to create thread')
       }
     } catch (error) {
       toast.error('Failed to create thread')
@@ -197,27 +202,23 @@ export default function CreateForumThreadPage() {
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Category <span className="text-red-500">*</span>
             </label>
-            <select
+            <Select
               value={formData.category_id}
-              onChange={(e) => {
-                setFormData({ ...formData, category_id: e.target.value })
+              onChange={(category_id) => {
+                setFormData({ ...formData, category_id })
                 if (errors.category_id) {
-                  setErrors({ ...errors, category_id: validateCategory(e.target.value) })
+                  setErrors({ ...errors, category_id: validateCategory(category_id) })
                 }
               }}
               onBlur={() => setErrors({ ...errors, category_id: validateCategory(formData.category_id) })}
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent ${
-                errors.category_id ? 'border-red-500' : 'border-pink-200'
-              }`}
+              invalid={Boolean(errors.category_id)}
               required
-            >
-              <option value="">Select a category</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: 'Select a category' },
+                ...categories.map(cat => ({ value: cat.id, label: cat.name })),
+              ]}
+              aria-label="Category"
+            />
             {errors.category_id && <p className="text-red-500 text-xs mt-1">{errors.category_id}</p>}
           </div>
 

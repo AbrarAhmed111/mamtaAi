@@ -8,7 +8,7 @@ interface ChecklistItem {
   title: string;
   description: string;
   completed: boolean;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
   action: string;
   loading?: boolean;
 }
@@ -18,70 +18,63 @@ interface WelcomeChecklistProps {
   onItemAction?: (itemId: string) => void;
 }
 
-export default function WelcomeChecklist({ 
-  checklist, 
-  onItemAction 
-}: WelcomeChecklistProps) {
+export default function WelcomeChecklist({ checklist, onItemAction }: WelcomeChecklistProps) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-pink-100 p-6 bg-gradient-to-br from-white to-pink-50/20">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
-          🎉 Welcome Checklist
-        </h3>
-      </div>
+    <div className="rounded-3xl border border-pink-100/80 bg-white p-5 shadow-md shadow-pink-100/20 sm:p-6">
+      <h3 className="mb-5 flex items-center gap-2 text-lg font-bold text-gray-900 sm:text-xl">
+        <span aria-hidden>🎉</span>
+        Welcome Checklist
+      </h3>
 
-      <div className="space-y-4">
-        {checklist.map((item) => {
+      <div className="space-y-3">
+        {checklist.map(item => {
           const Icon = item.icon;
           return (
             <div
               key={item.id}
-              className={`p-5 rounded-xl border-2 transition-all duration-300 ${
+              className={`flex flex-col gap-4 rounded-2xl border p-4 transition-all sm:flex-row sm:items-center sm:justify-between sm:p-5 ${
                 item.completed
-                  ? 'border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 shadow-sm'
-                  : 'border-pink-200 hover:border-pink-300 bg-gradient-to-br from-white to-pink-50/30 hover:shadow-md'
+                  ? 'border-emerald-100 bg-emerald-50/40'
+                  : 'border-gray-100 bg-white hover:border-pink-100 hover:shadow-sm'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div
-                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
-                      item.completed
-                        ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-lg'
-                        : item.loading
-                        ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-600'
-                        : 'bg-gradient-to-br from-pink-100 to-rose-100 text-pink-600'
-                    }`}
-                  >
-                    {item.loading ? (
-                      <Spinner size={20} color={item.completed ? 'white' : 'pink'} />
-                    ) : item.completed ? (
-                      <FaCheck className="text-lg" />
-                    ) : (
-                      <Icon className="text-lg" />
-                    )}
-                  </div>
-                  <div>
-                    <h4 className={`font-semibold text-lg ${
-                      item.completed ? 'text-green-800' : 'text-gray-900'
-                    }`}>
-                      {item.title}
-                    </h4>
-                    <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center">
-                  {!item.completed && (
-                    <button
-                      onClick={() => onItemAction?.(item.id)}
-                      className="px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold rounded-xl hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                    >
-                      {item.action}
-                    </button>
+              <div className="flex min-w-0 flex-1 items-start gap-4">
+                <div
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
+                    item.completed
+                      ? 'bg-emerald-500 text-white shadow-sm'
+                      : item.loading
+                        ? 'bg-pink-50 text-pink-500'
+                        : 'bg-pink-50 text-pink-500'
+                  }`}
+                >
+                  {item.loading ? (
+                    <Spinner size={20} color={item.completed ? 'white' : 'pink'} />
+                  ) : item.completed ? (
+                    <FaCheck className="text-lg" />
+                  ) : (
+                    <Icon className="text-lg" />
                   )}
                 </div>
+                <div className="min-w-0">
+                  <h4
+                    className={`font-semibold text-lg ${item.completed ? 'text-green-800' : 'text-gray-900'}`}
+                  >
+                    {item.title}
+                  </h4>
+                  <p className="mt-1 text-sm text-gray-600">{item.description}</p>
+                </div>
               </div>
+
+              {!item.completed && (
+                <button
+                  type="button"
+                  onClick={() => onItemAction?.(item.id)}
+                  className="shrink-0 self-start rounded-xl bg-pink-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-pink-200/50 transition-all hover:bg-pink-600 hover:shadow-lg sm:self-center"
+                >
+                  {item.action}
+                </button>
+              )}
             </div>
           );
         })}

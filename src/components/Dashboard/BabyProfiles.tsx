@@ -25,15 +25,15 @@ export default function BabyProfiles({
   onBabyClick 
 }: BabyProfilesProps) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-pink-100 p-6 bg-gradient-to-br from-white to-pink-50/20">
-      <div className="flex items-center justify-between mb-6">
+    <div className="rounded-3xl border border-pink-100/80 bg-white p-5 shadow-md shadow-pink-100/20 sm:p-6">
+      <div className="mb-5 flex items-center justify-between">
         <h3 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
           Your Babies
         </h3>
         <Link
           href="/dashboard/babies/add-baby"
           onClick={onAddBaby}
-          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm font-semibold"
+          className="flex items-center gap-2 rounded-xl bg-pink-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-pink-200/50 transition-all hover:bg-pink-600 hover:shadow-lg"
         >
           <FaPlus className="text-sm" />
           <span>Add Baby</span>

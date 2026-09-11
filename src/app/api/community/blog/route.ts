@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import {
+  checkLimit,
+  getPlanLimits,
+  incrementUsage,
+  planLimitErrorResponse,
+} from '@/lib/subscription'
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,6 +24,7 @@ export async function GET(request: NextRequest) {
         excerpt,
         content,
         featured_image_url,
+        author_id,
         category,
         subcategory,
         tags,
@@ -29,12 +36,7 @@ export async function GET(request: NextRequest) {
         author_credentials,
         published_at,
         is_pinned,
-        created_at,
-        author:profiles!blog_posts_author_id_fkey (
-          id,
-          full_name,
-          avatar_url
-        )
+        created_at
       `)
       .eq('status', 'published')
       .order('is_pinned', { ascending: false })
@@ -51,7 +53,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ posts: data || [] })
+    const authorIds = Array.from(
+      new Set(((data as any[]) || []).map(post => post.author_id).filter(Boolean)),
+    ) as string[]
+    let authors: any[] = []
+
+    if (authorIds.length > 0) {
+      const { data: authorData, error: authorError } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, role, is_expert, is_verified, verification_data, created_at')
+        .in('id', authorIds)
+
+      if (!authorError && Array.isArray(authorData)) {
+        authors = authorData
+      }
+    }
+
+    const authorMap = new Map(authors.map(author => [author.id, author]))
+    const posts = ((data as any[]) || []).map(post => ({
+      ...post,
+      author: authorMap.get(post.author_id) ?? null,
+    }))
+
+    return NextResponse.json({ posts })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }
@@ -68,6 +92,12 @@ export async function POST(request: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { data: profile } = await supabase.from('profiles').select('timezone').eq('id', user.id).maybeSingle()
+    const timezone = (profile as { timezone?: string } | null)?.timezone ?? null
+    const planCtx = await getPlanLimits(user.id, timezone)
+    const blogLimit = await checkLimit(user.id, 'create_blog_post', { timezone })
+    if (!blogLimit.allowed) return planLimitErrorResponse(blogLimit, planCtx.slug)
 
     const body = await request.json()
     const {
@@ -217,6 +247,8 @@ export async function POST(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    await incrementUsage(user.id, 'blog_posts_count', 1, timezone)
 
     return NextResponse.json({ post: data }, { status: 201 })
   } catch (e: any) {
