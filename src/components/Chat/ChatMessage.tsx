@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { FaCheck, FaRegCopy, FaRegThumbsDown, FaRegThumbsUp } from 'react-icons/fa'
 import logo from '@/assets/img/smallLogo.png'
+import UserAvatar from './UserAvatar'
 import type { ChatMessage as ChatMessageType } from './types'
 
 interface Props {
@@ -97,6 +98,7 @@ function renderInline(text: string): React.ReactNode {
 export default function ChatMessage({ message, userAvatarUrl, userName, onRate }: Props) {
   const [copied, setCopied] = useState(false)
   const isUser = message.role === 'user'
+  const isGuest = !userAvatarUrl && !userName
 
   const handleCopy = async () => {
     try {
@@ -119,6 +121,11 @@ export default function ChatMessage({ message, userAvatarUrl, userName, onRate }
         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-pink-200 bg-gradient-to-br from-pink-50 to-rose-50 shadow-sm">
           <Image src={logo} alt="MamtaBot" width={20} height={20} className="rounded-full" />
         </div>
+      )}
+
+      {/* User avatar */}
+      {isUser && (
+        <UserAvatar avatarUrl={userAvatarUrl} userName={userName} isGuest={isGuest} />
       )}
 
       <div className={`flex max-w-[85%] flex-col ${isUser ? 'items-end' : 'items-start'}`}>

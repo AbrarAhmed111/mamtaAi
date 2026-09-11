@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { FaPaperPlane, FaStop } from 'react-icons/fa'
+import { DISCLAIMER_TEXT } from './constants'
 
 interface Props {
   onSend: (text: string) => void
@@ -11,7 +12,14 @@ interface Props {
   placeholder?: string
 }
 
-const MAX_HEIGHT = 160
+const MAX_TEXTAREA_HEIGHT = 160
+
+/**
+ * Helper to check if submit should be allowed
+ */
+const canSubmit = (value: string, disabled: boolean, isStreaming: boolean): boolean => {
+  return value.trim().length > 0 && !disabled && !isStreaming
+}
 
 export default function ChatInput({
   onSend,
@@ -23,12 +31,12 @@ export default function ChatInput({
   const [value, setValue] = useState('')
   const ref = useRef<HTMLTextAreaElement>(null)
 
-  // Auto-grow the textarea up to MAX_HEIGHT.
+  // Auto-grow the textarea up to MAX_TEXTAREA_HEIGHT.
   useEffect(() => {
     const ta = ref.current
     if (!ta) return
     ta.style.height = 'auto'
-    ta.style.height = Math.min(ta.scrollHeight, MAX_HEIGHT) + 'px'
+    ta.style.height = Math.min(ta.scrollHeight, MAX_TEXTAREA_HEIGHT) + 'px'
   }, [value])
 
   const submit = () => {
@@ -45,12 +53,12 @@ export default function ChatInput({
     }
   }
 
-  const canSend = value.trim().length > 0 && !disabled && !isStreaming
+  const isSubmitAllowed = canSubmit(value, disabled, isStreaming)
 
   return (
-    <div className="border-t border-pink-100 bg-white/95 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+    <div className="border-t border-pink-100 bg-white/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-white/80">
       <div
-        className={`flex items-end gap-2 rounded-2xl border bg-white px-3 py-2 shadow-sm transition-all ${
+        className={`flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 shadow-sm transition-all ${
           disabled
             ? 'border-pink-100 opacity-60'
             : 'border-pink-200 focus-within:border-pink-400 focus-within:ring-2 focus-within:ring-pink-300/40'
@@ -64,7 +72,7 @@ export default function ChatInput({
           rows={1}
           placeholder={placeholder}
           disabled={disabled}
-          className="max-h-40 min-h-[24px] flex-1 resize-none bg-transparent text-sm leading-6 text-gray-800 placeholder:text-gray-400 focus:outline-none disabled:cursor-not-allowed"
+          className="max-h-40 min-h-[24px] flex-1 resize-none bg-transparent text-sm leading-6 text-gray-800 placeholder:text-gray-400 placeholder:leading-6 focus:outline-none disabled:cursor-not-allowed"
           aria-label="Chat message"
         />
 
@@ -82,9 +90,9 @@ export default function ChatInput({
           <button
             type="button"
             onClick={submit}
-            disabled={!canSend}
+            disabled={!isSubmitAllowed}
             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white transition-all active:scale-95 ${
-              canSend
+              isSubmitAllowed
                 ? 'bg-gradient-to-br from-pink-500 to-rose-500 shadow-sm hover:from-pink-600 hover:to-rose-600 hover:shadow-md'
                 : 'bg-gray-200 text-gray-400 shadow-none'
             }`}
@@ -96,8 +104,8 @@ export default function ChatInput({
         )}
       </div>
 
-      <p className="mt-2 text-center text-[11px] text-gray-400">
-        MamtaBot can make mistakes. Verify important matters with your pediatrician.
+      <p className="mt-1 text-center text-[11px] text-gray-400">
+        {DISCLAIMER_TEXT}
       </p>
     </div>
   )

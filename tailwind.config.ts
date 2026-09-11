@@ -38,10 +38,15 @@ module.exports = {
           '0%': { transform: 'scale(0.8)', opacity: '0.7' },
           '100%': { transform: 'scale(2)', opacity: '0' },
         },
+        'chat-panel-out': {
+          '0%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+          '100%': { opacity: '0', transform: 'translateY(16px) scale(0.96)' },
+        },
       },
       animation: {
         'bell-alert': 'bell-alert 0.9s ease-in-out infinite',
         'chat-panel-in': 'chat-panel-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        'chat-panel-out': 'chat-panel-out 260ms cubic-bezier(0.16, 1, 0.3, 1) both',
         'chat-message-in': 'chat-message-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both',
         'chat-bubble-float': 'chat-bubble-float 3s ease-in-out infinite',
         'chat-typing': 'chat-typing 1.2s ease-in-out infinite',
